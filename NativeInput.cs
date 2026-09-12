@@ -70,6 +70,12 @@ internal static class NativeInput
 
     public static void TapKey(ushort virtualKeyCode, bool extended)
     {
+        KeyDown(virtualKeyCode, extended);
+        KeyUp(virtualKeyCode, extended);
+    }
+
+    public static void KeyDown(ushort virtualKeyCode, bool extended)
+    {
         ushort scanCode = (ushort)MapVirtualKey(virtualKeyCode, MAPVK_VK_TO_VSC);
         uint flags = KEYEVENTF_SCANCODE | (extended ? KEYEVENTF_EXTENDEDKEY : 0);
 
@@ -78,12 +84,21 @@ internal static class NativeInput
             type = INPUT_KEYBOARD,
             U = new InputUnion { ki = new KEYBDINPUT { wScan = scanCode, dwFlags = flags } }
         };
+
+        SendInput(1, new[] { down }, Marshal.SizeOf<INPUT>());
+    }
+
+    public static void KeyUp(ushort virtualKeyCode, bool extended)
+    {
+        ushort scanCode = (ushort)MapVirtualKey(virtualKeyCode, MAPVK_VK_TO_VSC);
+        uint flags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP | (extended ? KEYEVENTF_EXTENDEDKEY : 0);
+
         var up = new INPUT
         {
             type = INPUT_KEYBOARD,
-            U = new InputUnion { ki = new KEYBDINPUT { wScan = scanCode, dwFlags = flags | KEYEVENTF_KEYUP } }
+            U = new InputUnion { ki = new KEYBDINPUT { wScan = scanCode, dwFlags = flags } }
         };
 
-        SendInput(2, new[] { down, up }, Marshal.SizeOf<INPUT>());
+        SendInput(1, new[] { up }, Marshal.SizeOf<INPUT>());
     }
 }

@@ -15,6 +15,7 @@ public sealed class OverlayForm : Form
     private readonly Image _listeningImage;
     private readonly Image _pausedImage;
     private bool _paused;
+    private DashboardForm? _dashboard;
 
     // Keeps this window from ever taking keyboard focus, so clicking it can never
     // steal focus away from the game.
@@ -58,7 +59,13 @@ public sealed class OverlayForm : Form
             Dock = DockStyle.Fill,
             Cursor = Cursors.Hand,
         };
-        _icon.Click += (_, _) => TogglePause();
+        _icon.MouseUp += (_, e) =>
+        {
+            if (e.Button == MouseButtons.Left)
+                TogglePause();
+            else if (e.Button == MouseButtons.Right)
+                ToggleDashboard();
+        };
 
         Controls.Add(_icon);
 
@@ -101,6 +108,20 @@ public sealed class OverlayForm : Form
             0, 0, original.Width, original.Height, GraphicsUnit.Pixel, attributes);
 
         return bitmap;
+    }
+
+    private void ToggleDashboard()
+    {
+        if (_dashboard != null && !_dashboard.IsDisposed)
+        {
+            _dashboard.Close();
+            return;
+        }
+
+        _dashboard = new DashboardForm();
+        int x = Math.Max(Screen.PrimaryScreen!.WorkingArea.Left, Left - _dashboard.Width - 10);
+        _dashboard.Location = new Point(x, Top - DashboardForm.TopInset);
+        _dashboard.Show(this);
     }
 
     private void TogglePause()

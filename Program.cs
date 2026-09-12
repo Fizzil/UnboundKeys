@@ -1,3 +1,5 @@
+using System.Threading.Tasks;
+
 namespace VoicePress;
 
 static class Program
@@ -27,14 +29,19 @@ static class Program
         voice.CommandRecognized += word =>
         {
             var vk = KeyMap.Words[word];
-            var extended = KeyMap.ExtendedKeys.Contains(vk);
-            NativeInput.TapKey(vk, extended);
+            var extended = KeyMap.IsExtendedKey(vk);
+            var behavior = KeyMap.Behaviors[word];
+            Task.Run(() => KeyExecutor.Execute(word, vk, extended, behavior));
         };
 
         voice.Start();
 
         using var overlay = new OverlayForm(voice);
         Application.Run(overlay);
+
+        // In case a word was mid-"infinite hold" when the app was closed —
+        // don't leave a real keyboard key stuck down.
+        KeyExecutor.ReleaseAll();
 
         voice.Dispose();
     }
