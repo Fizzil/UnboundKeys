@@ -28,6 +28,15 @@ static class Program
 
         voice.CommandRecognized += word =>
         {
+            if (word == VoiceEngine.StopWord)
+            {
+                // Voice-only safety net: releases every currently-engaged
+                // infinite hold/repeat, for when clicking the overlay to
+                // pause isn't an option.
+                Task.Run(KeyExecutor.ReleaseAll);
+                return;
+            }
+
             var vk = KeyMap.Words[word];
             var extended = KeyMap.IsExtendedKey(vk);
             var behavior = KeyMap.Behaviors[word];

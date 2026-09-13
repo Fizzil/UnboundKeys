@@ -68,6 +68,31 @@ internal static class NativeInput
     [DllImport("user32.dll")]
     private static extern uint MapVirtualKey(uint uCode, uint uMapType);
 
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    private static extern int GetWindowText(IntPtr hWnd, System.Text.StringBuilder lpString, int nMaxCount);
+
+    // Which window the user is currently focused on — used to release an
+    // infinite hold/repeat automatically if focus moves away from whatever
+    // window it was started in (e.g. alt-tabbing out of a game). Named
+    // distinctly from the unrelated Win32 GetActiveWindow (which returns the
+    // calling thread's own active window, not the true system-wide one).
+    public static IntPtr GetFocusedWindow() => GetForegroundWindow();
+
+    // A browser switching tabs doesn't change the foreground window at all —
+    // it's the same window handle the whole time — but most tabbed apps
+    // (browsers included) do update the window's title text to match
+    // whichever tab/document is now showing. Watching for that lets us catch
+    // a tab switch too, not just switching to a different window entirely.
+    public static string GetWindowTitle(IntPtr hWnd)
+    {
+        var buffer = new System.Text.StringBuilder(256);
+        GetWindowText(hWnd, buffer, buffer.Capacity);
+        return buffer.ToString();
+    }
+
     public static void TapKey(ushort virtualKeyCode, bool extended)
     {
         KeyDown(virtualKeyCode, extended);

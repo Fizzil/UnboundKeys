@@ -4,6 +4,12 @@ namespace VoicePress;
 
 public sealed class VoiceEngine : IDisposable
 {
+    // "press stop" is a safety-net word, not a real key mapping — recognized
+    // the same way as any other "press <word>" command, but Program.cs treats
+    // it specially (releases every infinite hold/repeat) instead of looking
+    // it up in KeyMap.Words.
+    public const string StopWord = "stop";
+
     // Fired with the recognized key word (e.g. "one", "escape") whenever a
     // "press <word>" command is heard with high enough confidence.
     public event Action<string>? CommandRecognized;
@@ -23,6 +29,7 @@ public sealed class VoiceEngine : IDisposable
         var choices = new Choices();
         foreach (var word in KeyMap.Words.Keys)
             choices.Add(word);
+        choices.Add(StopWord);
 
         var builder = new GrammarBuilder();
         builder.Append("press");
@@ -43,7 +50,7 @@ public sealed class VoiceEngine : IDisposable
             return;
 
         var spoken = parts[1].Trim();
-        if (KeyMap.Words.ContainsKey(spoken))
+        if (KeyMap.Words.ContainsKey(spoken) || string.Equals(spoken, StopWord, StringComparison.OrdinalIgnoreCase))
             CommandRecognized?.Invoke(spoken);
     }
 

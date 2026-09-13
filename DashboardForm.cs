@@ -16,28 +16,67 @@ public sealed class DashboardForm : Form
     private static readonly Color HoverColor = Color.FromArgb(60, 20, 12);
 
     private const int TabStripHeight = 60;
-    private const int OuterPadding = 6;
     private const int PressTagWidth = 100;
-    private const int CardWidth = 370;
+    private const int ProfileTabWidth = 70;
+    private const int InitialCardWidth = 370;
     private const int BaseCardHeight = 324;
     private const int ItemHeight = BaseCardHeight / 4;
     private const int AccordionHeight = 56;
 
-    // How far the visible top of the window (the Press tag / tab row) sits
-    // below this window's own top edge, because of the outer padding —
-    // OverlayForm uses this to line the dashboard's visible top up with the
-    // overlay icon's, instead of the invisible window edge.
-    public const int TopInset = OuterPadding;
+    // The Profiles tab's id in _cards/_tabButtons/etc. — distinct from any
+    // real spoken word, so it can share the same generic tab machinery.
+    private const string ProfilesTabId = "__profiles__";
+
+    // The Press-tag implode/reappear easter egg is shelved for now — a
+    // stray 1-2px gap keeps reappearing after the animation that we haven't
+    // pinned down. The implementation (AnimatePressTag, SetPressTagWidth,
+    // the tap counters below) is left in place to revisit later; this just
+    // stops the two trigger points from calling it.
+    private const bool PressTagEasterEggEnabled = false;
+
+    // The card/action-bar content area's width — starts at InitialCardWidth,
+    // but grows (never shrinks) if a future tab needs more room than the
+    // existing tabs leave available. See AddActionBarTab/EnsureContentWidth.
+    private int _contentWidth = InitialCardWidth;
+
+    // The dashboard no longer has any outer padding — its visible content
+    // starts exactly at its own window edges — so there's no offset left
+    // for OverlayForm to account for when lining the two windows up.
+    public const int TopInset = 0;
+
+    // The action bar: a horizontal strip of tabs across the top (currently
+    // the ten spoken-word tabs) plus the "Press" reminder in its own notch to
+    // the left. New kinds of tabs — a Profiles tab, a How-To tab, etc. — can
+    // be added later via AddActionBarTab without restructuring any of this;
+    // each just needs a short label and a Control to show when selected.
+    private TableLayoutPanel _actionBar;
+    private Panel _actionBarContent;
+    private TableLayoutPanel _outer;
+    private Label _pressLabel;
+
+    // The Press tag's current width, animated between 0 (imploded away) and
+    // PressTagWidth (fully shown) — tap it 4 times to collapse it, tap Reset
+    // 4 times to bring it back.
+    private int _pressTagWidth = PressTagWidth;
+    private bool _pressTagVisible = true;
 
     private readonly Dictionary<string, Control> _cards = new();
     private readonly Dictionary<string, Button> _tabButtons = new();
 
-    // How many extra pixels of accordion content (Key's expanded category
-    // rows, Repeat/Hold's timing row) the given word's card currently has
-    // open — both can be open at once, so this is a running total, not
-    // just on/off.
-    private readonly Dictionary<string, int> _extraHeight = new();
+    // The full height each tab's card currently needs (not just "extra" on
+    // top of a shared base) — different kinds of tabs don't all share the
+    // same base shape. The word cards use BaseCardHeight plus whatever
+    // accordions (Key's categories, Repeat/Hold's timing row) are open; the
+    // Profiles card computes its own height from however many rows it has.
+    private readonly Dictionary<string, int> _cardHeight = new();
     private string? _selectedWord;
+
+    // Whether the currently selected tab's card is showing. Clicking a tab
+    // that's already selected toggles this; clicking a different tab always
+    // sets it back to true (SelectTab). Only the current tab's state matters
+    // — switching away and back always re-expands, so nothing per-tab needs
+    // to be remembered.
+    private bool _selectedTabExpanded = true;
 
     // The currently-open category key-list popup (from any card's Key
     // accordion) — shared across cards since only one card is visible, and
@@ -84,29 +123,46 @@ public sealed class DashboardForm : Form
         BackColor = BackgroundColor;
         DoubleBuffered = true; // cuts down on the flash when the key menu closes
 
+        // Starts collapsed — just the tab strip, nothing selected — rather
+        // than opening straight into tab "one"'s card.
         ClientSize = new Size(
-            PressTagWidth + CardWidth + OuterPadding * 2,
-            TabStripHeight + BaseCardHeight + OuterPadding * 2);
+            ProfileTabWidth + _pressTagWidth + _contentWidth,
+            TabStripHeight);
 
-        // A 2x2 grid: "Press" sits over an empty bottom-left cell, tabs sit
-        // over the card content on the right. The window's Region (set
-        // below) then cuts away that empty bottom-left cell entirely, so it
-        // reads as an L-shaped flag — "Press" sticking out top-left — rather
-        // than a solid rectangle with a blank patch under the tag.
-        var outer = new TableLayoutPanel
+        // A 2x3 grid: "Profile" and "Press" each sit over their own empty
+        // bottom cell, tabs sit over the card content to the right. The
+        // window's Region (set below) then cuts away both those empty
+        // bottom cells entirely, so it reads as an L-shaped flag — Profile
+        // and Press sticking out top-left — rather than a solid rectangle
+        // with a blank patch under them.
+        //
+        // No padding at all: every edge of the visible content sits flush
+        // against the window's true edge, so nothing reads as a border
+        // separate from the black/red theme itself.
+        _outer = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            ColumnCount = 2,
+            ColumnCount = 3,
             RowCount = 2,
-            Padding = new Padding(OuterPadding),
+            Padding = new Padding(0),
             BackColor = BackgroundColor,
         };
-        outer.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, PressTagWidth));
-        outer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        outer.RowStyles.Add(new RowStyle(SizeType.Absolute, TabStripHeight));
-        outer.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        _outer.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ProfileTabWidth));
+        _outer.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, _pressTagWidth));
+        _outer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        _outer.RowStyles.Add(new RowStyle(SizeType.Absolute, TabStripHeight));
+        _outer.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
-        var pressLabel = new Label
+        // Easter egg: tap Press twice within 2 seconds to have it implode and
+        // vanish from the action bar (no hover/selected look on it, unlike
+        // the other buttons — it's not meant to read as a normal button).
+        // Tap Reset twice within 1 second (see below) to bring it back.
+        //
+        // MouseDown, not Click: a Label's Click event doesn't reliably fire
+        // on the second click of a fast double-click — Windows reinterprets
+        // it as part of a double-click gesture instead of two separate
+        // clicks. MouseDown fires for every physical press regardless.
+        _pressLabel = new Label
         {
             Text = "Press",
             Dock = DockStyle.Fill,
@@ -117,48 +173,166 @@ public sealed class DashboardForm : Form
             ForeColor = AccentColor,
             Font = new Font("Segoe UI", 12f),
         };
+        var pressClickTimes = new List<DateTime>();
+        _pressLabel.MouseDown += (_, e) =>
+        {
+            if (!PressTagEasterEggEnabled || e.Button != MouseButtons.Left)
+                return;
 
-        var words = KeyMap.RemappableWords;
-        var tabStrip = new TableLayoutPanel
+            var now = DateTime.UtcNow;
+            pressClickTimes.Add(now);
+            pressClickTimes.RemoveAll(t => (now - t).TotalSeconds > 2.0);
+
+            if (pressClickTimes.Count >= 2)
+            {
+                pressClickTimes.Clear();
+                if (_pressTagVisible)
+                    AnimatePressTag(show: false);
+            }
+        };
+
+        _actionBar = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             Margin = new Padding(0),
-            ColumnCount = words.Length,
+            ColumnCount = 0,
             RowCount = 1,
             BackColor = BackgroundColor,
         };
-        for (int i = 0; i < words.Length; i++)
-            tabStrip.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f / words.Length));
 
-        // All ten cards live in the same spot, stacked on top of each other —
-        // only the selected one is visible at a time.
-        var contentArea = new Panel { Dock = DockStyle.Fill, BackColor = BackgroundColor };
+        // All tabs' content lives in the same spot, stacked on top of each
+        // other — only the selected one is visible at a time.
+        _actionBarContent = new Panel { Dock = DockStyle.Fill, Margin = new Padding(0), BackColor = BackgroundColor };
 
-        for (int i = 0; i < words.Length; i++)
-        {
-            var word = words[i];
+        // AddActionBarTab inserts at the left end of the bar, so this builds
+        // the initial ten in reverse (10 down to 1) — each new insert at
+        // index 0 pushes the previous ones right, leaving them in the
+        // correct 1..10 left-to-right order once the loop finishes.
+        var words = KeyMap.RemappableWords;
+        for (int i = words.Length - 1; i >= 0; i--)
+            AddActionBarTab(words[i], (i + 1).ToString(), MakeCard(words[i]));
 
-            var tabButton = MakeTinyButton((i + 1).ToString());
-            tabButton.Margin = new Padding(0);
-            tabButton.Padding = new Padding(0);
-            tabButton.Font = new Font("Segoe UI", 9f);
-            tabButton.Click += (_, _) => SelectTab(word);
-            tabStrip.Controls.Add(tabButton, i, 0);
-            _tabButtons[word] = tabButton;
+        // Profile gets its own fixed slot to the left of Press, instead of
+        // living in the action bar with the word tabs — it goes through the
+        // same MakeTabButton wiring as every other tab (so switching to it,
+        // highlighting it, etc. all work identically), it's just placed in
+        // its own outer-grid column rather than inserted into _actionBar.
+        // The numbered tabs' widths, order, and position are untouched.
+        var profileButton = MakeTabButton(ProfilesTabId, "Profile", MakeProfilesCard());
+        profileButton.Margin = new Padding(0);
 
-            var card = MakeCard(word);
-            card.Visible = false;
-            contentArea.Controls.Add(card);
-            _cards[word] = card;
-        }
-
-        outer.Controls.Add(pressLabel, 0, 0);
-        outer.Controls.Add(tabStrip, 1, 0);
-        outer.Controls.Add(contentArea, 1, 1);
-        Controls.Add(outer);
+        _outer.Controls.Add(profileButton, 0, 0);
+        _outer.Controls.Add(_pressLabel, 1, 0);
+        _outer.Controls.Add(_actionBar, 2, 0);
+        _outer.Controls.Add(_actionBarContent, 2, 1);
+        Controls.Add(_outer);
 
         RecomputeRegion();
-        SelectTab(words[0]);
+
+        // Profile is the first control added to the form, so it's the
+        // implicit default ActiveControl — clicking the separate overlay
+        // icon shifts window activation away and back even though it never
+        // takes real focus, and that activation blip was enough to make
+        // Windows paint Profile's focus cue. Clearing ActiveControl on both
+        // transitions means there's never a control left to draw one on.
+        Activated += (_, _) => ActiveControl = null;
+        Deactivate += (_, _) => ActiveControl = null;
+    }
+
+    // Left-to-right order of the action bar's tabs, each with its own fixed
+    // (never-changing-once-set) pixel width. New tabs are inserted at index
+    // 0 — the left end — so existing tabs never get resized or reordered to
+    // make room; the bar (and the window) grows wider instead.
+    private readonly List<(string Id, Button Button, int Width)> _actionBarTabs = new();
+
+    // Builds one tab's button and wires up its click behavior (toggle open/
+    // closed if it's already the active tab, otherwise switch to it), and
+    // registers its content in the shared display area. Shared by every
+    // tab regardless of where its button ends up living — the action bar,
+    // or the Profile tab's own fixed slot to the left of Press.
+    private Button MakeTabButton(string id, string label, Control content)
+    {
+        var tabButton = MakeTinyButton(label);
+        tabButton.Margin = new Padding(0);
+        tabButton.Padding = new Padding(0);
+        tabButton.Font = new Font("Segoe UI", 9f);
+        tabButton.Click += (_, _) =>
+        {
+            // Clicking the already-active tab toggles its card open/closed;
+            // clicking a different tab always opens (SelectTab handles that).
+            if (_selectedWord == id)
+            {
+                _selectedTabExpanded = !_selectedTabExpanded;
+                _cards[id].Visible = _selectedTabExpanded;
+                AdjustHeight();
+            }
+            else
+            {
+                SelectTab(id);
+            }
+        };
+        _tabButtons[id] = tabButton;
+
+        content.Visible = false;
+        _actionBarContent.Controls.Add(content);
+        _cards[id] = content;
+
+        return tabButton;
+    }
+
+    // Adds one more tab to the action bar itself: a small button with the
+    // given label, showing the given content when selected, inserted at the
+    // left end of the bar. Existing tabs keep their exact size and position —
+    // this is how a future How-To tab (or similar) would get added, alongside
+    // the word tabs, without disturbing them.
+    private void AddActionBarTab(string id, string label, Control content, int? width = null)
+    {
+        var tabButton = MakeTabButton(id, label, content);
+        int tabWidth = width ?? InitialCardWidth / KeyMap.RemappableWords.Length;
+        _actionBarTabs.Insert(0, (id, tabButton, tabWidth));
+        RebuildActionBar();
+    }
+
+    // Re-lays-out the action bar's tabs in their current left-to-right order,
+    // each at its own fixed width, then grows the window if the bar now
+    // needs more room than the card content currently has.
+    private void RebuildActionBar()
+    {
+        _actionBar.SuspendLayout();
+        _actionBar.Controls.Clear();
+        _actionBar.ColumnStyles.Clear();
+        _actionBar.ColumnCount = _actionBarTabs.Count;
+
+        int totalWidth = 0;
+        for (int i = 0; i < _actionBarTabs.Count; i++)
+        {
+            var (_, tabButton, tabWidth) = _actionBarTabs[i];
+            _actionBar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, tabWidth));
+            _actionBar.Controls.Add(tabButton, i, 0);
+            totalWidth += tabWidth;
+        }
+        _actionBar.ResumeLayout(true);
+
+        EnsureContentWidth(totalWidth);
+    }
+
+    // Grows (never shrinks) the card/action-bar content area to fit a
+    // minimum width — used when the action bar's tabs need more room than
+    // the window currently provides.
+    private void EnsureContentWidth(int minWidth)
+    {
+        if (minWidth <= _contentWidth)
+            return;
+
+        _contentWidth = minWidth;
+        var newSize = new Size(ProfileTabWidth + _pressTagWidth + _contentWidth, ClientSize.Height);
+
+        SuspendLayout();
+        ClientSize = newSize;
+        RecomputeRegion();
+        ResumeLayout(true);
+        Invalidate(true);
+        Update();
     }
 
     // Cut the empty bottom-left cell out of the window's shape entirely, so
@@ -168,12 +342,93 @@ public sealed class DashboardForm : Form
     private void RecomputeRegion()
     {
         var shape = new Region(new Rectangle(Point.Empty, ClientSize));
-        shape.Exclude(new Rectangle(
-            0,
-            TabStripHeight + OuterPadding,
-            PressTagWidth + OuterPadding,
-            ClientSize.Height - TabStripHeight - OuterPadding));
+
+        // When the Profile tab's own card is open, it stretches back to
+        // cover the notch itself (see SelectTab) rather than leaving it as
+        // dead space — so there's nothing to cut away in that case.
+        bool profileCardOpen = _selectedWord == ProfilesTabId && _selectedTabExpanded;
+        int notchWidth = profileCardOpen ? 0 : ProfileTabWidth + _pressTagWidth;
+        if (notchWidth > 0)
+        {
+            shape.Exclude(new Rectangle(
+                0,
+                TabStripHeight,
+                notchWidth,
+                ClientSize.Height - TabStripHeight));
+        }
+
         Region = shape;
+    }
+
+    // Animates the Press tag's width between 0 (imploded away) and its full
+    // size, growing/shrinking the window and re-cutting its L-shape at each
+    // step so it reads as the notch physically shrinking into (or growing
+    // out of) the main body, rather than just vanishing/appearing instantly.
+    private System.Windows.Forms.Timer? _pressTagAnimationTimer;
+
+    private void AnimatePressTag(bool show)
+    {
+        if (show == _pressTagVisible && _pressTagAnimationTimer == null)
+            return;
+
+        // Cancel any animation already running instead of letting a second
+        // one start alongside it — two timers independently calling
+        // SetPressTagWidth could stomp on each other's state.
+        _pressTagAnimationTimer?.Stop();
+        _pressTagAnimationTimer?.Dispose();
+
+        if (show)
+            _pressLabel.Visible = true;
+
+        const int steps = 8;
+        int stepsDone = 0;
+        int startWidth = _pressTagWidth;
+        int endWidth = show ? PressTagWidth : 0;
+
+        var timer = new System.Windows.Forms.Timer { Interval = 30 }; // 2x slower than the original 15ms
+        _pressTagAnimationTimer = timer;
+        timer.Tick += (_, _) =>
+        {
+            stepsDone++;
+            SetPressTagWidth(startWidth + (endWidth - startWidth) * stepsDone / steps);
+
+            if (stepsDone >= steps)
+            {
+                timer.Stop();
+                timer.Dispose();
+                if (_pressTagAnimationTimer == timer)
+                    _pressTagAnimationTimer = null;
+                SetPressTagWidth(endWidth);
+                _pressTagVisible = show;
+                _pressLabel.Visible = show;
+            }
+        };
+        timer.Start();
+    }
+
+    // Sets the Press tag to an exact width, keeping the tab/card area
+    // visually anchored in place — the window's left edge moves instead of
+    // its right edge, so shrinking the tag reads as it retracting into the
+    // main body rather than the whole window sliding sideways.
+    private void SetPressTagWidth(int width)
+    {
+        // Computed fresh from the current right edge every time (rather than
+        // applying a relative delta on top of whatever the last step left
+        // behind) so this is self-correcting — 8 animation steps of relative
+        // adjustment could accumulate a pixel or two of drift; this can't.
+        int rightEdgeX = Location.X + ClientSize.Width;
+
+        _pressTagWidth = width;
+        _outer.ColumnStyles[1].Width = width;
+
+        int newWindowWidth = ProfileTabWidth + width + _contentWidth;
+
+        SuspendLayout();
+        Location = new Point(rightEdgeX - newWindowWidth, Location.Y);
+        ClientSize = new Size(newWindowWidth, ClientSize.Height);
+        RecomputeRegion();
+        ResumeLayout(true);
+        Invalidate(true);
     }
 
     private void SelectTab(string word)
@@ -181,27 +436,85 @@ public sealed class DashboardForm : Form
         _openCategoryPopup?.Close();
         _openCategoryPopup = null;
 
+        _selectedWord = word;
+        _selectedTabExpanded = true;
+
+        // Every word card only ever drops down under the action bar (to the
+        // right of the Profile/Press notch) — but the Profile tab's own
+        // button lives further left, in the notch itself, so its card needs
+        // to stretch back to cover that same notch area instead. Otherwise
+        // it reads as a dropdown disconnected from the button that opened it.
+        if (word == ProfilesTabId)
+        {
+            _outer.SetColumn(_actionBarContent, 0);
+            _outer.SetColumnSpan(_actionBarContent, 3);
+        }
+        else
+        {
+            _outer.SetColumn(_actionBarContent, 2);
+            _outer.SetColumnSpan(_actionBarContent, 1);
+        }
+
         foreach (var (w, card) in _cards)
             card.Visible = w == word;
         foreach (var (w, button) in _tabButtons)
             SetToggleAppearance(button, w == word);
 
-        _selectedWord = word;
         AdjustHeight();
+    }
+
+    // Refreshes the Profiles card's own highlighting after a switch — set by
+    // MakeProfilesCard, since that list lives in its own closures.
+    private Action? _refreshProfilesHighlight;
+
+    // Loads a different profile's key map/behaviors and rebuilds all ten
+    // word cards from scratch against it — "a full new set of ten numbered
+    // cards to adjust freely". The old cards are disposed (not just hidden)
+    // so their tap-counter timers actually stop. Stays on the Profiles tab
+    // afterward rather than jumping to a numbered tab.
+    private void SwitchToProfile(string profileName)
+    {
+        _openCategoryPopup?.Close();
+        _openCategoryPopup = null;
+
+        KeyMap.SwitchProfile(profileName);
+
+        foreach (var word in KeyMap.RemappableWords)
+        {
+            var oldCard = _cards[word];
+            _actionBarContent.Controls.Remove(oldCard);
+            oldCard.Dispose();
+
+            var newCard = MakeCard(word);
+            newCard.Visible = false;
+            _actionBarContent.Controls.Add(newCard);
+            _cards[word] = newCard;
+        }
+
+        // Stay on the Profiles tab — clicking a profile shouldn't yank you
+        // over to tab "one"; you just want to see it's now the active one
+        // (via the refreshed highlight) and switch to a numbered tab
+        // yourself whenever you're ready.
+        _refreshProfilesHighlight?.Invoke();
     }
 
     // Grows/shrinks the window to fit however many accordion rows the
     // selected card currently has open — so Key/Repeat/Hold/Reset always stay
     // the same size, and each accordion adds height rather than taking it
-    // from them.
+    // from them. If the selected tab's card is collapsed, the window shrinks
+    // to just the action bar, with no card showing at all.
     private void AdjustHeight()
     {
-        int extraHeight = _selectedWord != null && _extraHeight.TryGetValue(_selectedWord, out var value)
-            ? value
-            : 0;
-
-        int cardHeight = BaseCardHeight + extraHeight;
-        var newSize = new Size(ClientSize.Width, TabStripHeight + cardHeight + OuterPadding * 2);
+        int cardHeight;
+        if (!_selectedTabExpanded || _selectedWord == null)
+        {
+            cardHeight = 0;
+        }
+        else
+        {
+            cardHeight = _cardHeight.TryGetValue(_selectedWord, out var value) ? value : BaseCardHeight;
+        }
+        var newSize = new Size(ClientSize.Width, TabStripHeight + cardHeight);
         if (ClientSize == newSize)
             return;
 
@@ -219,6 +532,283 @@ public sealed class DashboardForm : Form
         // collapsing several accordions worth of height at once).
         Invalidate(true);
         Update();
+    }
+
+    // The Profiles card: same width/row-height as the word cards (it lives in
+    // the same _actionBarContent, and every row uses ItemHeight, matching the
+    // word cards' own rows). "Add Profile" is always first; clicking it
+    // expands an inline accordion — a name field + confirm button — for
+    // naming a new profile. Existing profiles list below it, one per row,
+    // each a name button (click to switch to it) plus a delete "X" (except
+    // Default, which can't be deleted). Rows grow/shrink the card exactly
+    // like the word cards' own accordions do.
+    private Control MakeProfilesCard()
+    {
+        var card = new Panel
+        {
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0),
+            Padding = new Padding(0),
+            BackColor = BackgroundColor,
+        };
+        card.Paint += (_, e) =>
+        {
+            using var pen = new Pen(AccentColor);
+            e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
+        };
+
+        var list = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0),
+            ColumnCount = 1,
+            RowCount = 1,
+            BackColor = BackgroundColor,
+        };
+        card.Controls.Add(list);
+
+        var existingNames = new HashSet<string>(Settings.LoadProfileNames());
+        var profileRows = new List<TableLayoutPanel>();
+
+        var addProfileButton = MakeListButton("Add Profile");
+        bool namingExpanded = false;
+
+        // No border box at all now — instead the field just shows its own
+        // ghost/placeholder text ("your profile") in the accent color until
+        // clicked, the same idea as a normal placeholder, then swaps to an
+        // empty editable field. The field and its confirm button are sized
+        // to about half the row's width instead of stretching full-width,
+        // so the row reads as a small compact strip rather than a big bar
+        // with a lot of dead space around a tiny bit of text.
+        const string NamePlaceholder = "Profile name...";
+        // A single-line TextBox has a well-known WinForms quirk: it ignores
+        // whatever height Dock=Fill gives it and snaps back to its own
+        // preferred (font-based) height, staying pinned to the top of that
+        // space — which is why it was sitting at the top of the row with
+        // blank space below it. Wrapping it in a plain Panel (which doesn't
+        // have that quirk) and manually centering it inside that panel on
+        // every resize fixes it.
+        var nameBox = new TextBox
+        {
+            Margin = new Padding(0),
+            BackColor = ButtonColor,
+            ForeColor = AccentColor,
+            BorderStyle = BorderStyle.None,
+            // A single-line TextBox's height always tracks its font size —
+            // there's no separate height property that sticks — so making
+            // it ~20% taller means a ~20% bigger font (10 -> 12).
+            Font = new Font("Segoe UI", 12f),
+            Text = NamePlaceholder,
+            TextAlign = HorizontalAlignment.Center,
+        };
+        nameBox.GotFocus += (_, _) =>
+        {
+            if (nameBox.Text == NamePlaceholder)
+                nameBox.Text = "";
+        };
+        nameBox.LostFocus += (_, _) =>
+        {
+            if (string.IsNullOrEmpty(nameBox.Text))
+                nameBox.Text = NamePlaceholder;
+        };
+        var nameBoxHost = new Panel
+        {
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0),
+            BackColor = ButtonColor,
+        };
+        nameBoxHost.Controls.Add(nameBox);
+        nameBoxHost.Layout += (_, _) =>
+        {
+            nameBox.Width = nameBoxHost.ClientSize.Width;
+            nameBox.Left = 0;
+            // A plain 50/50 split still reads as sitting a bit low, since
+            // the textbox's own reported height carries a little extra
+            // room below the text for descenders — giving the space above
+            // a smaller share (35%) than below (65%) corrects for that.
+            int emptySpace = nameBoxHost.ClientSize.Height - nameBox.Height;
+            nameBox.Top = Math.Max(0, (int)(emptySpace * 0.35));
+        };
+        var confirmButton = MakeTinyButton("✓");
+        // Same idea as the field above: a plain centered checkmark glyph
+        // still reads as sitting a bit low (the character's own metrics
+        // leave more visual space above it than below), so padding the
+        // bottom of its content area nudges the centered glyph upward —
+        // roughly 30% of the row's own height (ItemHeight).
+        confirmButton.Padding = new Padding(0, 0, 0, (int)(ItemHeight * 0.3));
+
+        var namingRow = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0, 1, 0, 1),
+            ColumnCount = 3,
+            RowCount = 1,
+            // The same gray as every other button's background (not the
+            // card's black), so the blank strips either side of the field
+            // read as that button's own padding rather than a gap in it —
+            // the whole row looks like one button with the field embedded.
+            BackColor = ButtonColor,
+        };
+        // A blank strip on the left matching the confirm button's width on
+        // the right, so the field sits centered between them — its own text
+        // is also center-aligned, so it lines up with "Add Profile"'s
+        // centered text in the row above/below it.
+        namingRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 15)); // blank — matches the button's width
+        namingRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 70)); // field, centered
+        namingRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 15)); // confirm button, flush right
+        namingRow.Controls.Add(nameBoxHost, 1, 0);
+        namingRow.Controls.Add(confirmButton, 2, 0);
+
+        void RebuildProfilesList()
+        {
+            list.SuspendLayout();
+            list.Controls.Clear();
+            list.RowStyles.Clear();
+
+            var rows = new List<Control> { addProfileButton };
+            if (namingExpanded)
+                rows.Add(namingRow);
+            rows.AddRange(profileRows);
+
+            list.RowCount = rows.Count;
+            for (int i = 0; i < rows.Count; i++)
+            {
+                list.RowStyles.Add(new RowStyle(SizeType.Absolute, ItemHeight));
+                list.Controls.Add(rows[i], 0, i);
+
+                // Same fix as the word cards' own list: each row's 1px
+                // bottom margin is a spacer to the row after it, so the
+                // last row needs it zeroed instead of leaving a 1px sliver
+                // of black exposed below it, at the card's true bottom edge.
+                var m = rows[i].Margin;
+                rows[i].Margin = new Padding(m.Left, m.Top, m.Right, i == rows.Count - 1 ? 0 : 1);
+            }
+            list.ResumeLayout(true);
+            ActiveControl = null;
+
+            foreach (var row in profileRows)
+                if (row.Controls.Count > 0 && row.Controls[0] is Button nameButton)
+                    SetToggleAppearance(nameButton, nameButton.Text == KeyMap.ActiveProfile);
+
+            _cardHeight[ProfilesTabId] = ItemHeight * rows.Count;
+            if (ProfilesTabId == _selectedWord)
+                AdjustHeight();
+        }
+
+        _refreshProfilesHighlight = RebuildProfilesList;
+
+        TableLayoutPanel AddProfileRow(string name)
+        {
+            bool deletable = name != Settings.DefaultProfileName;
+
+            var row = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                Margin = new Padding(0, 1, 0, 1),
+                ColumnCount = deletable ? 2 : 1,
+                RowCount = 1,
+                BackColor = BackgroundColor,
+            };
+            row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, deletable ? 80 : 100));
+            if (deletable)
+                row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20));
+
+            var nameButton = MakeListButton(name);
+            nameButton.Click += (_, _) =>
+            {
+                // Picking a profile while the naming row is still open (from
+                // an earlier "Add Profile" tap) should close it, same as
+                // tapping "Add Profile" again would — RebuildProfilesList
+                // runs as part of SwitchToProfile's own highlight refresh.
+                namingExpanded = false;
+                SwitchToProfile(name);
+            };
+            row.Controls.Add(nameButton, 0, 0);
+
+            if (deletable)
+            {
+                // Tap once to arm (lights up), tap again within 2 seconds to
+                // actually delete — same "confirm via a second tap" language
+                // as the rest of the app, since this is destructive.
+                var deleteButton = MakeTinyButton("✕");
+                bool armed = false;
+                var armTimer = new System.Windows.Forms.Timer { Interval = 2000 };
+                armTimer.Tick += (_, _) =>
+                {
+                    armed = false;
+                    armTimer.Stop();
+                    SetToggleAppearance(deleteButton, false);
+                };
+                deleteButton.Click += (_, _) =>
+                {
+                    if (!armed)
+                    {
+                        armed = true;
+                        SetToggleAppearance(deleteButton, true);
+                        armTimer.Stop();
+                        armTimer.Start();
+                        return;
+                    }
+
+                    armTimer.Stop();
+                    armTimer.Dispose();
+                    Settings.DeleteProfile(name);
+                    existingNames.Remove(name);
+                    profileRows.Remove(row);
+                    row.Dispose();
+
+                    bool wasActive = KeyMap.ActiveProfile == name;
+                    RebuildProfilesList();
+                    if (wasActive)
+                        SwitchToProfile(Settings.DefaultProfileName);
+                };
+                row.Controls.Add(deleteButton, 1, 0);
+            }
+
+            profileRows.Add(row);
+            return row;
+        }
+
+        void TryCreateProfile()
+        {
+            var name = nameBox.Text == NamePlaceholder ? "" : nameBox.Text.Trim();
+            if (string.IsNullOrEmpty(name) || existingNames.Contains(name))
+                return;
+
+            var freshWords = new Dictionary<string, ushort>(KeyMap.DefaultWords, StringComparer.OrdinalIgnoreCase);
+            var freshBehaviors = new Dictionary<string, KeyBehavior>(StringComparer.OrdinalIgnoreCase);
+            foreach (var word in KeyMap.RemappableWords)
+                freshBehaviors[word] = new KeyBehavior();
+            Settings.CreateProfileIfMissing(name, freshWords, freshBehaviors);
+
+            existingNames.Add(name);
+            AddProfileRow(name);
+            namingExpanded = false;
+            RebuildProfilesList();
+        }
+
+        addProfileButton.Click += (_, _) =>
+        {
+            namingExpanded = !namingExpanded;
+            if (namingExpanded)
+                nameBox.Text = NamePlaceholder;
+            RebuildProfilesList();
+        };
+        confirmButton.Click += (_, _) => TryCreateProfile();
+        nameBox.KeyDown += (_, e) =>
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                e.SuppressKeyPress = true;
+                TryCreateProfile();
+            }
+        };
+
+        foreach (var name in existingNames)
+            AddProfileRow(name);
+        RebuildProfilesList();
+
+        return card;
     }
 
     private Control MakeCard(string word)
@@ -251,6 +841,7 @@ public sealed class DashboardForm : Form
         var list = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
+            Margin = new Padding(0),
             ColumnCount = 1,
             RowCount = 4,
             BackColor = BackgroundColor,
@@ -379,6 +970,18 @@ public sealed class DashboardForm : Form
                 int height = rows[i] == timingPanel ? AccordionHeight : ItemHeight;
                 list.RowStyles.Add(new RowStyle(SizeType.Absolute, height));
                 list.Controls.Add(rows[i], 0, i);
+
+                // Every row has a 1px bottom margin as a spacer to whatever
+                // comes after it — on the last row there's nothing after it,
+                // so that margin just leaves a 1px sliver of the card's own
+                // black background exposed beneath it, right at the card's
+                // true bottom edge. Recomputed fresh every rebuild (rather
+                // than only ever patching whichever row is last) since these
+                // are the same reused controls across rebuilds — one that
+                // used to be last but isn't anymore needs its normal 1px
+                // margin back, not whatever it was last left at.
+                var m = rows[i].Margin;
+                rows[i].Margin = new Padding(m.Left, m.Top, m.Right, i == rows.Count - 1 ? 0 : 1);
             }
             list.ResumeLayout(true);
             ActiveControl = null;
@@ -386,7 +989,7 @@ public sealed class DashboardForm : Form
             int extraHeight = (keyExpanded ? categoryButtons.Count * ItemHeight : 0)
                 + (repeatOn || holdOn ? AccordionHeight : 0)
                 + (resetAllExpanded ? ItemHeight : 0);
-            _extraHeight[word] = extraHeight;
+            _cardHeight[word] = BaseCardHeight + extraHeight;
             if (word == _selectedWord)
                 AdjustHeight();
         }
@@ -402,6 +1005,31 @@ public sealed class DashboardForm : Form
 
         void SaveBehavior() => KeyMap.SetBehavior(word, repeatOn, holdOn, duration, infiniteOn);
 
+        // Editing the timer in any way — adding time or resetting it — means
+        // you're moving away from infinite mode: turn the Infinite toggle
+        // itself off (not just release whatever's currently engaged), so the
+        // dashboard and the actual behavior agree with each other again.
+        void DisengageInfinite()
+        {
+            if (infiniteOn)
+            {
+                infiniteOn = false;
+                SetToggleAppearance(infiniteButton, false);
+            }
+            KeyExecutor.ForceRelease(word);
+        }
+
+        // Repeat and Hold each get their own independent timer/Infinite
+        // setup — switching from one to the other resets it back to default
+        // rather than carrying over whatever was configured for the mode
+        // you're leaving.
+        void ResetTimingForModeSwitch()
+        {
+            duration = 0.0;
+            durationLabel.Text = FormatDuration(duration);
+            DisengageInfinite();
+        }
+
         // Repeat and Hold are mutually exclusive — tapping the key repeatedly
         // and holding it down don't mean anything combined, so turning one on
         // turns the other off.
@@ -412,6 +1040,7 @@ public sealed class DashboardForm : Form
             {
                 holdOn = false;
                 SetToggleAppearance(holdButton, false);
+                ResetTimingForModeSwitch();
             }
             SetToggleAppearance(repeatButton, repeatOn);
             SaveBehavior();
@@ -424,6 +1053,7 @@ public sealed class DashboardForm : Form
             {
                 repeatOn = false;
                 SetToggleAppearance(repeatButton, false);
+                ResetTimingForModeSwitch();
             }
             SetToggleAppearance(holdButton, holdOn);
             SaveBehavior();
@@ -443,22 +1073,26 @@ public sealed class DashboardForm : Form
             }
             SaveBehavior();
         };
+
         plusOne.Click += (_, _) =>
         {
             duration = Math.Round(duration + 1.0, 1);
             durationLabel.Text = FormatDuration(duration);
+            DisengageInfinite();
             SaveBehavior();
         };
         plusTenth.Click += (_, _) =>
         {
             duration = Math.Round(duration + 0.1, 1);
             durationLabel.Text = FormatDuration(duration);
+            DisengageInfinite();
             SaveBehavior();
         };
         resetDurationButton.Click += (_, _) =>
         {
             duration = 0.0;
             durationLabel.Text = FormatDuration(duration);
+            DisengageInfinite();
             SaveBehavior();
         };
         void ResetCard()
@@ -489,9 +1123,13 @@ public sealed class DashboardForm : Form
                 reset();
         };
 
-        // Easter egg: tap Reset three times quickly to expand a "Reset All"
-        // row underneath — an accordion, same as Key/Repeat/Hold — with a
-        // button that resets every card, not just this one.
+        // Easter eggs on Reset — two independent sliding time windows, both
+        // checked on every click:
+        //  - 3 taps within 1.5s expands a "Reset All" row underneath (an
+        //    accordion, same as Key/Repeat/Hold) with a button that resets
+        //    every card, not just this one.
+        //  - 2 taps within 1s brings back the Press tag if it's currently
+        //    imploded (see _pressLabel's own tap-counter above).
         int resetTapCount = 0;
         var resetTapTimer = new System.Windows.Forms.Timer { Interval = 600 };
         resetTapTimer.Tick += (_, _) =>
@@ -499,6 +1137,7 @@ public sealed class DashboardForm : Form
             resetTapCount = 0;
             resetTapTimer.Stop();
         };
+        var resetReappearClickTimes = new List<DateTime>();
         resetCardButton.Click += (_, _) =>
         {
             resetTapCount++;
@@ -511,19 +1150,35 @@ public sealed class DashboardForm : Form
             SetToggleAppearance(resetCardButton, true);
             ResetCard();
 
-            if (resetTapCount >= 3)
+            if (resetTapCount == 3)
             {
-                resetTapCount = 0;
-                resetTapTimer.Stop();
                 resetAllExpanded = true;
                 SetToggleAppearance(resetCardButton, true);
                 RebuildList();
+            }
+
+            if (PressTagEasterEggEnabled)
+            {
+                var now = DateTime.UtcNow;
+                resetReappearClickTimes.Add(now);
+                resetReappearClickTimes.RemoveAll(t => (now - t).TotalSeconds > 1.0);
+                if (resetReappearClickTimes.Count >= 2)
+                {
+                    resetReappearClickTimes.Clear();
+                    if (!_pressTagVisible)
+                        AnimatePressTag(show: true);
+                }
             }
         };
 
         RebuildList();
 
         card.Controls.Add(list);
+
+        // Profile switching rebuilds these cards from scratch, disposing the
+        // old ones — without this, the tap-counter Timer above would keep
+        // ticking in the background forever with nothing left to act on.
+        card.Disposed += (_, _) => resetTapTimer.Dispose();
 
         return card;
     }
@@ -555,7 +1210,11 @@ public sealed class DashboardForm : Form
         {
             Text = text,
             Dock = DockStyle.Fill,
-            Margin = new Padding(1),
+            // Vertical-only: these stack in a single column, so left/right
+            // margin only insets them from the card's edges (unwanted, since
+            // the card should line up flush with the tab row's width) —
+            // top/bottom still gives the thin gap between stacked buttons.
+            Margin = new Padding(0, 1, 0, 1),
             FlatStyle = FlatStyle.Flat,
             BackColor = ButtonColor,
             ForeColor = AccentColor,
@@ -629,7 +1288,7 @@ public sealed class DashboardForm : Form
             TopMost = true,
             ShowInTaskbar = false,
             BackColor = ButtonColor,
-            ClientSize = new Size(CardWidth, keys.Length * rowHeight),
+            ClientSize = new Size(_contentWidth, keys.Length * rowHeight),
         };
 
         var list = new TableLayoutPanel

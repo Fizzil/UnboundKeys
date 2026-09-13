@@ -14,12 +14,17 @@ public static class KeyMap
     // around so the dashboard's full-card reset has something to reset back to.
     public static readonly Dictionary<string, ushort> DefaultWords = BuildDefaultMap();
 
-    // Spoken word -> key it currently presses. Loaded from saved settings (if
-    // any) on top of the defaults below.
+    // Which saved profile is currently active — each profile has its own
+    // complete key map and set of behaviors. Switching profiles (see
+    // SwitchProfile) replaces the contents of Words/Behaviors in place.
+    public static string ActiveProfile { get; private set; } = Settings.LoadActiveProfileName();
+
+    // Spoken word -> key it currently presses. Loaded from the active
+    // profile's saved settings (if any) on top of the defaults below.
     public static readonly Dictionary<string, ushort> Words = BuildMap();
 
     // Spoken word -> how that key gets pressed (tap/repeat/hold, and for how
-    // long). Also loaded from saved settings.
+    // long). Also loaded from the active profile's saved settings.
     public static readonly Dictionary<string, KeyBehavior> Behaviors = BuildBehaviors();
 
     private static Dictionary<string, ushort> BuildDefaultMap()
@@ -33,27 +38,28 @@ public static class KeyMap
         return map;
     }
 
-    private static Dictionary<string, ushort> BuildMap()
-    {
-        var map = new Dictionary<string, ushort>(DefaultWords, StringComparer.OrdinalIgnoreCase);
-        return Settings.LoadKeyMap(map);
-    }
+    private static Dictionary<string, ushort> FreshDefaultWords() =>
+        new(DefaultWords, StringComparer.OrdinalIgnoreCase);
 
-    private static Dictionary<string, KeyBehavior> BuildBehaviors()
+    private static Dictionary<string, KeyBehavior> FreshDefaultBehaviors()
     {
         var map = new Dictionary<string, KeyBehavior>(StringComparer.OrdinalIgnoreCase);
-
         foreach (var word in RemappableWords)
             map[word] = new KeyBehavior();
-
-        return Settings.LoadBehaviors(map);
+        return map;
     }
+
+    private static Dictionary<string, ushort> BuildMap() =>
+        Settings.LoadKeyMap(ActiveProfile, FreshDefaultWords());
+
+    private static Dictionary<string, KeyBehavior> BuildBehaviors() =>
+        Settings.LoadBehaviors(ActiveProfile, FreshDefaultBehaviors());
 
     // Called by the dashboard when the user picks a new key for a word.
     public static void Rebind(string word, ushort vkCode)
     {
         Words[word] = vkCode;
-        Settings.Save(Words, Behaviors);
+        Save();
     }
 
     // Called by the dashboard when the user changes a word's Repeat/Hold/
@@ -67,7 +73,7 @@ public static class KeyMap
             DurationSeconds = durationSeconds,
             Infinite = infinite,
         };
-        Settings.Save(Words, Behaviors);
+        Save();
     }
 
     // Called by the dashboard's card-level reset button: puts a word back to
@@ -76,7 +82,34 @@ public static class KeyMap
     {
         Words[word] = DefaultWords[word];
         Behaviors[word] = new KeyBehavior();
-        Settings.Save(Words, Behaviors);
+        Save();
+    }
+
+    private static void Save() => Settings.SaveProfile(ActiveProfile, Words, Behaviors);
+
+    // Switches to a different profile: loads its key map and behaviors into
+    // the same Words/Behaviors dictionaries in place (so everything that
+    // reads KeyMap.Words/Behaviors sees the new profile automatically), and
+    // remembers the choice for next launch. Releases anything currently
+    // engaged first — an infinite hold from the old profile's word meanings
+    // shouldn't carry over into the new profile's context.
+    public static void SwitchProfile(string profileName)
+    {
+        KeyExecutor.ReleaseAll();
+
+        var newWords = Settings.LoadKeyMap(profileName, FreshDefaultWords());
+        var newBehaviors = Settings.LoadBehaviors(profileName, FreshDefaultBehaviors());
+
+        Words.Clear();
+        foreach (var (word, vk) in newWords)
+            Words[word] = vk;
+
+        Behaviors.Clear();
+        foreach (var (word, behavior) in newBehaviors)
+            Behaviors[word] = behavior;
+
+        ActiveProfile = profileName;
+        Settings.SetActiveProfile(profileName);
     }
 
     // SendInput needs to know which keys are part of the nav cluster / extended
