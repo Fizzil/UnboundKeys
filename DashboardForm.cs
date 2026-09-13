@@ -262,6 +262,13 @@ public sealed class DashboardForm : Form
             // clicking a different tab always opens (SelectTab handles that).
             if (_selectedWord == id)
             {
+                // SelectTab already closes this when switching tabs, but
+                // collapsing the current tab's own card is handled here
+                // instead — without this, the popup was left floating on
+                // screen with no card left open underneath it.
+                _openCategoryPopup?.Close();
+                _openCategoryPopup = null;
+
                 _selectedTabExpanded = !_selectedTabExpanded;
                 _cards[id].Visible = _selectedTabExpanded;
                 AdjustHeight();
