@@ -80,8 +80,14 @@ public sealed class DashboardForm : Form
 
     // The currently-open category key-list popup (from any card's Key
     // accordion) — shared across cards since only one card is visible, and
-    // only one popup should ever be open, at a time.
+    // only one popup should ever be open, at a time. _openCategoryPopupAnchor
+    // is whichever category button opened it, so the popup can be
+    // re-positioned relative to it if the dashboard itself moves (see
+    // RepositionCategoryPopup, wired to LocationChanged in the constructor)
+    // — otherwise dragging the listener icon would leave the popup behind,
+    // no longer attached to the card it came from.
     private Form? _openCategoryPopup;
+    private Control? _openCategoryPopupAnchor;
 
     // Each card's own "reset everything about this card" logic, so the
     // triple-tap "Reset All" easter egg can run every card's reset at once —
@@ -237,6 +243,11 @@ public sealed class DashboardForm : Form
         // transitions means there's never a control left to draw one on.
         Activated += (_, _) => ActiveControl = null;
         Deactivate += (_, _) => ActiveControl = null;
+
+        // Keeps an open category popup glued to its card whenever this
+        // window itself moves (e.g. while the listener icon is being
+        // dragged, which drags the dashboard along with it).
+        LocationChanged += (_, _) => RepositionCategoryPopup();
     }
 
     // Left-to-right order of the action bar's tabs, each with its own fixed
@@ -876,6 +887,7 @@ public sealed class DashboardForm : Form
             {
                 _openCategoryPopup?.Close();
                 _openCategoryPopup = ShowCategoryKeys(categoryButton, word, keys, keyButton);
+                _openCategoryPopupAnchor = categoryButton;
             };
             categoryButtons.Add(categoryButton);
         }
@@ -1323,12 +1335,32 @@ public sealed class DashboardForm : Form
 
         popup.Controls.Add(list);
 
-        const int gapFromCard = 6;
-        var anchorScreenPoint = anchor.PointToScreen(Point.Empty);
-        popup.Location = new Point(anchorScreenPoint.X - popup.Width - gapFromCard, anchorScreenPoint.Y);
+        PositionCategoryPopup(popup, anchor);
         popup.Show(this);
         popup.ActiveControl = null; // otherwise the first key shows a focus outline immediately
         return popup;
+    }
+
+    // Positions a category popup relative to whichever category button
+    // opened it. Shared by ShowCategoryKeys (initial placement) and
+    // RepositionCategoryPopup (keeping it glued to the card while the
+    // dashboard itself moves — e.g. while the listener icon is being
+    // dragged), so the two never drift out of sync with each other.
+    private const int CategoryPopupGap = 6;
+    private void PositionCategoryPopup(Form popup, Control anchor)
+    {
+        var anchorScreenPoint = anchor.PointToScreen(Point.Empty);
+        popup.Location = new Point(anchorScreenPoint.X - popup.Width - CategoryPopupGap, anchorScreenPoint.Y);
+    }
+
+    // Called whenever this window moves (see LocationChanged in the
+    // constructor). Without this, dragging the listener icon around would
+    // drag the dashboard along with it but leave any open category popup
+    // stranded at its old position, disconnected from the card it belongs to.
+    private void RepositionCategoryPopup()
+    {
+        if (_openCategoryPopup != null && _openCategoryPopupAnchor != null)
+            PositionCategoryPopup(_openCategoryPopup, _openCategoryPopupAnchor);
     }
 
     // A borderless popup that never takes window activation, so it can't
