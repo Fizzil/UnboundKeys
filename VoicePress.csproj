@@ -10,6 +10,13 @@
     <StartupObject>VoicePress.Program</StartupObject>
     <Company>Built by Fizzil^.^</Company>
     <Version>1.0.0</Version>
+    <!-- The exe's own filename carries the version (VoicePress-v1.0.0.exe),
+         staying in sync automatically on every future bump. RootNamespace
+         is pinned separately so embedded resource lookups (Assets\skull.*)
+         keep working regardless of what AssemblyName becomes — otherwise
+         it would default to matching AssemblyName and break them. -->
+    <AssemblyName>VoicePress-v$(Version)</AssemblyName>
+    <RootNamespace>VoicePress</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
