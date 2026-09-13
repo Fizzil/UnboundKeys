@@ -86,7 +86,13 @@ public sealed class OverlayForm : Form
     {
         _voice = voice;
 
-        Text = "VoicePress";
+        // Pulled from the project file's <Version> at build time rather
+        // than hardcoded here, so it never falls out of sync — bump it in
+        // VoicePress.csproj and this picks it up automatically.
+        var version = Assembly.GetExecutingAssembly().GetName().Version;
+        string versionText = version == null ? "" : $"{version.Major}.{version.Minor}.{version.Build}";
+
+        Text = $"VoicePress v{versionText}";
         FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.Manual;
         TopMost = true;
@@ -129,6 +135,7 @@ public sealed class OverlayForm : Form
             Dock = DockStyle.Fill,
             Cursor = Cursors.Hand,
         };
+        new ToolTip().SetToolTip(_icon, $"VoicePress v{versionText}");
         // Left-button drag moves the whole icon; a left/right press that
         // never moves past DragThreshold still counts as a plain click
         // (pause toggle / dashboard toggle) same as before.
