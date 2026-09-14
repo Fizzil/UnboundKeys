@@ -1,10 +1,10 @@
 # VoicePress Manual
 
-The gist of how VoicePress behaves. See [README.md](README.md) for what it's for and how to install it.
+How VoicePress behaves. See [README.md](README.md) for what it's for and how to install it.
 
 ## Voice commands
 
-Say **"press &lt;word&gt;"** — `one` through `ten`, or `stop`. Nothing else is recognized; speech recognition runs fully offline and its vocabulary is limited to just these words, so ordinary conversation won't trigger anything.
+Say "press" `one` through `ten`, or `stop`. Nothing else is recognized; speech recognition runs fully offline and its vocabulary is limited to just these words, so ordinary conversation won't trigger anything.
 
 By default `one`–`nine` map to the number keys, and `ten` maps to `0`. Every word's key, and how it behaves, is remappable from the dashboard (right-click the skull icon).
 
