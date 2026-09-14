@@ -26,6 +26,18 @@ public sealed class VoiceEngine : IDisposable
         _engine = new SpeechRecognitionEngine();
         _engine.SetInputToDefaultAudioDevice();
 
+        // With only ~11 possible phrases loaded, the engine's default
+        // behavior is to force almost any short utterance into whichever of
+        // them it's phonetically closest to, rather than truly rejecting
+        // off-grammar speech — which is what let ordinary talk (nothing
+        // like "press" or a number) trigger commands. This is a native SAPI
+        // setting (not exposed as a typed property in System.Speech) that
+        // makes the engine itself reject weak matches before they ever
+        // become a SpeechRecognized event, instead of relying only on the
+        // post-hoc Confidence check below. 0-100 scale; may need further
+        // tuning against real background speech.
+        _engine.UpdateRecognizerSetting("CFGConfidenceRejectionThreshold", 60);
+
         var choices = new Choices();
         foreach (var word in KeyMap.Words.Keys)
             choices.Add(word);
