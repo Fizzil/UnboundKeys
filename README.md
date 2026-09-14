@@ -11,6 +11,13 @@ VoicePress was built as an accessibility tool, for Fizzil â€” who is disabled â€
 
 VoicePress fills the remaining gap: a handful of game actions triggered by saying "press &lt;word&gt;," for moments a hand isn't free to reach a key.
 
+## Screenshots
+
+<p float="left">
+  <img src="Assets/screenshots/VP-KeyMapping.png" width="45%" alt="A word card showing Key, Repeat, Hold, the timer row, and Reset" />
+  <img src="Assets/screenshots/VP-Profiles.png" width="45%" alt="The Profiles tab, showing Default and a custom 'the isle' profile" />
+</p>
+
 ## What it does
 
 - Say "press one" through "press ten" to send the matching key.
