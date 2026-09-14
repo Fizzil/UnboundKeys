@@ -34,9 +34,11 @@ public sealed class VoiceEngine : IDisposable
         // setting (not exposed as a typed property in System.Speech) that
         // makes the engine itself reject weak matches before they ever
         // become a SpeechRecognized event, instead of relying only on the
-        // post-hoc Confidence check below. 0-100 scale; may need further
-        // tuning against real background speech.
-        _engine.UpdateRecognizerSetting("CFGConfidenceRejectionThreshold", 60);
+        // post-hoc Confidence check below. 0-100 scale, but not on the same
+        // scale as Confidence above — 60 turned out to reject real "press
+        // one" commands outright, not just background talk, so dropping it
+        // much lower. Still likely needs further tuning either way.
+        _engine.UpdateRecognizerSetting("CFGConfidenceRejectionThreshold", 20);
 
         var choices = new Choices();
         foreach (var word in KeyMap.Words.Keys)
