@@ -21,8 +21,8 @@ VoicePress fills the remaining gap: a handful of game actions triggered by sayin
 ## What it does
 
 - Say "press one" through "press ten" to send the matching key.
-- Say "press stop" to release anything currently held down or repeating — a safety net for whenever a command can't be repeated in time.
 - Right-click the skull icon for a small dashboard: remap which key each word sends, set it to tap, hold, or repeat, and manage multiple named profiles.
+- Say "press stop" to release anything currently held down or repeating — a safety net for whenever a command can't be repeated in time.
 - Left-click (or drag) the skull icon to pause listening or move it around the screen.
 - Runs fully offline — speech recognition ([Vosk](https://alphacephei.com/vosk/)) happens entirely on your machine. Nothing is sent anywhere.
 
