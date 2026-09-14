@@ -10,7 +10,6 @@ namespace VoicePress;
 internal static class CategoryKeyPopup
 {
     private const int RowHeight = 34;
-    private const int Gap = 6;
 
     // No scrollbar even for the longest category (Letters, 26 keys) — this
     // just sizes the popup tall enough to show every key at once, since a
@@ -65,7 +64,7 @@ internal static class CategoryKeyPopup
     public static void Reposition(Form popup, Control anchor)
     {
         var anchorScreenPoint = anchor.PointToScreen(Point.Empty);
-        popup.Location = new Point(anchorScreenPoint.X - popup.Width - Gap, anchorScreenPoint.Y);
+        popup.Location = new Point(anchorScreenPoint.X - popup.Width, anchorScreenPoint.Y);
     }
 
     // A borderless popup that never takes window activation, so it can't
