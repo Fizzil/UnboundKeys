@@ -13,9 +13,6 @@ public sealed class OverlayForm : Form
     // used to be, since this is now the only listener icon there is.
     private const int TargetWidth = 60;
 
-    // Matches DashboardForm's own ButtonColor — the dashboard has no shared
-    // theme class to pull this from, so it's just kept in sync by eye.
-    private static readonly Color ButtonColor = Color.FromArgb(18, 18, 18);
 
     // How far the mouse has to move (while held down) before a press counts
     // as a drag instead of a click — small enough to feel immediate, large
@@ -113,7 +110,7 @@ public sealed class OverlayForm : Form
         // same gray blends the icon into the dashboard instead of clashing
         // with it.
         var cropped = CropBottom(LoadEmbeddedImage("VoicePress.Assets.skull.png"), 10);
-        _listeningImage = RecolorBackground(cropped, ButtonColor);
+        _listeningImage = RecolorBackground(cropped, Theme.Current.Button);
         _pausedImage = MakeDimmed(_listeningImage);
 
         // A square window, exactly TabStripHeight tall — not the image's own
