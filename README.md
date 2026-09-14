@@ -26,6 +26,8 @@ VoicePress fills the remaining gap: a handful of game actions triggered by sayin
 - Left-click (or drag) the skull icon to pause listening or move it around the screen.
 - Runs fully offline — speech recognition ([Vosk](https://alphacephei.com/vosk/)) happens entirely on your machine. Nothing is sent anywhere.
 
+See [MANUAL.md](MANUAL.md) for the full details — exact voice commands, safety nets, profile behavior, and everything the dashboard does.
+
 ## Installing
 
 Grab the latest release from the [Releases page](https://github.com/Fizzil/VoicePress/releases), unzip it, and run the `.exe`. It's self-contained — no separate .NET install needed.
