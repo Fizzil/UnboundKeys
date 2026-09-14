@@ -1,7 +1,21 @@
-using System.Speech.Recognition;
+using System.Text.Json;
+using NAudio.Wave;
+using Vosk;
 
 namespace VoicePress;
 
+// Offline, small-vocabulary speech recognition via Vosk — replaces the
+// built-in Windows System.Speech (SAPI) engine, which couldn't reliably
+// tell "press one" apart from ordinary conversation: with only ~11 phrases
+// loaded, SAPI would force almost any short utterance into whichever one
+// it was phonetically closest to, rather than truly rejecting it.
+//
+// Vosk has no microphone capture of its own — NAudio pulls raw audio off
+// the default input device and feeds it in. The recognizer's vocabulary is
+// constrained to just "press" plus the key words (see the grammar built
+// below), so it's not merely unlikely but actually *impossible* for it to
+// transcribe anything else — a much stronger guarantee than SAPI's
+// best-effort phrase matching ever gave us.
 public sealed class VoiceEngine : IDisposable
 {
     // "press stop" is a safety-net word, not a real key mapping — recognized
@@ -11,56 +25,71 @@ public sealed class VoiceEngine : IDisposable
     public const string StopWord = "stop";
 
     // Fired with the recognized key word (e.g. "one", "escape") whenever a
-    // "press <word>" command is heard with high enough confidence.
+    // "press <word>" command is heard.
     public event Action<string>? CommandRecognized;
 
-    private readonly SpeechRecognitionEngine _engine;
+    private const int SampleRate = 16000;
 
-    // The exact-phrase grammar (only "press <key word>" matches at all) is what mainly
-    // keeps ordinary conversation from triggering a key press, so this doesn't need to be
-    // strict too — real test data showed correctly-heard commands often scoring ~55-65%.
-    private const float ConfidenceThreshold = 0.45f;
+    private readonly Model _model;
+    private readonly VoskRecognizer _recognizer;
+    private readonly WaveInEvent _waveIn;
 
     public VoiceEngine()
     {
-        _engine = new SpeechRecognitionEngine();
-        _engine.SetInputToDefaultAudioDevice();
+        Vosk.Vosk.SetLogLevel(-1); // Vosk logs verbosely to the console by default; not useful here.
 
-        // With only ~11 possible phrases loaded, the engine's default
-        // behavior is to force almost any short utterance into whichever of
-        // them it's phonetically closest to, rather than truly rejecting
-        // off-grammar speech — which is what let ordinary talk (nothing
-        // like "press" or a number) trigger commands. This is a native SAPI
-        // setting (not exposed as a typed property in System.Speech) that
-        // makes the engine itself reject weak matches before they ever
-        // become a SpeechRecognized event, instead of relying only on the
-        // post-hoc Confidence check below. 0-100 scale, but not on the same
-        // scale as Confidence above — 60 turned out to reject real "press
-        // one" commands outright, not just background talk, so dropping it
-        // much lower. Still likely needs further tuning either way.
-        _engine.UpdateRecognizerSetting("CFGConfidenceRejectionThreshold", 20);
+        // Copied alongside the exe at build/publish time (see the .csproj) —
+        // it's a folder of data files, not a single assembly, so it can't be
+        // embedded into the single-file publish the way the code itself is.
+        string modelPath = Path.Combine(AppContext.BaseDirectory, "VoskModel");
+        if (!Directory.Exists(modelPath))
+        {
+            throw new InvalidOperationException(
+                $"Couldn't find the speech recognition model at:\n{modelPath}\n\n" +
+                "The VoskModel folder needs to sit next to VoicePress's exe.");
+        }
 
-        var choices = new Choices();
-        foreach (var word in KeyMap.Words.Keys)
-            choices.Add(word);
-        choices.Add(StopWord);
+        _model = new Model(modelPath);
 
-        var builder = new GrammarBuilder();
-        builder.Append("press");
-        builder.Append(choices);
+        // A JSON list of every word the recognizer is allowed to output —
+        // not fixed two-word phrases, just the flat set of individual words.
+        // Whatever gets said, Vosk can only ever transcribe it as some
+        // sequence of these; the actual "press <word>" shape is enforced
+        // afterward in HandleResult.
+        var words = new List<string> { "press" };
+        words.AddRange(KeyMap.Words.Keys);
+        words.Add(StopWord);
+        string grammar = JsonSerializer.Serialize(words);
+        _recognizer = new VoskRecognizer(_model, SampleRate, grammar);
 
-        var grammar = new Grammar(builder);
-        _engine.LoadGrammarAsync(grammar);
-        _engine.SpeechRecognized += OnSpeechRecognized;
+        _waveIn = new WaveInEvent
+        {
+            WaveFormat = new WaveFormat(SampleRate, 16, 1),
+        };
+        _waveIn.DataAvailable += OnDataAvailable;
     }
 
-    private void OnSpeechRecognized(object? sender, SpeechRecognizedEventArgs e)
+    private void OnDataAvailable(object? sender, WaveInEventArgs e)
     {
-        if (e.Result.Confidence < ConfidenceThreshold)
+        // Returns true once it's decided a phrase is finished (on a pause in
+        // speech) — Result() then has the finished text. False means it's
+        // still only a partial/in-progress guess, not worth acting on yet.
+        if (_recognizer.AcceptWaveform(e.Buffer, e.BytesRecorded))
+            HandleResult(_recognizer.Result());
+    }
+
+    private void HandleResult(string resultJson)
+    {
+        using var doc = JsonDocument.Parse(resultJson);
+        if (!doc.RootElement.TryGetProperty("text", out var textProperty))
             return;
 
-        var parts = e.Result.Text.Split(' ', 2);
-        if (parts.Length != 2)
+        var text = textProperty.GetString();
+        if (string.IsNullOrWhiteSpace(text))
+            return;
+
+        var parts = text.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length != 2 || parts[0] != "press")
             return;
 
         var spoken = parts[1].Trim();
@@ -68,13 +97,15 @@ public sealed class VoiceEngine : IDisposable
             CommandRecognized?.Invoke(spoken);
     }
 
-    public void Start() => _engine.RecognizeAsync(RecognizeMode.Multiple);
-    public void Pause() => _engine.RecognizeAsyncStop();
-    public void Resume() => _engine.RecognizeAsync(RecognizeMode.Multiple);
+    public void Start() => _waveIn.StartRecording();
+    public void Pause() => _waveIn.StopRecording();
+    public void Resume() => _waveIn.StartRecording();
 
     public void Dispose()
     {
-        _engine.SpeechRecognized -= OnSpeechRecognized;
-        _engine.Dispose();
+        _waveIn.DataAvailable -= OnDataAvailable;
+        _waveIn.Dispose();
+        _recognizer.Dispose();
+        _model.Dispose();
     }
 }

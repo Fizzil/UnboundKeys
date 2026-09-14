@@ -20,12 +20,26 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.Speech" Version="8.0.0" />
+    <!-- Vosk: offline, small-vocabulary speech recognition — replaces the
+         built-in Windows System.Speech engine, which couldn't reliably tell
+         "press one" apart from ordinary talk. NAudio captures raw microphone
+         audio and feeds it to Vosk (Vosk itself has no capture of its own). -->
+    <PackageReference Include="Vosk" Version="0.3.38" />
+    <PackageReference Include="NAudio" Version="2.4.0" />
   </ItemGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="Assets\skull.png" />
     <EmbeddedResource Include="Assets\skull.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The Vosk model is a folder of data files, not a single assembly, so
+         it's copied to sit next to the exe rather than embedded in it —
+         PublishSingleFile bundles managed assemblies, not arbitrary data
+         trees like this. VoiceEngine.cs resolves it relative to the running
+         exe's own folder at startup. -->
+    <None Include="VoskModel\**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
