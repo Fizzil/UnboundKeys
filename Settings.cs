@@ -17,6 +17,13 @@ internal static class Settings
     public sealed class ProfileData
     {
         public Dictionary<string, ushort> KeyMap { get; set; } = new();
+
+        // Up to two extra keys per word, fired alongside its main key as a
+        // combo. Absent entirely from settings files saved before this
+        // existed — deserializing just leaves this at its empty default, so
+        // older profiles need no migration step.
+        public Dictionary<string, List<ushort>> ExtraKeys { get; set; } = new();
+
         public Dictionary<string, KeyBehavior> Behaviors { get; set; } = new();
     }
 
@@ -115,6 +122,16 @@ internal static class Settings
         return defaults;
     }
 
+    public static Dictionary<string, List<ushort>> LoadExtraKeys(string profile, Dictionary<string, List<ushort>> defaults)
+    {
+        if (Read().Profiles.TryGetValue(profile, out var data))
+            foreach (var (word, extras) in data.ExtraKeys)
+                if (defaults.ContainsKey(word))
+                    defaults[word] = extras;
+
+        return defaults;
+    }
+
     public static Dictionary<string, KeyBehavior> LoadBehaviors(string profile, Dictionary<string, KeyBehavior> defaults)
     {
         if (Read().Profiles.TryGetValue(profile, out var data))
@@ -125,22 +142,22 @@ internal static class Settings
         return defaults;
     }
 
-    public static void SaveProfile(string profile, Dictionary<string, ushort> keyMap, Dictionary<string, KeyBehavior> behaviors)
+    public static void SaveProfile(string profile, Dictionary<string, ushort> keyMap, Dictionary<string, List<ushort>> extraKeys, Dictionary<string, KeyBehavior> behaviors)
     {
         var saved = Read();
-        saved.Profiles[profile] = new ProfileData { KeyMap = keyMap, Behaviors = behaviors };
+        saved.Profiles[profile] = new ProfileData { KeyMap = keyMap, ExtraKeys = extraKeys, Behaviors = behaviors };
         Write(saved);
     }
 
     // Creates a profile with the given defaults if it doesn't already exist —
     // a no-op if it does, so this is safe to call speculatively.
-    public static void CreateProfileIfMissing(string profile, Dictionary<string, ushort> keyMap, Dictionary<string, KeyBehavior> behaviors)
+    public static void CreateProfileIfMissing(string profile, Dictionary<string, ushort> keyMap, Dictionary<string, List<ushort>> extraKeys, Dictionary<string, KeyBehavior> behaviors)
     {
         var saved = Read();
         if (saved.Profiles.ContainsKey(profile))
             return;
 
-        saved.Profiles[profile] = new ProfileData { KeyMap = keyMap, Behaviors = behaviors };
+        saved.Profiles[profile] = new ProfileData { KeyMap = keyMap, ExtraKeys = extraKeys, Behaviors = behaviors };
         Write(saved);
     }
 

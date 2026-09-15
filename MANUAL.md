@@ -17,6 +17,13 @@ Each word can be set to:
 - **Hold** — holds the key down for a set duration.
 - **Infinite** — instead of a fixed duration, saying the word starts the hold/repeat, and saying it again stops it.
 
+## Multiple keys per word
+
+"Add Key," under a word's Key row, adds up to two more keys to it — enough for a three-key combo like Ctrl+Alt+Delete, or a short sequence of abilities.
+
+- **Tap** and **Hold** press every key together, all at once.
+- **Repeat** instead cycles through them one at a time — Key 1, then Key 2, then Key 3, then back to Key 1 — using the normal fixed gap between each, unless "Repeat Interval" is turned on to set a custom gap for one or more of them.
+
 ## Safety nets
 
 Because Infinite holds/repeats can run indefinitely, VoicePress is built so a stuck key is never the only way out:

@@ -23,6 +23,12 @@ public static class KeyMap
     // profile's saved settings (if any) on top of the defaults below.
     public static readonly Dictionary<string, ushort> Words = BuildMap();
 
+    // Spoken word -> up to two additional keys pressed alongside the one in
+    // Words, all at once (e.g. binding Ctrl and C alongside the main key
+    // makes the word send Ctrl+C as a combo). Empty by default. Loaded from
+    // the active profile the same way Words is.
+    public static readonly Dictionary<string, List<ushort>> ExtraWords = BuildExtraWords();
+
     // Spoken word -> how that key gets pressed (tap/repeat/hold, and for how
     // long). Also loaded from the active profile's saved settings.
     public static readonly Dictionary<string, KeyBehavior> Behaviors = BuildBehaviors();
@@ -49,8 +55,19 @@ public static class KeyMap
         return map;
     }
 
+    private static Dictionary<string, List<ushort>> FreshDefaultExtraWords()
+    {
+        var map = new Dictionary<string, List<ushort>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var word in RemappableWords)
+            map[word] = new List<ushort>();
+        return map;
+    }
+
     private static Dictionary<string, ushort> BuildMap() =>
         Settings.LoadKeyMap(ActiveProfile, FreshDefaultWords());
+
+    private static Dictionary<string, List<ushort>> BuildExtraWords() =>
+        Settings.LoadExtraKeys(ActiveProfile, FreshDefaultExtraWords());
 
     private static Dictionary<string, KeyBehavior> BuildBehaviors() =>
         Settings.LoadBehaviors(ActiveProfile, FreshDefaultBehaviors());
@@ -62,9 +79,59 @@ public static class KeyMap
         Save();
     }
 
+    // Called by the dashboard's "Add Key" — adds one more key that fires
+    // alongside the word's main key, as a combo. Capped at two extras (three
+    // keys total per word); a no-op past that, so it's safe to call
+    // speculatively without checking the count first.
+    public static void AddExtraKey(string word, ushort vkCode)
+    {
+        if (ExtraWords[word].Count >= 2)
+            return;
+
+        ExtraWords[word].Add(vkCode);
+        Save();
+    }
+
+    // Called by the dashboard when the user picks a different key for an
+    // already-added extra key slot — same idea as Rebind, but for one of
+    // the extras instead of the main key.
+    public static void SetExtraKey(string word, int index, ushort vkCode)
+    {
+        var extras = ExtraWords[word];
+        if (index < 0 || index >= extras.Count)
+            return;
+
+        extras[index] = vkCode;
+        Save();
+    }
+
+    // Called by the dashboard's "✕" on an extra key row.
+    public static void RemoveExtraKey(string word, int index)
+    {
+        var extras = ExtraWords[word];
+        if (index < 0 || index >= extras.Count)
+            return;
+
+        extras.RemoveAt(index);
+        Save();
+    }
+
+    // The full set of keys a word should press — its main key followed by
+    // any extras — each paired with whether SendInput needs to treat it as
+    // an extended key. Used everywhere a word is actually executed, instead
+    // of just looking up Words[word] alone.
+    public static List<(ushort Vk, bool Extended)> GetAllKeys(string word)
+    {
+        var keys = new List<(ushort, bool)> { (Words[word], IsExtendedKey(Words[word])) };
+        foreach (var vk in ExtraWords[word])
+            keys.Add((vk, IsExtendedKey(vk)));
+        return keys;
+    }
+
     // Called by the dashboard when the user changes a word's Repeat/Hold/
-    // Infinite checkboxes or its duration.
-    public static void SetBehavior(string word, bool repeat, bool hold, double durationSeconds, bool infinite)
+    // Infinite checkboxes, its duration, or (for a 2+ key word) its
+    // per-key repeat intervals.
+    public static void SetBehavior(string word, bool repeat, bool hold, double durationSeconds, bool infinite, bool useCustomRepeatIntervals, List<double> repeatKeyIntervalsSeconds)
     {
         Behaviors[word] = new KeyBehavior
         {
@@ -72,24 +139,27 @@ public static class KeyMap
             Hold = hold,
             DurationSeconds = durationSeconds,
             Infinite = infinite,
+            UseCustomRepeatIntervals = useCustomRepeatIntervals,
+            RepeatKeyIntervalsSeconds = new List<double>(repeatKeyIntervalsSeconds),
         };
         Save();
     }
 
     // Called by the dashboard's card-level reset button: puts a word back to
-    // its original key with no repeat/hold/duration set.
+    // its original key with no repeat/hold/duration set, and no extra keys.
     public static void ResetToDefault(string word)
     {
         Words[word] = DefaultWords[word];
+        ExtraWords[word].Clear();
         Behaviors[word] = new KeyBehavior();
         Save();
     }
 
-    private static void Save() => Settings.SaveProfile(ActiveProfile, Words, Behaviors);
+    private static void Save() => Settings.SaveProfile(ActiveProfile, Words, ExtraWords, Behaviors);
 
     // Switches to a different profile: loads its key map and behaviors into
-    // the same Words/Behaviors dictionaries in place (so everything that
-    // reads KeyMap.Words/Behaviors sees the new profile automatically), and
+    // the same Words/ExtraWords/Behaviors dictionaries in place (so
+    // everything that reads them sees the new profile automatically), and
     // remembers the choice for next launch. Releases anything currently
     // engaged first — an infinite hold from the old profile's word meanings
     // shouldn't carry over into the new profile's context.
@@ -98,11 +168,16 @@ public static class KeyMap
         KeyExecutor.ReleaseAll();
 
         var newWords = Settings.LoadKeyMap(profileName, FreshDefaultWords());
+        var newExtraWords = Settings.LoadExtraKeys(profileName, FreshDefaultExtraWords());
         var newBehaviors = Settings.LoadBehaviors(profileName, FreshDefaultBehaviors());
 
         Words.Clear();
         foreach (var (word, vk) in newWords)
             Words[word] = vk;
+
+        ExtraWords.Clear();
+        foreach (var (word, extras) in newExtraWords)
+            ExtraWords[word] = extras;
 
         Behaviors.Clear();
         foreach (var (word, behavior) in newBehaviors)

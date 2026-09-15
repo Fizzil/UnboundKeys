@@ -12,6 +12,26 @@ internal static class KeyExecutor
 {
     private const int RepeatIntervalMs = 100;
 
+    // A 2+ key word can customize the gap after each key in its sequence
+    // (see KeyBehavior.UseCustomRepeatIntervals) — keyIndex is which key
+    // was just tapped (0 = Key 1), and its own gap value is what to wait
+    // before the next one. A 0 entry, or the feature being off entirely,
+    // means "use the normal fixed gap" above.
+    private static int GapMsAfterKey(KeyBehavior behavior, int keyIndex, int keyCount)
+    {
+        if (behavior.UseCustomRepeatIntervals)
+        {
+            int slot = keyIndex % keyCount;
+            if (slot < behavior.RepeatKeyIntervalsSeconds.Count)
+            {
+                double seconds = behavior.RepeatKeyIntervalsSeconds[slot];
+                if (seconds > 0)
+                    return (int)(seconds * 1000);
+            }
+        }
+        return RepeatIntervalMs;
+    }
+
     // Tracks which words currently have an infinite hold/repeat running, so
     // the next time the word is heard we know to stop it instead of starting
     // another one.
@@ -24,7 +44,7 @@ internal static class KeyExecutor
     // independent, so one word can be infinite-holding while a different word
     // is infinite-repeating.
     private static string? _activeInfiniteHoldWord;
-    private static (ushort Vk, bool Extended)? _activeInfiniteHoldKey;
+    private static IReadOnlyList<(ushort Vk, bool Extended)>? _activeInfiniteHoldKeys;
     private static string? _activeInfiniteRepeatWord;
 
     // The window (and its title, at the time) that was focused when each
@@ -41,32 +61,77 @@ internal static class KeyExecutor
         new(CheckFocus, null, FocusCheckIntervalMs, FocusCheckIntervalMs);
     private const int FocusCheckIntervalMs = 300;
 
-    public static void Execute(string word, ushort vk, bool extended, KeyBehavior behavior)
+    // A word can have up to three keys (its main one plus two extras) that
+    // all fire together as a combo — pressing each down in quick succession,
+    // then releasing each in quick succession, rather than one full
+    // down-then-up cycle per key. That's as close to truly simultaneous as
+    // discrete SendInput calls get, and it's imperceptible in practice.
+    private static void PressAllDown(IReadOnlyList<(ushort Vk, bool Extended)> keys)
+    {
+        foreach (var key in keys)
+            NativeInput.KeyDown(key.Vk, key.Extended);
+    }
+
+    private static void ReleaseAllUp(IReadOnlyList<(ushort Vk, bool Extended)> keys)
+    {
+        foreach (var key in keys)
+            NativeInput.KeyUp(key.Vk, key.Extended);
+    }
+
+    // Repeat cycles through a word's keys one at a time instead of firing
+    // them together — Key 1, then Key 2, then Key 3, then back to Key 1, for
+    // as long as the repeat runs (a single key just "cycles" through itself
+    // every time, same as before). Hold and a plain tap still fire every key
+    // together, since that's what makes a combo like Ctrl+C work at all.
+    private static void TapKeySequentially(IReadOnlyList<(ushort Vk, bool Extended)> keys, int index)
+    {
+        var key = keys[index % keys.Count];
+        NativeInput.KeyDown(key.Vk, key.Extended);
+        NativeInput.KeyUp(key.Vk, key.Extended);
+    }
+
+    public static void Execute(string word, IReadOnlyList<(ushort Vk, bool Extended)> keys, KeyBehavior behavior)
     {
         if (behavior.Infinite)
         {
-            ExecuteInfinite(word, vk, extended, behavior);
+            ExecuteInfinite(word, keys, behavior);
             return;
         }
 
         if (behavior.Hold && behavior.DurationSeconds > 0)
         {
-            NativeInput.KeyDown(vk, extended);
+            PressAllDown(keys);
             Thread.Sleep((int)(behavior.DurationSeconds * 1000));
-            NativeInput.KeyUp(vk, extended);
+            ReleaseAllUp(keys);
         }
         else if (behavior.Repeat && behavior.DurationSeconds > 0)
         {
             var end = DateTime.UtcNow.AddSeconds(behavior.DurationSeconds);
+            int i = 0;
             while (DateTime.UtcNow < end)
             {
-                NativeInput.TapKey(vk, extended);
-                Thread.Sleep(RepeatIntervalMs);
+                TapKeySequentially(keys, i);
+                Thread.Sleep(GapMsAfterKey(behavior, i, keys.Count));
+                i++;
+            }
+        }
+        else if (behavior.Repeat)
+        {
+            // No repeat duration set (0s) — still march through the whole
+            // sequence once, respecting each key's own gap, instead of
+            // collapsing into a single simultaneous tap of every key. For a
+            // 1-key word this is just one tap either way, same as before.
+            for (int i = 0; i < keys.Count; i++)
+            {
+                TapKeySequentially(keys, i);
+                if (i < keys.Count - 1)
+                    Thread.Sleep(GapMsAfterKey(behavior, i, keys.Count));
             }
         }
         else
         {
-            NativeInput.TapKey(vk, extended);
+            PressAllDown(keys);
+            ReleaseAllUp(keys);
         }
     }
 
@@ -83,7 +148,7 @@ internal static class KeyExecutor
                     engagedWords.Add(word);
             _engaged.Clear();
             _activeInfiniteHoldWord = null;
-            _activeInfiniteHoldKey = null;
+            _activeInfiniteHoldKeys = null;
             _activeInfiniteHoldWindow = null;
             _activeInfiniteHoldWindowTitle = null;
             _activeInfiniteRepeatWord = null;
@@ -92,10 +157,7 @@ internal static class KeyExecutor
         }
 
         foreach (var word in engagedWords)
-        {
-            var vk = KeyMap.Words[word];
-            NativeInput.KeyUp(vk, KeyMap.IsExtendedKey(vk));
-        }
+            ReleaseAllUp(KeyMap.GetAllKeys(word));
     }
 
     // Lets the dashboard forcibly let go of a word's infinite hold/repeat if
@@ -104,9 +166,7 @@ internal static class KeyExecutor
     // isn't actually engaged right now.
     public static void ForceRelease(string word)
     {
-        bool releaseHoldKey = false;
-        ushort vk = 0;
-        bool extended = false;
+        IReadOnlyList<(ushort Vk, bool Extended)>? keysToRelease = null;
 
         lock (_lock)
         {
@@ -116,14 +176,9 @@ internal static class KeyExecutor
 
                 if (_activeInfiniteHoldWord == word)
                 {
-                    if (_activeInfiniteHoldKey.HasValue)
-                    {
-                        releaseHoldKey = true;
-                        vk = _activeInfiniteHoldKey.Value.Vk;
-                        extended = _activeInfiniteHoldKey.Value.Extended;
-                    }
+                    keysToRelease = _activeInfiniteHoldKeys;
                     _activeInfiniteHoldWord = null;
-                    _activeInfiniteHoldKey = null;
+                    _activeInfiniteHoldKeys = null;
                     _activeInfiniteHoldWindow = null;
                     _activeInfiniteHoldWindowTitle = null;
                 }
@@ -138,16 +193,16 @@ internal static class KeyExecutor
             }
         }
 
-        if (releaseHoldKey)
-            NativeInput.KeyUp(vk, extended);
+        if (keysToRelease != null)
+            ReleaseAllUp(keysToRelease);
     }
 
-    private static void ExecuteInfinite(string word, ushort vk, bool extended, KeyBehavior behavior)
+    private static void ExecuteInfinite(string word, IReadOnlyList<(ushort Vk, bool Extended)> keys, KeyBehavior behavior)
     {
         bool repeatMode = behavior.Repeat && !behavior.Hold;
         bool starting;
         string? bumpedWord = null;
-        (ushort Vk, bool Extended)? bumpedHoldKey = null;
+        IReadOnlyList<(ushort Vk, bool Extended)>? bumpedHoldKeys = null;
 
         lock (_lock)
         {
@@ -179,11 +234,11 @@ internal static class KeyExecutor
                     if (_activeInfiniteHoldWord != null && _activeInfiniteHoldWord != word)
                     {
                         bumpedWord = _activeInfiniteHoldWord;
-                        bumpedHoldKey = _activeInfiniteHoldKey;
+                        bumpedHoldKeys = _activeInfiniteHoldKeys;
                         _engaged[bumpedWord] = false;
                     }
                     _activeInfiniteHoldWord = word;
-                    _activeInfiniteHoldKey = (vk, extended);
+                    _activeInfiniteHoldKeys = keys;
                     _activeInfiniteHoldWindow = focusedWindow;
                     _activeInfiniteHoldWindowTitle = focusedTitle;
                 }
@@ -199,7 +254,7 @@ internal static class KeyExecutor
                 if (!repeatMode && _activeInfiniteHoldWord == word)
                 {
                     _activeInfiniteHoldWord = null;
-                    _activeInfiniteHoldKey = null;
+                    _activeInfiniteHoldKeys = null;
                     _activeInfiniteHoldWindow = null;
                     _activeInfiniteHoldWindowTitle = null;
                 }
@@ -207,30 +262,32 @@ internal static class KeyExecutor
         }
 
         // Release whichever word this one just bumped out of its slot.
-        if (bumpedHoldKey.HasValue)
-            NativeInput.KeyUp(bumpedHoldKey.Value.Vk, bumpedHoldKey.Value.Extended);
+        if (bumpedHoldKeys != null)
+            ReleaseAllUp(bumpedHoldKeys);
 
         if (!starting)
         {
             // Second time hearing this word — stop. In repeat mode the loop
             // below notices _engaged flip to false on its own; in hold mode
-            // we have to explicitly let go of the key.
+            // we have to explicitly let go of the keys.
             if (!repeatMode)
-                NativeInput.KeyUp(vk, extended);
+                ReleaseAllUp(keys);
             return;
         }
 
         if (repeatMode)
         {
+            int i = 0;
             while (IsEngaged(word))
             {
-                NativeInput.TapKey(vk, extended);
-                Thread.Sleep(RepeatIntervalMs);
+                TapKeySequentially(keys, i);
+                Thread.Sleep(GapMsAfterKey(behavior, i, keys.Count));
+                i++;
             }
         }
         else
         {
-            NativeInput.KeyDown(vk, extended);
+            PressAllDown(keys);
         }
     }
 
@@ -253,7 +310,7 @@ internal static class KeyExecutor
         var current = NativeInput.GetFocusedWindow();
         string? currentTitle = null; // fetched lazily, only if actually needed below
         string? holdWordToRelease = null;
-        (ushort Vk, bool Extended)? holdKeyToRelease = null;
+        IReadOnlyList<(ushort Vk, bool Extended)>? holdKeysToRelease = null;
 
         lock (_lock)
         {
@@ -266,10 +323,10 @@ internal static class KeyExecutor
                 if (changed)
                 {
                     holdWordToRelease = _activeInfiniteHoldWord;
-                    holdKeyToRelease = _activeInfiniteHoldKey;
+                    holdKeysToRelease = _activeInfiniteHoldKeys;
                     _engaged[holdWordToRelease] = false;
                     _activeInfiniteHoldWord = null;
-                    _activeInfiniteHoldKey = null;
+                    _activeInfiniteHoldKeys = null;
                     _activeInfiniteHoldWindow = null;
                     _activeInfiniteHoldWindowTitle = null;
                 }
@@ -293,7 +350,7 @@ internal static class KeyExecutor
             }
         }
 
-        if (holdKeyToRelease.HasValue)
-            NativeInput.KeyUp(holdKeyToRelease.Value.Vk, holdKeyToRelease.Value.Extended);
+        if (holdKeysToRelease != null)
+            ReleaseAllUp(holdKeysToRelease);
     }
 }

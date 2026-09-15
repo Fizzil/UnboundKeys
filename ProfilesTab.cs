@@ -242,10 +242,14 @@ internal sealed class ProfilesTab : IDashboardTab
                 return;
 
             var freshWords = new Dictionary<string, ushort>(KeyMap.DefaultWords, StringComparer.OrdinalIgnoreCase);
+            var freshExtraWords = new Dictionary<string, List<ushort>>(StringComparer.OrdinalIgnoreCase);
             var freshBehaviors = new Dictionary<string, KeyBehavior>(StringComparer.OrdinalIgnoreCase);
             foreach (var word in KeyMap.RemappableWords)
+            {
+                freshExtraWords[word] = new List<ushort>();
                 freshBehaviors[word] = new KeyBehavior();
-            Settings.CreateProfileIfMissing(name, freshWords, freshBehaviors);
+            }
+            Settings.CreateProfileIfMissing(name, freshWords, freshExtraWords, freshBehaviors);
 
             existingNames.Add(name);
             AddProfileRow(name);

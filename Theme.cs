@@ -32,6 +32,11 @@ internal static class Theme
         };
         button.FlatAppearance.BorderSize = 0;
         button.FlatAppearance.MouseOverBackColor = Current.Hover;
+        // Without this, WinForms falls back to its own computed press color
+        // for a flat button, which reads as a jarring white flash against
+        // this dark theme — using the accent color instead makes a click
+        // read as a brief orange flash, matching the rest of the theme.
+        button.FlatAppearance.MouseDownBackColor = Current.Accent;
         ClearFocusAfterClick(button);
         return button;
     }
@@ -57,6 +62,7 @@ internal static class Theme
         };
         button.FlatAppearance.BorderSize = 0;
         button.FlatAppearance.MouseOverBackColor = Current.Hover;
+        button.FlatAppearance.MouseDownBackColor = Current.Accent;
         ClearFocusAfterClick(button);
         return button;
     }
@@ -96,4 +102,39 @@ internal static class Theme
     // would render it as "0,0s".
     public static string FormatDuration(double seconds) =>
         seconds.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + "s";
+
+    // A "✕" button that requires two taps to actually do anything
+    // destructive: tap once to arm (lights up), tap again within 2 seconds
+    // to confirm — otherwise it disarms itself. Used anywhere removing
+    // something (a profile, an extra key) can't easily be undone. Defaults
+    // to the small square style (Profiles' delete "✕"); pass MakeListButton
+    // for a full-width row instead (an extra key's own delete row).
+    public static Button MakeConfirmDeleteButton(Action onConfirmed, Func<string, Button>? buttonFactory = null)
+    {
+        var button = (buttonFactory ?? MakeTinyButton)("✕");
+        bool armed = false;
+        var armTimer = new System.Windows.Forms.Timer { Interval = 2000 };
+        armTimer.Tick += (_, _) =>
+        {
+            armed = false;
+            armTimer.Stop();
+            SetToggleAppearance(button, false);
+        };
+        button.Click += (_, _) =>
+        {
+            if (!armed)
+            {
+                armed = true;
+                SetToggleAppearance(button, true);
+                armTimer.Stop();
+                armTimer.Start();
+                return;
+            }
+
+            armTimer.Stop();
+            armTimer.Dispose();
+            onConfirmed();
+        };
+        return button;
+    }
 }

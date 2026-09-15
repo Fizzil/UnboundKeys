@@ -37,10 +37,9 @@ static class Program
                 return;
             }
 
-            var vk = KeyMap.Words[word];
-            var extended = KeyMap.IsExtendedKey(vk);
+            var keys = KeyMap.GetAllKeys(word);
             var behavior = KeyMap.Behaviors[word];
-            Task.Run(() => KeyExecutor.Execute(word, vk, extended, behavior));
+            Task.Run(() => KeyExecutor.Execute(word, keys, behavior));
         };
 
         voice.Start();

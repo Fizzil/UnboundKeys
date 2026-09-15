@@ -16,7 +16,14 @@ internal sealed class WordCardTab : IDashboardTab
     // fixed word list, not the spoken word ("one".."ten") used as Id.
     public string Label => (Array.IndexOf(KeyMap.RemappableWords, _word) + 1).ToString();
 
-    private static string KeyLabelFor(string word) => $"Key: {KeyCatalog.DisplayNameFor(KeyMap.Words[word])}";
+    private static string KeyLabelFor(string word) => $"Key 1: {KeyCatalog.DisplayNameFor(KeyMap.Words[word])}";
+
+    // Extra keys are numbered from 2 (the primary key is "Key 1"), so the
+    // first extra reads "Key 2: ...", the second "Key 3: ...". Recomputed
+    // fresh from each row's live position every rebuild, so removing "Key 2"
+    // automatically renumbers "Key 3" down to "Key 2" rather than leaving a
+    // gap.
+    private static string ExtraKeyLabel(int slotNumber, ushort vk) => $"Key {slotNumber}: {KeyCatalog.DisplayNameFor(vk)}";
 
     public Control BuildContent(DashboardTabContext ctx)
     {
@@ -55,33 +62,69 @@ internal sealed class WordCardTab : IDashboardTab
             BackColor = Theme.Current.Background,
         };
 
-        // 1. Key — click to expand an accordion of key categories (Letters,
-        // Numbers, Function Keys, ...) as full-width rows stacked vertically
-        // underneath, exactly like Repeat/Hold's own rows; click Key again to
-        // collapse it. Clicking a category pops out a list of that
-        // category's individual keys to the left of the card.
-        var keyButton = Theme.MakeListButton(KeyLabelFor(word));
-        bool keyExpanded = false;
-
+        // A row of key-category buttons (Letters, Numbers, Function Keys,
+        // ...) — hovering one pops out a list of its individual keys to the
+        // left of the card. Shared by both Key (rebinds the main key) and
+        // Add Key (adds an extra one), so the two accordions behave
+        // identically apart from what picking a key actually does.
+        //
         // Only one category's key list should be open at a time. This uses a
         // plain borderless window rather than a ContextMenuStrip — a native
         // menu puts Windows into a special "menu tracking" mode the instant
         // it opens, which blocks MouseEnter from reaching sibling controls
         // (the other category buttons) until it closes. A regular window
         // doesn't have that restriction, so hovering across categories works.
-        var categoryButtons = new List<Control>();
-        foreach (var (category, keys) in KeyCatalog.Groups)
+        List<Control> BuildCategoryButtons(Action<KeyCatalog.Entry> onSelect)
         {
-            var categoryButton = Theme.MakeListButton(category);
-            categoryButton.MouseEnter += (_, _) =>
+            var buttons = new List<Control>();
+            foreach (var (category, keys) in KeyCatalog.Groups)
             {
-                ctx.ShowCategoryPopup(categoryButton, keys, entry =>
-                {
-                    KeyMap.Rebind(word, entry.VkCode);
-                    keyButton.Text = KeyLabelFor(word);
-                });
-            };
-            categoryButtons.Add(categoryButton);
+                var categoryButton = Theme.MakeListButton(category);
+                categoryButton.MouseEnter += (_, _) => ctx.ShowCategoryPopup(categoryButton, keys, onSelect);
+                buttons.Add(categoryButton);
+            }
+            return buttons;
+        }
+
+        // 2. Key 1 — click to expand the category accordion above; click Key
+        // again to collapse it. Picking a key rebinds the card's main key.
+        var keyButton = Theme.MakeListButton(KeyLabelFor(word));
+        bool keyExpanded = false;
+        var categoryButtons = BuildCategoryButtons(entry =>
+        {
+            KeyMap.Rebind(word, entry.VkCode);
+            keyButton.Text = KeyLabelFor(word);
+        });
+
+        // 1. Add Key — adds one more key that fires alongside the main one
+        // as a combo, instead of replacing it. Clicking it just adds a new
+        // row (starting as a copy of the main key) directly below Key 1 and
+        // any earlier extras — Key 1 stays on top, extras stack downward
+        // from it in order, ending just above Repeat — it doesn't open a
+        // category picker itself; the new row does that, the same way the
+        // main Key row already does. Only shown while there's room for
+        // another (up to two extras, three keys total); disappears at the
+        // cap the same way Profiles never shows a delete "✕" on Default.
+        // (Built further down, once RebuildList's other dependencies —
+        // Repeat/Hold/Reset/the timing row — all exist; it closes over
+        // RebuildList too, same as this one does.)
+        var addKeyButton = Theme.MakeListButton("Add Key");
+        var extraKeyRows = new List<Control>();
+        // Parallel to KeyMap.ExtraWords[word] — seeded with one "false" per
+        // already-saved extra key, since a word can already have extras from
+        // a previous session by the time its card is first built.
+        var extraKeyExpanded = new List<bool>(new bool[KeyMap.ExtraWords[word].Count]);
+
+        // Only one key's category dropdown should be open at a time — Key
+        // 1's or any extra's. Called before opening a different one, so the
+        // previously open dropdown (whichever key it belonged to) collapses
+        // first.
+        void CollapseAllKeys()
+        {
+            keyExpanded = false;
+            Theme.SetToggleAppearance(keyButton, false);
+            for (int idx = 0; idx < extraKeyExpanded.Count; idx++)
+                extraKeyExpanded[idx] = false;
         }
 
         // 2. Repeat — a toggle button: click to turn on/off, lit up when on.
@@ -149,6 +192,158 @@ internal sealed class WordCardTab : IDashboardTab
         timingPanel.Controls.Add(infiniteButton, 3, 0);
         timingPanel.Controls.Add(durationLabel, 4, 0);
 
+        // Repeat Interval: only shown while Repeat is on for a word with 2+
+        // keys (see RebuildList) — a plain toggle button, no value of its
+        // own. Turning it on reveals a row below it with one "K1"/"K2"/...
+        // button per key (see RebuildKeyIntervalRow) — K1's own gap before
+        // K2, K2's before K3, and so on, wrapping back to K1 — each
+        // independently selectable so +1/+0.1/reset (from the timing row
+        // above) target that key's gap instead of the main duration. ∞
+        // keeps doing what it already does regardless of what's selected,
+        // since it's a whole-word setting, not specific to one duration.
+        // Turning this off makes the custom gaps stop applying entirely —
+        // repeats fall back to the plain fixed gap, same as any 1-key word.
+        bool useCustomRepeatIntervals = behavior.UseCustomRepeatIntervals;
+        var repeatIntervalButton = Theme.MakeListButton("Repeat Interval");
+        Theme.SetToggleAppearance(repeatIntervalButton, useCustomRepeatIntervals);
+
+        // One gap value per key (index 0 = K1, the primary key). Guarded
+        // against stale/mismatched saved data — e.g. an old profile saved
+        // before this feature existed — by rebuilding to the right length
+        // rather than trusting it blindly.
+        int totalKeyCount = 1 + KeyMap.ExtraWords[word].Count;
+        List<double> keyIntervalSeconds = behavior.RepeatKeyIntervalsSeconds.Count == totalKeyCount
+            ? new List<double>(behavior.RepeatKeyIntervalsSeconds)
+            : new List<double>(new double[totalKeyCount]);
+
+        // -1 = no key selected -> +1/+0.1/reset target the main duration.
+        int selectedKIndex = -1;
+
+        var keyIntervalRowPanel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0, 1, 0, 1),
+            RowCount = 1,
+            BackColor = Theme.Current.Background,
+        };
+
+        // Rebuilt whenever a key is added/removed (the number of K buttons
+        // changes) or a different K is selected (to refresh which one is
+        // lit up) — mirrors the pattern used for the extra key rows above.
+        void RebuildKeyIntervalRow()
+        {
+            keyIntervalRowPanel.Controls.Clear();
+            keyIntervalRowPanel.ColumnStyles.Clear();
+            keyIntervalRowPanel.ColumnCount = Math.Max(keyIntervalSeconds.Count * 2, 1);
+            float colWidth = 100f / (keyIntervalSeconds.Count * 2);
+
+            for (int idx = 0; idx < keyIntervalSeconds.Count; idx++)
+            {
+                int kIndex = idx; // captured per-button, not the loop variable
+                keyIntervalRowPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, colWidth));
+                keyIntervalRowPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, colWidth));
+
+                var kButton = Theme.MakeTinyButton($"K{kIndex + 1}");
+                Theme.SetToggleAppearance(kButton, selectedKIndex == kIndex);
+                kButton.Click += (_, _) =>
+                {
+                    selectedKIndex = selectedKIndex == kIndex ? -1 : kIndex;
+                    RebuildKeyIntervalRow();
+                };
+
+                var kLabel = new Label
+                {
+                    Text = Theme.FormatDuration(keyIntervalSeconds[kIndex]),
+                    Dock = DockStyle.Fill,
+                    Margin = new Padding(1),
+                    AutoSize = false,
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    ForeColor = Theme.Current.Accent,
+                    BackColor = Theme.Current.Button,
+                    Font = new Font("Segoe UI", 11f),
+                };
+
+                keyIntervalRowPanel.Controls.Add(kButton, idx * 2, 0);
+                keyIntervalRowPanel.Controls.Add(kLabel, idx * 2 + 1, 0);
+            }
+        }
+        RebuildKeyIntervalRow();
+
+        // Rebuilt fresh from KeyMap.ExtraWords[word] every time one is added,
+        // removed, or expanded/collapsed, so the "Key 2"/"Key 3" numbering
+        // always matches actual position rather than going stale after a
+        // delete. Declared here rather than up by Add Key's other fields
+        // because each row's own category picker closes over RebuildList
+        // (below), which itself closes over Repeat/Hold/Reset/the timing row
+        // above — same reasoning as the main Key/categoryButtons pairing.
+        void RebuildExtraKeyRows()
+        {
+            extraKeyRows.Clear();
+            var extras = KeyMap.ExtraWords[word];
+            for (int i = 0; i < extras.Count; i++)
+            {
+                int slotIndex = i; // captured per-row, not the loop variable
+
+                // A plain full-width label, same as the primary Key button —
+                // clicking it expands/collapses this row's own category
+                // picker, exactly like Key does. The "✕" to remove this key
+                // lives inside that dropdown instead of on the row itself
+                // (see below), so only the two added keys ever show one.
+                var label = Theme.MakeListButton(ExtraKeyLabel(slotIndex + 2, extras[slotIndex]));
+                Theme.SetToggleAppearance(label, extraKeyExpanded[slotIndex]);
+                label.Click += (_, _) =>
+                {
+                    ctx.CloseCategoryPopup();
+                    bool opening = !extraKeyExpanded[slotIndex];
+                    CollapseAllKeys();
+                    extraKeyExpanded[slotIndex] = opening;
+                    RebuildExtraKeyRows();
+                    RebuildList();
+                };
+                extraKeyRows.Add(label);
+
+                if (extraKeyExpanded[slotIndex])
+                {
+                    // The "✕" is the first row of the dropdown, above the
+                    // category buttons — full-width, one click and it's
+                    // gone (no arm/confirm here, unlike Reset or a profile
+                    // delete — the key's own row is already a deliberate,
+                    // out-of-the-way place to find this button).
+                    var deleteButton = Theme.MakeListButton("✕");
+                    deleteButton.Click += (_, _) =>
+                    {
+                        KeyMap.RemoveExtraKey(word, slotIndex);
+                        extraKeyExpanded.RemoveAt(slotIndex);
+
+                        // Keep the repeat-interval gaps in sync: slot 0 is
+                        // always the primary key, so an extra at slotIndex
+                        // is K-slot (slotIndex + 1).
+                        int removedKIndex = slotIndex + 1;
+                        if (removedKIndex < keyIntervalSeconds.Count)
+                            keyIntervalSeconds.RemoveAt(removedKIndex);
+                        if (selectedKIndex == removedKIndex)
+                            selectedKIndex = -1;
+                        else if (selectedKIndex > removedKIndex)
+                            selectedKIndex--;
+
+                        RebuildExtraKeyRows();
+                        RebuildKeyIntervalRow();
+                        RebuildList();
+                    };
+                    extraKeyRows.Add(deleteButton);
+
+                    var extraCategoryButtons = BuildCategoryButtons(entry =>
+                    {
+                        KeyMap.SetExtraKey(word, slotIndex, entry.VkCode);
+                        RebuildExtraKeyRows();
+                        RebuildList();
+                    });
+                    extraKeyRows.AddRange(extraCategoryButtons);
+                }
+            }
+        }
+        RebuildExtraKeyRows();
+
         // Rebuilds which rows the list has and in what order: Key's category
         // row and the timing row each get inserted right after the button
         // that opened them (both are accordions — everything below shifts
@@ -162,12 +357,42 @@ internal sealed class WordCardTab : IDashboardTab
             list.Controls.Clear();
             list.RowStyles.Clear();
 
-            var rows = new List<Control> { keyButton };
+            bool atExtraKeyCap = KeyMap.ExtraWords[word].Count >= 2;
+
+            // A 2+ key word (at least one extra added) gets a repeat
+            // interval toggle to tune — a 1-key word has nothing between
+            // taps worth spacing out. If the toggle disappears (Repeat
+            // turned off, or the word drops back to 1 key) while it was on,
+            // switch it back off and drop the K selection so +1/+0.1/reset
+            // don't silently target a hidden control.
+            bool canCustomizeRepeatInterval = repeatOn && KeyMap.ExtraWords[word].Count >= 1;
+            if (!canCustomizeRepeatInterval && useCustomRepeatIntervals)
+            {
+                useCustomRepeatIntervals = false;
+                Theme.SetToggleAppearance(repeatIntervalButton, false);
+            }
+            if (!canCustomizeRepeatInterval)
+                selectedKIndex = -1;
+            bool showKeyIntervalRow = canCustomizeRepeatInterval && useCustomRepeatIntervals;
+
+            var rows = new List<Control>();
+            if (!atExtraKeyCap)
+                rows.Add(addKeyButton);
+            rows.Add(keyButton);
             if (keyExpanded)
                 rows.AddRange(categoryButtons);
+            rows.AddRange(extraKeyRows);
             rows.Add(repeatButton);
             if (repeatOn)
+            {
                 rows.Add(timingPanel);
+                if (canCustomizeRepeatInterval)
+                {
+                    rows.Add(repeatIntervalButton);
+                    if (showKeyIntervalRow)
+                        rows.Add(keyIntervalRowPanel);
+                }
+            }
             rows.Add(holdButton);
             if (holdOn)
                 rows.Add(timingPanel);
@@ -197,8 +422,12 @@ internal sealed class WordCardTab : IDashboardTab
             list.ResumeLayout(true);
             ctx.ClearFocus();
 
-            int extraHeight = (keyExpanded ? categoryButtons.Count * ctx.ItemHeight : 0)
+            int extraHeight = (!atExtraKeyCap ? ctx.ItemHeight : 0)
+                + (keyExpanded ? categoryButtons.Count * ctx.ItemHeight : 0)
+                + extraKeyRows.Count * ctx.ItemHeight
                 + (repeatOn || holdOn ? ctx.AccordionHeight : 0)
+                + (canCustomizeRepeatInterval ? ctx.ItemHeight : 0)
+                + (showKeyIntervalRow ? ctx.ItemHeight : 0)
                 + (resetAllExpanded ? ctx.ItemHeight : 0);
             ctx.ReportHeight(ctx.BaseCardHeight + extraHeight);
         }
@@ -206,12 +435,40 @@ internal sealed class WordCardTab : IDashboardTab
         keyButton.Click += (_, _) =>
         {
             ctx.CloseCategoryPopup();
-            keyExpanded = !keyExpanded;
+            bool opening = !keyExpanded;
+            CollapseAllKeys();
+            keyExpanded = opening;
             Theme.SetToggleAppearance(keyButton, keyExpanded);
+            RebuildExtraKeyRows();
             RebuildList();
         };
 
-        void SaveBehavior() => KeyMap.SetBehavior(word, repeatOn, holdOn, duration, infiniteOn);
+        addKeyButton.Click += (_, _) =>
+        {
+            // Starts as a copy of the main key — not because that's a
+            // meaningful default, just because a slot needs some value, and
+            // clicking it to pick a real one (like the main Key row) is the
+            // very next thing you'd do anyway.
+            ctx.CloseCategoryPopup();
+            KeyMap.AddExtraKey(word, KeyMap.Words[word]);
+            extraKeyExpanded.Add(false);
+            keyIntervalSeconds.Add(0.0);
+            RebuildExtraKeyRows();
+            RebuildKeyIntervalRow();
+            RebuildList();
+        };
+
+        repeatIntervalButton.Click += (_, _) =>
+        {
+            useCustomRepeatIntervals = !useCustomRepeatIntervals;
+            Theme.SetToggleAppearance(repeatIntervalButton, useCustomRepeatIntervals);
+            if (!useCustomRepeatIntervals)
+                selectedKIndex = -1;
+            SaveBehavior();
+            RebuildList();
+        };
+
+        void SaveBehavior() => KeyMap.SetBehavior(word, repeatOn, holdOn, duration, infiniteOn, useCustomRepeatIntervals, keyIntervalSeconds);
 
         // Editing the timer in any way — adding time or resetting it — means
         // you're moving away from infinite mode: turn the Infinite toggle
@@ -235,6 +492,12 @@ internal sealed class WordCardTab : IDashboardTab
         {
             duration = 0.0;
             durationLabel.Text = Theme.FormatDuration(duration);
+            for (int idx = 0; idx < keyIntervalSeconds.Count; idx++)
+                keyIntervalSeconds[idx] = 0.0;
+            useCustomRepeatIntervals = false;
+            selectedKIndex = -1;
+            Theme.SetToggleAppearance(repeatIntervalButton, false);
+            RebuildKeyIntervalRow();
             DisengageInfinite();
         }
 
@@ -282,8 +545,19 @@ internal sealed class WordCardTab : IDashboardTab
             SaveBehavior();
         };
 
+        // +1/+0.1/reset target whichever K is selected in the repeat
+        // interval row instead of the main duration — editing a key's gap
+        // isn't "moving away from infinite mode" the way editing the main
+        // duration is, so DisengageInfinite is skipped for it.
         plusOne.Click += (_, _) =>
         {
+            if (selectedKIndex >= 0)
+            {
+                keyIntervalSeconds[selectedKIndex] = Math.Round(keyIntervalSeconds[selectedKIndex] + 1.0, 1);
+                RebuildKeyIntervalRow();
+                SaveBehavior();
+                return;
+            }
             duration = Math.Round(duration + 1.0, 1);
             durationLabel.Text = Theme.FormatDuration(duration);
             DisengageInfinite();
@@ -291,13 +565,39 @@ internal sealed class WordCardTab : IDashboardTab
         };
         plusTenth.Click += (_, _) =>
         {
+            if (selectedKIndex >= 0)
+            {
+                keyIntervalSeconds[selectedKIndex] = Math.Round(keyIntervalSeconds[selectedKIndex] + 0.1, 1);
+                RebuildKeyIntervalRow();
+                SaveBehavior();
+                return;
+            }
             duration = Math.Round(duration + 0.1, 1);
             durationLabel.Text = Theme.FormatDuration(duration);
             DisengageInfinite();
             SaveBehavior();
         };
+        // Reset targets exactly whichever one K is selected, same as
+        // +1/+0.1 — just that key's own gap. With the Repeat Interval row
+        // visible but no particular K selected, it resets every key's gap
+        // at once instead. Otherwise it's just the main duration.
         resetDurationButton.Click += (_, _) =>
         {
+            if (selectedKIndex >= 0)
+            {
+                keyIntervalSeconds[selectedKIndex] = 0.0;
+                RebuildKeyIntervalRow();
+                SaveBehavior();
+                return;
+            }
+            if (useCustomRepeatIntervals)
+            {
+                for (int idx = 0; idx < keyIntervalSeconds.Count; idx++)
+                    keyIntervalSeconds[idx] = 0.0;
+                RebuildKeyIntervalRow();
+                SaveBehavior();
+                return;
+            }
             duration = 0.0;
             durationLabel.Text = Theme.FormatDuration(duration);
             DisengageInfinite();
@@ -306,10 +606,17 @@ internal sealed class WordCardTab : IDashboardTab
         void ResetCard()
         {
             ctx.CloseCategoryPopup();
-            KeyMap.ResetToDefault(word);
+            KeyMap.ResetToDefault(word); // also clears this word's extra keys
             keyButton.Text = KeyLabelFor(word);
+            extraKeyExpanded.Clear();
+            RebuildExtraKeyRows();
             duration = 0.0;
             durationLabel.Text = Theme.FormatDuration(duration);
+            keyIntervalSeconds.Clear();
+            keyIntervalSeconds.Add(0.0); // only the primary key remains after reset
+            selectedKIndex = -1;
+            useCustomRepeatIntervals = false;
+            RebuildKeyIntervalRow();
             repeatOn = false;
             holdOn = false;
             infiniteOn = false;
@@ -320,6 +627,7 @@ internal sealed class WordCardTab : IDashboardTab
             Theme.SetToggleAppearance(infiniteButton, false);
             Theme.SetToggleAppearance(keyButton, false);
             Theme.SetToggleAppearance(resetCardButton, false);
+            Theme.SetToggleAppearance(repeatIntervalButton, false);
             RebuildList();
         }
         ctx.RegisterResetAction(ResetCard);
