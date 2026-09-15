@@ -12,6 +12,18 @@ internal static class KeyExecutor
 {
     private const int RepeatIntervalMs = 100;
 
+    // A timed Hold or Repeat only ever checked elapsed time, so "press
+    // stop" had no way to interrupt one already in progress — it could take
+    // the full duration (now possibly several seconds, with per-key gaps)
+    // before it noticed anything. This broadcasts a cancel to every
+    // in-flight sleep: ReleaseAll cancels the current source and swaps in a
+    // fresh one, so already-running executions stop immediately while new
+    // ones (captured after the swap) start unaffected.
+    private static CancellationTokenSource _stopSignal = new();
+
+    private static void InterruptibleSleep(int ms, CancellationToken token) =>
+        token.WaitHandle.WaitOne(ms);
+
     // A 2+ key word can customize the gap after each key in its sequence
     // (see KeyBehavior.UseCustomRepeatIntervals) — keyIndex is which key
     // was just tapped (0 = Key 1), and its own gap value is what to wait
@@ -98,20 +110,22 @@ internal static class KeyExecutor
             return;
         }
 
+        var token = _stopSignal.Token;
+
         if (behavior.Hold && behavior.DurationSeconds > 0)
         {
             PressAllDown(keys);
-            Thread.Sleep((int)(behavior.DurationSeconds * 1000));
+            InterruptibleSleep((int)(behavior.DurationSeconds * 1000), token);
             ReleaseAllUp(keys);
         }
         else if (behavior.Repeat && behavior.DurationSeconds > 0)
         {
             var end = DateTime.UtcNow.AddSeconds(behavior.DurationSeconds);
             int i = 0;
-            while (DateTime.UtcNow < end)
+            while (DateTime.UtcNow < end && !token.IsCancellationRequested)
             {
                 TapKeySequentially(keys, i);
-                Thread.Sleep(GapMsAfterKey(behavior, i, keys.Count));
+                InterruptibleSleep(GapMsAfterKey(behavior, i, keys.Count), token);
                 i++;
             }
         }
@@ -121,11 +135,11 @@ internal static class KeyExecutor
             // sequence once, respecting each key's own gap, instead of
             // collapsing into a single simultaneous tap of every key. For a
             // 1-key word this is just one tap either way, same as before.
-            for (int i = 0; i < keys.Count; i++)
+            for (int i = 0; i < keys.Count && !token.IsCancellationRequested; i++)
             {
                 TapKeySequentially(keys, i);
                 if (i < keys.Count - 1)
-                    Thread.Sleep(GapMsAfterKey(behavior, i, keys.Count));
+                    InterruptibleSleep(GapMsAfterKey(behavior, i, keys.Count), token);
             }
         }
         else
@@ -136,9 +150,16 @@ internal static class KeyExecutor
     }
 
     // If the app closes while a key is being held/repeated indefinitely, this
-    // lets Program.cs let go of it instead of leaving it stuck down.
+    // lets Program.cs let go of it instead of leaving it stuck down. Also
+    // where "press stop" and the other safety nets land — cancelling the
+    // stop signal here is what makes an in-progress timed Hold/Repeat let go
+    // immediately instead of running out its full duration first.
     public static void ReleaseAll()
     {
+        var oldSignal = Interlocked.Exchange(ref _stopSignal, new CancellationTokenSource());
+        oldSignal.Cancel();
+        oldSignal.Dispose();
+
         List<string> engagedWords;
         lock (_lock)
         {
@@ -277,11 +298,12 @@ internal static class KeyExecutor
 
         if (repeatMode)
         {
+            var token = _stopSignal.Token;
             int i = 0;
-            while (IsEngaged(word))
+            while (IsEngaged(word) && !token.IsCancellationRequested)
             {
                 TapKeySequentially(keys, i);
-                Thread.Sleep(GapMsAfterKey(behavior, i, keys.Count));
+                InterruptibleSleep(GapMsAfterKey(behavior, i, keys.Count), token);
                 i++;
             }
         }
