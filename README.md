@@ -17,6 +17,9 @@ VoicePress fills the remaining gap: a handful of game actions triggered by sayin
   <img src="Assets/screenshots/VP-KeyMapping.png" width="45%" alt="A word card showing Key, Repeat, Hold, the timer row, and Reset" />
   <img src="Assets/screenshots/VP-Profiles.png" width="45%" alt="The Profiles tab, showing Default and a custom 'the isle' profile" />
 </p>
+<p float="left">
+  <img src="Assets/screenshots/VP-MultiKey-RepeatInterval.png" width="45%" alt="A word card with a three-key combo, Repeat and Infinite on, and the Repeat Interval row with K1/K2/K3 timing" />
+</p>
 
 ## What it does
 
