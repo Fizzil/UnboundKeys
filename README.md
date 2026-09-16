@@ -2,15 +2,6 @@
 
 A small Windows overlay that turns spoken commands into key presses, built for playing **The Isle: Evrima**.
 
-## Why this exists
-
-VoicePress was built as an accessibility tool, for Fizzil — who is disabled — to be able to play *The Isle: Evrima*. It is **not** intended as a way to play the game hands-free with voice alone. It's meant to be used alongside:
-
-- A normal mouse, or a specialized **quad mouse** (a mouse with extra physical buttons), and
-- [X-Mouse Button Control](https://www.highrez.co.uk/downloads/XMouseButtonControl.htm), a free third-party tool that remaps otherwise-unused mouse buttons.
-
-VoicePress fills the remaining gap: a handful of game actions triggered by saying "press &lt;word&gt;," for moments a hand isn't free to reach a key.
-
 ## Screenshots
 
 <p float="left">
@@ -24,13 +15,22 @@ VoicePress fills the remaining gap: a handful of game actions triggered by sayin
 ## What it does
 
 - Say "press one" through "press ten" to send the matching key.
-- Right-click the skull icon for a small dashboard: remap which key each word sends, set it to tap, hold, or repeat, and manage multiple named profiles.
+- Remap which key each word sends, set it to tap, hold, or repeat, and manage multiple named profiles. Right-click the skull icon for a small dashboard.
 - Add up to two more keys to a word for a combo, like Ctrl+C — tap and hold press them all together, and repeat cycles through them in sequence, with the timing between each adjustable.
 - Say "press stop" to release anything currently held down or repeating — a safety net for whenever a command can't be repeated in time.
 - Left-click (or drag) the skull icon to pause listening or move it around the screen.
 - Runs fully offline — speech recognition ([Vosk](https://alphacephei.com/vosk/)) happens entirely on your machine. Nothing is sent anywhere.
 
 See [MANUAL.md](MANUAL.md) for the full details — exact voice commands, safety nets, profile behavior, and everything the dashboard does.
+
+## Why this exists
+
+VoicePress was built as an accessibility tool, for Fizzil — who is disabled — to be able to play *The Isle: Evrima*. It is **not** intended as a way to play the game hands-free with voice alone. It's meant to be used alongside:
+
+- A normal mouse, or a specialized **quad mouse** (a mouse with extra physical buttons), and
+- [X-Mouse Button Control](https://www.highrez.co.uk/downloads/XMouseButtonControl.htm), a free third-party tool that remaps otherwise-unused mouse buttons.
+
+VoicePress fills the remaining gap: a handful of game actions triggered by saying "press &lt;word&gt;," for moments a hand isn't free to reach a key.
 
 ## Installing
 
