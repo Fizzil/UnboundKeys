@@ -2,12 +2,13 @@ using System.Threading;
 
 namespace VoicePress;
 
-// Carries out a recognized voice command according to its behavior: a single
-// tap, holding the key down for a duration, tapping it repeatedly for a
-// duration, or — if Infinite is set — starting an indefinite hold/repeat that
-// only stops the next time the same word is recognized. Runs on a background
-// thread (see Program.cs) so a long hold/repeat doesn't block speech
-// recognition from hearing the next command.
+// Carries out a recognized command (a spoken word, or a mapped mouse
+// button) according to its behavior: a single tap, holding the key down for
+// a duration, tapping it repeatedly for a duration, or — if Infinite is set
+// — starting an indefinite hold/repeat that only stops the next time the
+// same word/button is recognized. Runs on a background thread (see
+// Program.cs) so a long hold/repeat doesn't block speech recognition (or
+// the mouse hook) from noticing the next command.
 internal static class KeyExecutor
 {
     private const int RepeatIntervalMs = 100;
@@ -44,31 +45,49 @@ internal static class KeyExecutor
         return RepeatIntervalMs;
     }
 
-    // Tracks which words currently have an infinite hold/repeat running, so
-    // the next time the word is heard we know to stop it instead of starting
-    // another one.
+    // Tracks which words/button-ids currently have an infinite hold/repeat
+    // running, so the next time it's heard/pressed we know to stop it
+    // instead of starting another one. Shared across both sources — a
+    // spoken word and a mouse button id never collide, so one dictionary is
+    // fine — but which SLOT (see InfiniteState below) a given key occupies
+    // does depend on its source.
     private static readonly Dictionary<string, bool> _engaged = new();
     private static readonly object _lock = new();
 
     // Only one word may be doing an infinite hold at a time, and separately
-    // only one may be doing an infinite repeat at a time — engaging a new one
-    // bumps whichever word was already occupying that slot. The two slots are
-    // independent, so one word can be infinite-holding while a different word
-    // is infinite-repeating.
-    private static string? _activeInfiniteHoldWord;
-    private static IReadOnlyList<(ushort Vk, bool Extended)>? _activeInfiniteHoldKeys;
-    private static string? _activeInfiniteRepeatWord;
+    // only one may be doing an infinite repeat — engaging a new one bumps
+    // whichever word was already occupying that slot. Mouse buttons get
+    // their own completely independent pair of slots (see StateFor), so a
+    // voice-triggered infinite hold and a mouse-button-triggered infinite
+    // hold can run at the same time without bumping each other — only two
+    // words from the *same* source ever compete for the same slot.
+    private sealed class InfiniteState
+    {
+        public string? HoldWord;
+        public IReadOnlyList<(ushort Vk, bool Extended)>? HoldKeys;
+        public IntPtr? HoldWindow;
+        public string? HoldWindowTitle;
+
+        public string? RepeatWord;
+        public IntPtr? RepeatWindow;
+        public string? RepeatWindowTitle;
+    }
+
+    private static readonly InfiniteState _voiceState = new();
+    private static readonly InfiniteState _mouseState = new();
+
+    private static bool IsMouseSource(string word) => Array.IndexOf(MouseMap.ButtonIds, word) >= 0;
+    private static InfiniteState StateFor(string word) => IsMouseSource(word) ? _mouseState : _voiceState;
+
+    private static List<(ushort Vk, bool Extended)> GetAllKeysForWord(string word) =>
+        IsMouseSource(word) ? MouseMap.GetAllKeys(word) : KeyMap.GetAllKeys(word);
 
     // The window (and its title, at the time) that was focused when each
     // slot was engaged — e.g. the game. If focus moves to a different window
     // (alt-tabbing out, clicking elsewhere), or the SAME window's title
     // changes (switching tabs in a browser doesn't change the window at all,
     // but the title usually updates to match the new tab), _focusWatchTimer
-    // notices and releases that slot.
-    private static IntPtr? _activeInfiniteHoldWindow;
-    private static string? _activeInfiniteHoldWindowTitle;
-    private static IntPtr? _activeInfiniteRepeatWindow;
-    private static string? _activeInfiniteRepeatWindowTitle;
+    // notices and releases that slot. Tracked per InfiniteState now, above.
     private static readonly System.Threading.Timer _focusWatchTimer =
         new(CheckFocus, null, FocusCheckIntervalMs, FocusCheckIntervalMs);
     private const int FocusCheckIntervalMs = 300;
@@ -168,17 +187,23 @@ internal static class KeyExecutor
                 if (engaged)
                     engagedWords.Add(word);
             _engaged.Clear();
-            _activeInfiniteHoldWord = null;
-            _activeInfiniteHoldKeys = null;
-            _activeInfiniteHoldWindow = null;
-            _activeInfiniteHoldWindowTitle = null;
-            _activeInfiniteRepeatWord = null;
-            _activeInfiniteRepeatWindow = null;
-            _activeInfiniteRepeatWindowTitle = null;
+            ClearState(_voiceState);
+            ClearState(_mouseState);
         }
 
         foreach (var word in engagedWords)
-            ReleaseAllUp(KeyMap.GetAllKeys(word));
+            ReleaseAllUp(GetAllKeysForWord(word));
+    }
+
+    private static void ClearState(InfiniteState s)
+    {
+        s.HoldWord = null;
+        s.HoldKeys = null;
+        s.HoldWindow = null;
+        s.HoldWindowTitle = null;
+        s.RepeatWord = null;
+        s.RepeatWindow = null;
+        s.RepeatWindowTitle = null;
     }
 
     // Lets the dashboard forcibly let go of a word's infinite hold/repeat if
@@ -188,6 +213,7 @@ internal static class KeyExecutor
     public static void ForceRelease(string word)
     {
         IReadOnlyList<(ushort Vk, bool Extended)>? keysToRelease = null;
+        var s = StateFor(word);
 
         lock (_lock)
         {
@@ -195,21 +221,21 @@ internal static class KeyExecutor
             {
                 _engaged[word] = false;
 
-                if (_activeInfiniteHoldWord == word)
+                if (s.HoldWord == word)
                 {
-                    keysToRelease = _activeInfiniteHoldKeys;
-                    _activeInfiniteHoldWord = null;
-                    _activeInfiniteHoldKeys = null;
-                    _activeInfiniteHoldWindow = null;
-                    _activeInfiniteHoldWindowTitle = null;
+                    keysToRelease = s.HoldKeys;
+                    s.HoldWord = null;
+                    s.HoldKeys = null;
+                    s.HoldWindow = null;
+                    s.HoldWindowTitle = null;
                 }
-                else if (_activeInfiniteRepeatWord == word)
+                else if (s.RepeatWord == word)
                 {
                     // The repeat loop notices _engaged[word] flip to false
                     // and exits on its own — nothing to send here.
-                    _activeInfiniteRepeatWord = null;
-                    _activeInfiniteRepeatWindow = null;
-                    _activeInfiniteRepeatWindowTitle = null;
+                    s.RepeatWord = null;
+                    s.RepeatWindow = null;
+                    s.RepeatWindowTitle = null;
                 }
             }
         }
@@ -224,6 +250,7 @@ internal static class KeyExecutor
         bool starting;
         string? bumpedWord = null;
         IReadOnlyList<(ushort Vk, bool Extended)>? bumpedHoldKeys = null;
+        var s = StateFor(word);
 
         lock (_lock)
         {
@@ -241,43 +268,43 @@ internal static class KeyExecutor
 
                 if (repeatMode)
                 {
-                    if (_activeInfiniteRepeatWord != null && _activeInfiniteRepeatWord != word)
+                    if (s.RepeatWord != null && s.RepeatWord != word)
                     {
-                        bumpedWord = _activeInfiniteRepeatWord;
+                        bumpedWord = s.RepeatWord;
                         _engaged[bumpedWord] = false;
                     }
-                    _activeInfiniteRepeatWord = word;
-                    _activeInfiniteRepeatWindow = focusedWindow;
-                    _activeInfiniteRepeatWindowTitle = focusedTitle;
+                    s.RepeatWord = word;
+                    s.RepeatWindow = focusedWindow;
+                    s.RepeatWindowTitle = focusedTitle;
                 }
                 else
                 {
-                    if (_activeInfiniteHoldWord != null && _activeInfiniteHoldWord != word)
+                    if (s.HoldWord != null && s.HoldWord != word)
                     {
-                        bumpedWord = _activeInfiniteHoldWord;
-                        bumpedHoldKeys = _activeInfiniteHoldKeys;
+                        bumpedWord = s.HoldWord;
+                        bumpedHoldKeys = s.HoldKeys;
                         _engaged[bumpedWord] = false;
                     }
-                    _activeInfiniteHoldWord = word;
-                    _activeInfiniteHoldKeys = keys;
-                    _activeInfiniteHoldWindow = focusedWindow;
-                    _activeInfiniteHoldWindowTitle = focusedTitle;
+                    s.HoldWord = word;
+                    s.HoldKeys = keys;
+                    s.HoldWindow = focusedWindow;
+                    s.HoldWindowTitle = focusedTitle;
                 }
             }
             else
             {
-                if (repeatMode && _activeInfiniteRepeatWord == word)
+                if (repeatMode && s.RepeatWord == word)
                 {
-                    _activeInfiniteRepeatWord = null;
-                    _activeInfiniteRepeatWindow = null;
-                    _activeInfiniteRepeatWindowTitle = null;
+                    s.RepeatWord = null;
+                    s.RepeatWindow = null;
+                    s.RepeatWindowTitle = null;
                 }
-                if (!repeatMode && _activeInfiniteHoldWord == word)
+                if (!repeatMode && s.HoldWord == word)
                 {
-                    _activeInfiniteHoldWord = null;
-                    _activeInfiniteHoldKeys = null;
-                    _activeInfiniteHoldWindow = null;
-                    _activeInfiniteHoldWindowTitle = null;
+                    s.HoldWord = null;
+                    s.HoldKeys = null;
+                    s.HoldWindow = null;
+                    s.HoldWindowTitle = null;
                 }
             }
         }
@@ -325,54 +352,84 @@ internal static class KeyExecutor
     // foreground window has changed since a slot was engaged (alt-tabbing
     // out of a game, clicking a different window) — or the same window's
     // title has changed (switching tabs in a browser) — that slot releases
-    // automatically. A safety net for whenever saying the word again or
-    // "press stop" isn't an option.
+    // automatically. A safety net for whenever saying the word (or pressing
+    // the button) again, or "press stop", isn't an option. Checks both
+    // sources' slots independently, since either or both can be engaged at once.
+    // A window handle change is always a genuine focus switch (typing into
+    // a target never makes some *other* window take focus), so that always
+    // releases. A title change is ambiguous — it might be a real tab switch
+    // (the case this was built for), or it might just be the same window
+    // reacting to the keys we're actively sending it (an editor appending a
+    // "*" for unsaved changes, say — which was making an infinite repeat
+    // stop itself after only a couple of taps, since typing "s" for the
+    // very first time is exactly the kind of title change this was meant
+    // to catch). Telling those apart: a modified-indicator title is
+    // (almost) always the old title with a marker simply added — one
+    // string still fully contains the other — whereas a genuine tab switch
+    // replaces the title's actual content, so neither contains the other.
+    // Only the latter counts as a real switch; the former just re-baselines
+    // the stored title and keeps going.
+    private static bool LooksLikeOwnSideEffect(string? oldTitle, string? newTitle) =>
+        !string.IsNullOrEmpty(oldTitle) && !string.IsNullOrEmpty(newTitle)
+        && (newTitle.Contains(oldTitle) || oldTitle.Contains(newTitle));
+
     private static void CheckFocus(object? state)
     {
         var current = NativeInput.GetFocusedWindow();
         string? currentTitle = null; // fetched lazily, only if actually needed below
-        string? holdWordToRelease = null;
-        IReadOnlyList<(ushort Vk, bool Extended)>? holdKeysToRelease = null;
+        var holdReleases = new List<IReadOnlyList<(ushort Vk, bool Extended)>>();
 
         lock (_lock)
         {
-            if (_activeInfiniteHoldWord != null && _activeInfiniteHoldWindow.HasValue)
+            foreach (var s in new[] { _voiceState, _mouseState })
             {
-                currentTitle ??= NativeInput.GetWindowTitle(current);
-                bool changed = _activeInfiniteHoldWindow.Value != current
-                    || _activeInfiniteHoldWindowTitle != currentTitle;
-
-                if (changed)
+                if (s.HoldWord != null && s.HoldWindow.HasValue)
                 {
-                    holdWordToRelease = _activeInfiniteHoldWord;
-                    holdKeysToRelease = _activeInfiniteHoldKeys;
-                    _engaged[holdWordToRelease] = false;
-                    _activeInfiniteHoldWord = null;
-                    _activeInfiniteHoldKeys = null;
-                    _activeInfiniteHoldWindow = null;
-                    _activeInfiniteHoldWindowTitle = null;
+                    currentTitle ??= NativeInput.GetWindowTitle(current);
+                    bool windowChanged = s.HoldWindow.Value != current;
+                    bool titleChanged = !windowChanged && s.HoldWindowTitle != currentTitle;
+                    bool ownSideEffect = titleChanged && LooksLikeOwnSideEffect(s.HoldWindowTitle, currentTitle);
+
+                    if (windowChanged || (titleChanged && !ownSideEffect))
+                    {
+                        _engaged[s.HoldWord] = false;
+                        holdReleases.Add(s.HoldKeys!);
+                        s.HoldWord = null;
+                        s.HoldKeys = null;
+                        s.HoldWindow = null;
+                        s.HoldWindowTitle = null;
+                    }
+                    else if (titleChanged)
+                    {
+                        s.HoldWindowTitle = currentTitle;
+                    }
                 }
-            }
 
-            if (_activeInfiniteRepeatWord != null && _activeInfiniteRepeatWindow.HasValue)
-            {
-                currentTitle ??= NativeInput.GetWindowTitle(current);
-                bool changed = _activeInfiniteRepeatWindow.Value != current
-                    || _activeInfiniteRepeatWindowTitle != currentTitle;
-
-                if (changed)
+                if (s.RepeatWord != null && s.RepeatWindow.HasValue)
                 {
-                    // The repeat loop notices _engaged flip to false and
-                    // exits on its own — nothing to send here.
-                    _engaged[_activeInfiniteRepeatWord] = false;
-                    _activeInfiniteRepeatWord = null;
-                    _activeInfiniteRepeatWindow = null;
-                    _activeInfiniteRepeatWindowTitle = null;
+                    currentTitle ??= NativeInput.GetWindowTitle(current);
+                    bool windowChanged = s.RepeatWindow.Value != current;
+                    bool titleChanged = !windowChanged && s.RepeatWindowTitle != currentTitle;
+                    bool ownSideEffect = titleChanged && LooksLikeOwnSideEffect(s.RepeatWindowTitle, currentTitle);
+
+                    if (windowChanged || (titleChanged && !ownSideEffect))
+                    {
+                        // The repeat loop notices _engaged flip to false and
+                        // exits on its own — nothing to send here.
+                        _engaged[s.RepeatWord] = false;
+                        s.RepeatWord = null;
+                        s.RepeatWindow = null;
+                        s.RepeatWindowTitle = null;
+                    }
+                    else if (titleChanged)
+                    {
+                        s.RepeatWindowTitle = currentTitle;
+                    }
                 }
             }
         }
 
-        if (holdKeysToRelease != null)
-            ReleaseAllUp(holdKeysToRelease);
+        foreach (var keys in holdReleases)
+            ReleaseAllUp(keys);
     }
 }
