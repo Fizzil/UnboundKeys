@@ -11,7 +11,10 @@ public sealed class OverlayForm : Form
     private const int WS_EX_NOACTIVATE = 0x08000000;
     // Shrunk to match the size the taskbar's own (now-removed) listener icon
     // used to be, since this is now the only listener icon there is.
-    private const int TargetWidth = 60;
+    // Internal rather than private — DashboardForm's Profile dropdown needs
+    // to know exactly how wide the icon is to size itself flush with its
+    // right edge, and duplicating the number risked them drifting apart.
+    internal const int TargetWidth = 60;
 
 
     // How far the mouse has to move (while held down) before a press counts
@@ -21,6 +24,7 @@ public sealed class OverlayForm : Form
     private const int DragThreshold = 4;
 
     private readonly VoiceEngine _voice;
+    private readonly MouseInputWatcher _mouse;
     private readonly PictureBox _icon;
     private readonly Image _listeningImage;
     private readonly Image _pausedImage;
@@ -79,9 +83,10 @@ public sealed class OverlayForm : Form
         base.WndProc(ref m);
     }
 
-    public OverlayForm(VoiceEngine voice)
+    public OverlayForm(VoiceEngine voice, MouseInputWatcher mouse)
     {
         _voice = voice;
+        _mouse = mouse;
 
         // Pulled from the project file's <Version> at build time rather
         // than hardcoded here, so it never falls out of sync — bump it in
@@ -166,7 +171,7 @@ public sealed class OverlayForm : Form
                 // Without a matching clamp here, the icon would keep going
                 // past that point on its own, ending up dragged behind the
                 // now-stuck dashboard instead of staying glued to its edge.
-                int minX = screen.Left + (dashboardOpen ? _dashboard!.Width : 0);
+                int minX = screen.Left + (dashboardOpen ? DashboardForm.LeftEdgeOffsetFromIcon : 0);
                 newX = Math.Max(newX, minX);
 
                 // Right: the icon's own right edge is the rightmost point of
@@ -304,7 +309,7 @@ public sealed class OverlayForm : Form
         if (_dashboard == null || _dashboard.IsDisposed)
             return;
 
-        int x = Math.Max(Screen.PrimaryScreen!.WorkingArea.Left, Left - _dashboard.Width);
+        int x = Math.Max(Screen.PrimaryScreen!.WorkingArea.Left, Left - DashboardForm.LeftEdgeOffsetFromIcon);
         _dashboard.Location = new Point(x, Top - DashboardForm.TopInset);
     }
 
@@ -314,15 +319,17 @@ public sealed class OverlayForm : Form
         if (_paused)
         {
             _voice.Pause();
+            _mouse.Pause();
             _icon.Image = _pausedImage;
             // Otherwise a key left mid-infinite-hold/repeat would stay stuck
             // that way — with listening off, there's no way to say the word
-            // again to release it.
+            // (or press the button) again to release it.
             KeyExecutor.ReleaseAll();
         }
         else
         {
             _voice.Resume();
+            _mouse.Resume();
             _icon.Image = _listeningImage;
         }
     }

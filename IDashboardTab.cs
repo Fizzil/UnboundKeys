@@ -66,9 +66,12 @@ internal sealed class DashboardTabContext
     // RegisterResetAction) — triggered by the "Reset All" row.
     public required Action ResetAllCards { get; init; }
 
-    // Whether the (currently shelved) Press-tag implode/reappear easter
-    // egg is turned on, and the action to bring the tag back if it's
-    // hidden — kept behind the shell, which owns the tag itself.
-    public required bool PressTagEasterEggEnabled { get; init; }
-    public required Action ShowPressTagIfHidden { get; init; }
+    // Freezes/thaws the dashboard window's own screen updates — wrap a
+    // multi-step change (rebuilding a whole list of rows, say) between
+    // these so nothing partially-updated flashes on screen partway through.
+    // Safely nestable: only the outermost Begin/End pair actually does
+    // anything, so it's fine to call these even from within a callback
+    // (like ReportHeight) that might itself already be wrapped by the shell.
+    public required Action BeginScreenUpdate { get; init; }
+    public required Action EndScreenUpdate { get; init; }
 }

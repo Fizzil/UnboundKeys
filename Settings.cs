@@ -25,6 +25,17 @@ internal static class Settings
         public Dictionary<string, List<ushort>> ExtraKeys { get; set; } = new();
 
         public Dictionary<string, KeyBehavior> Behaviors { get; set; } = new();
+
+        // Mouse-button mappings — same shape as the three above, just keyed
+        // by MouseCatalog button id (e.g. "middle") instead of a spoken word.
+        // MouseEnabled tracks which buttons actually have a key assigned; an
+        // unmapped button passes its click through untouched. Absent from
+        // settings files saved before this existed, same as ExtraKeys above
+        // — no migration needed, every button just starts unmapped.
+        public Dictionary<string, bool> MouseEnabled { get; set; } = new();
+        public Dictionary<string, ushort> MouseKeyMap { get; set; } = new();
+        public Dictionary<string, List<ushort>> MouseExtraKeys { get; set; } = new();
+        public Dictionary<string, KeyBehavior> MouseBehaviors { get; set; } = new();
     }
 
     private sealed class SavedData
@@ -142,22 +153,94 @@ internal static class Settings
         return defaults;
     }
 
+    public static Dictionary<string, bool> LoadMouseEnabled(string profile, Dictionary<string, bool> defaults)
+    {
+        if (Read().Profiles.TryGetValue(profile, out var data))
+            foreach (var (id, enabled) in data.MouseEnabled)
+                if (defaults.ContainsKey(id))
+                    defaults[id] = enabled;
+
+        return defaults;
+    }
+
+    public static Dictionary<string, ushort> LoadMouseKeyMap(string profile, Dictionary<string, ushort> defaults)
+    {
+        if (Read().Profiles.TryGetValue(profile, out var data))
+            foreach (var (id, vk) in data.MouseKeyMap)
+                if (defaults.ContainsKey(id))
+                    defaults[id] = vk;
+
+        return defaults;
+    }
+
+    public static Dictionary<string, List<ushort>> LoadMouseExtraKeys(string profile, Dictionary<string, List<ushort>> defaults)
+    {
+        if (Read().Profiles.TryGetValue(profile, out var data))
+            foreach (var (id, extras) in data.MouseExtraKeys)
+                if (defaults.ContainsKey(id))
+                    defaults[id] = extras;
+
+        return defaults;
+    }
+
+    public static Dictionary<string, KeyBehavior> LoadMouseBehaviors(string profile, Dictionary<string, KeyBehavior> defaults)
+    {
+        if (Read().Profiles.TryGetValue(profile, out var data))
+            foreach (var (id, behavior) in data.MouseBehaviors)
+                if (defaults.ContainsKey(id))
+                    defaults[id] = behavior;
+
+        return defaults;
+    }
+
+    // Each Save*/Create* method below reads the profile's current saved data,
+    // patches only the fields it owns, and writes the whole thing back — so
+    // saving a voice-word change never clobbers whatever mouse-button
+    // mappings are already on disk for that profile (and vice versa).
     public static void SaveProfile(string profile, Dictionary<string, ushort> keyMap, Dictionary<string, List<ushort>> extraKeys, Dictionary<string, KeyBehavior> behaviors)
     {
         var saved = Read();
-        saved.Profiles[profile] = new ProfileData { KeyMap = keyMap, ExtraKeys = extraKeys, Behaviors = behaviors };
+        var data = saved.Profiles.TryGetValue(profile, out var existing) ? existing : new ProfileData();
+        data.KeyMap = keyMap;
+        data.ExtraKeys = extraKeys;
+        data.Behaviors = behaviors;
+        saved.Profiles[profile] = data;
+        Write(saved);
+    }
+
+    public static void SaveMouseProfile(string profile, Dictionary<string, bool> enabled, Dictionary<string, ushort> keyMap, Dictionary<string, List<ushort>> extraKeys, Dictionary<string, KeyBehavior> behaviors)
+    {
+        var saved = Read();
+        var data = saved.Profiles.TryGetValue(profile, out var existing) ? existing : new ProfileData();
+        data.MouseEnabled = enabled;
+        data.MouseKeyMap = keyMap;
+        data.MouseExtraKeys = extraKeys;
+        data.MouseBehaviors = behaviors;
+        saved.Profiles[profile] = data;
         Write(saved);
     }
 
     // Creates a profile with the given defaults if it doesn't already exist —
     // a no-op if it does, so this is safe to call speculatively.
-    public static void CreateProfileIfMissing(string profile, Dictionary<string, ushort> keyMap, Dictionary<string, List<ushort>> extraKeys, Dictionary<string, KeyBehavior> behaviors)
+    public static void CreateProfileIfMissing(
+        string profile,
+        Dictionary<string, ushort> keyMap, Dictionary<string, List<ushort>> extraKeys, Dictionary<string, KeyBehavior> behaviors,
+        Dictionary<string, bool> mouseEnabled, Dictionary<string, ushort> mouseKeyMap, Dictionary<string, List<ushort>> mouseExtraKeys, Dictionary<string, KeyBehavior> mouseBehaviors)
     {
         var saved = Read();
         if (saved.Profiles.ContainsKey(profile))
             return;
 
-        saved.Profiles[profile] = new ProfileData { KeyMap = keyMap, ExtraKeys = extraKeys, Behaviors = behaviors };
+        saved.Profiles[profile] = new ProfileData
+        {
+            KeyMap = keyMap,
+            ExtraKeys = extraKeys,
+            Behaviors = behaviors,
+            MouseEnabled = mouseEnabled,
+            MouseKeyMap = mouseKeyMap,
+            MouseExtraKeys = mouseExtraKeys,
+            MouseBehaviors = mouseBehaviors,
+        };
         Write(saved);
     }
 

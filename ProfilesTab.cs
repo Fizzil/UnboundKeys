@@ -35,6 +35,7 @@ internal sealed class ProfilesTab : IDashboardTab
         };
         card.Controls.Add(list);
 
+        const int MaxProfiles = 10;
         var existingNames = new HashSet<string>(Settings.LoadProfileNames());
         var profileRows = new List<TableLayoutPanel>();
 
@@ -56,6 +57,7 @@ internal sealed class ProfilesTab : IDashboardTab
         // blank space below it. Wrapping it in a plain Panel (which doesn't
         // have that quirk) and manually centering it inside that panel on
         // every resize fixes it.
+        const int MaxNameLength = 15;
         var nameBox = new TextBox
         {
             Margin = new Padding(0),
@@ -68,6 +70,10 @@ internal sealed class ProfilesTab : IDashboardTab
             Font = new Font("Segoe UI", 12f),
             Text = NamePlaceholder,
             TextAlign = HorizontalAlignment.Center,
+            // Keeps a long name from stretching the profile's own row —
+            // only limits typed/pasted input, so setting the (also
+            // 15-character) placeholder text below still works normally.
+            MaxLength = MaxNameLength,
         };
         nameBox.GotFocus += (_, _) =>
         {
@@ -129,36 +135,51 @@ internal sealed class ProfilesTab : IDashboardTab
 
         void RebuildProfilesList()
         {
-            list.SuspendLayout();
-            list.Controls.Clear();
-            list.RowStyles.Clear();
-
-            var rows = new List<Control> { addProfileButton };
-            if (namingExpanded)
-                rows.Add(namingRow);
-            rows.AddRange(profileRows);
-
-            list.RowCount = rows.Count;
-            for (int i = 0; i < rows.Count; i++)
+            // Clearing and re-adding every row below was visibly flashing
+            // before this window's screen updates were frozen for the
+            // duration — same fix as everywhere else this happens.
+            ctx.BeginScreenUpdate();
+            try
             {
-                list.RowStyles.Add(new RowStyle(SizeType.Absolute, ctx.ItemHeight));
-                list.Controls.Add(rows[i], 0, i);
+                list.SuspendLayout();
+                list.Controls.Clear();
+                list.RowStyles.Clear();
 
-                // Same fix as the word cards' own list: each row's 1px
-                // bottom margin is a spacer to the row after it, so the
-                // last row needs it zeroed instead of leaving a 1px sliver
-                // of black exposed below it, at the card's true bottom edge.
-                var m = rows[i].Margin;
-                rows[i].Margin = new Padding(m.Left, m.Top, m.Right, i == rows.Count - 1 ? 0 : 1);
+                bool atProfileCap = existingNames.Count >= MaxProfiles;
+
+                var rows = new List<Control>();
+                if (!atProfileCap)
+                    rows.Add(addProfileButton);
+                if (namingExpanded && !atProfileCap)
+                    rows.Add(namingRow);
+                rows.AddRange(profileRows);
+
+                list.RowCount = rows.Count;
+                for (int i = 0; i < rows.Count; i++)
+                {
+                    list.RowStyles.Add(new RowStyle(SizeType.Absolute, ctx.ItemHeight));
+                    list.Controls.Add(rows[i], 0, i);
+
+                    // Same fix as the word cards' own list: each row's 1px
+                    // bottom margin is a spacer to the row after it, so the
+                    // last row needs it zeroed instead of leaving a 1px sliver
+                    // of black exposed below it, at the card's true bottom edge.
+                    var m = rows[i].Margin;
+                    rows[i].Margin = new Padding(m.Left, m.Top, m.Right, i == rows.Count - 1 ? 0 : 1);
+                }
+                list.ResumeLayout(true);
+                ctx.ClearFocus();
+
+                foreach (var row in profileRows)
+                    if (row.Controls.Count > 0 && row.Controls[0] is Button nameButton)
+                        Theme.SetToggleAppearance(nameButton, nameButton.Text == KeyMap.ActiveProfile);
+
+                ctx.ReportHeight(ctx.ItemHeight * rows.Count);
             }
-            list.ResumeLayout(true);
-            ctx.ClearFocus();
-
-            foreach (var row in profileRows)
-                if (row.Controls.Count > 0 && row.Controls[0] is Button nameButton)
-                    Theme.SetToggleAppearance(nameButton, nameButton.Text == KeyMap.ActiveProfile);
-
-            ctx.ReportHeight(ctx.ItemHeight * rows.Count);
+            finally
+            {
+                ctx.EndScreenUpdate();
+            }
         }
 
         ctx.OnProfileSwitched(RebuildProfilesList);
@@ -237,6 +258,9 @@ internal sealed class ProfilesTab : IDashboardTab
 
         void TryCreateProfile()
         {
+            if (existingNames.Count >= MaxProfiles)
+                return;
+
             var name = nameBox.Text == NamePlaceholder ? "" : nameBox.Text.Trim();
             if (string.IsNullOrEmpty(name) || existingNames.Contains(name))
                 return;
@@ -249,7 +273,25 @@ internal sealed class ProfilesTab : IDashboardTab
                 freshExtraWords[word] = new List<ushort>();
                 freshBehaviors[word] = new KeyBehavior();
             }
-            Settings.CreateProfileIfMissing(name, freshWords, freshExtraWords, freshBehaviors);
+
+            // Mouse buttons start unmapped in every new profile, same as a
+            // freshly-installed VoicePress — there's no equivalent of a
+            // word's "natural" default key for a mouse button.
+            var freshMouseEnabled = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+            var freshMouseWords = new Dictionary<string, ushort>(StringComparer.OrdinalIgnoreCase);
+            var freshMouseExtraWords = new Dictionary<string, List<ushort>>(StringComparer.OrdinalIgnoreCase);
+            var freshMouseBehaviors = new Dictionary<string, KeyBehavior>(StringComparer.OrdinalIgnoreCase);
+            foreach (var button in MouseCatalog.Buttons)
+            {
+                freshMouseEnabled[button.Id] = false;
+                freshMouseWords[button.Id] = 0;
+                freshMouseExtraWords[button.Id] = new List<ushort>();
+                freshMouseBehaviors[button.Id] = new KeyBehavior();
+            }
+
+            Settings.CreateProfileIfMissing(
+                name, freshWords, freshExtraWords, freshBehaviors,
+                freshMouseEnabled, freshMouseWords, freshMouseExtraWords, freshMouseBehaviors);
 
             existingNames.Add(name);
             AddProfileRow(name);

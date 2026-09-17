@@ -61,6 +61,11 @@ internal static class CategoryKeyPopup
     // opened it. Called both for initial placement and to keep it glued to
     // its card while the dashboard itself moves (e.g. while the listener
     // icon is being dragged) — see DashboardForm's RepositionCategoryPopup.
+    //
+    // To the left of the anchor, not overlapping it: sitting at the same X
+    // as the anchor (tried briefly) rendered the individual keys directly
+    // over the category list itself instead of as a distinct flyout beside
+    // it, which read as more confusing than the popup's width ever did.
     public static void Reposition(Form popup, Control anchor)
     {
         var anchorScreenPoint = anchor.PointToScreen(Point.Empty);

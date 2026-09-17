@@ -1,82 +1,97 @@
 namespace VoicePress;
 
-// The right-click dashboard: one window with a numbered tab strip (1-10)
-// across the top — click a tab to switch which word's card is showing below
-// it. Each card is a title (the word) over a bullet list of attributes: Key
-// (click to open a menu of every key on an on-screen keyboard), Repeat, Hold,
-// a duration readout with +1/+0.1/reset controls, an Infinite checkbox
-// (checking it makes the word toggle the hold/repeat on and off — say it once
-// to start, say it again to stop — instead of running for the fixed
-// duration), and last, a button that resets the whole card.
+// The right-click dashboard. This window is a fixed size from the moment
+// it's created and never resizes or repositions itself — VPress, Mouse, and
+// Profile sit at permanent coordinates within it, and opening one of them
+// just reveals a pre-allocated area that was already part of the window the
+// whole time (previously invisible/unclickable via the window's Region),
+// rather than growing the window into existence. That's what keeps the
+// three buttons from ever "jumping": there's no resize-and-reposition dance
+// left to get wrong.
+//
+// Layout, left to right, all fixed:
+//   x:[0, DrawerWidth)                     — VPress's ten tabs, or Mouse's six
+//   x:[DrawerWidth, DrawerWidth+FixedGroupWidth) — VPress / Mouse / Profile buttons
+//   x:[DrawerWidth+FixedGroupWidth, MaxWidth)    — Profile's dropdown's extra reach
+// Only one of {VPress, Mouse}'s drawer (left zone) or Profile's dropdown
+// (right zone, which also includes the space under the three buttons) is
+// ever revealed at a time — see RecomputeRegion.
 public sealed class DashboardForm : Form
 {
     private const int TabStripHeight = 60;
-    private const int PressTagWidth = 100;
     private const int ProfileTabWidth = 70;
-    private const int InitialCardWidth = 370;
+    private const int MouseTabWidth = 70;
+    private const int PressTabWidth = 100;
+    private const int FixedGroupWidth = PressTabWidth + MouseTabWidth + ProfileTabWidth;
+
+    // The left zone: VPress's ten tabs and Mouse's six both render within
+    // this same fixed width, so opening either one always reveals exactly
+    // the same amount of space.
+    private const int DrawerWidth = 370;
+
+    // The right zone, past the fixed group: exactly as wide as the listener
+    // icon itself, so Profile's dropdown (fixed group + this) reaches
+    // precisely to the icon's own far edge.
+    private const int ProfileExtraWidth = OverlayForm.TargetWidth;
+
+    private const int MaxWidth = DrawerWidth + FixedGroupWidth + ProfileExtraWidth;
+
+    // How far left of the listener icon's left edge this window's own left
+    // edge sits — a fixed relationship (the window never resizes, so this
+    // never needs recomputing). OverlayForm's RepositionDashboard uses this
+    // instead of this window's Width, since Width no longer reflects "how
+    // far left the icon-adjacent content reaches" the way it used to.
+    public const int LeftEdgeOffsetFromIcon = DrawerWidth + FixedGroupWidth;
+
     private const int BaseCardHeight = 324;
     private const int ItemHeight = BaseCardHeight / 4;
     private const int AccordionHeight = 56;
 
-    // The Press-tag implode/reappear easter egg is shelved for now — a
-    // stray 1-2px gap keeps reappearing after the animation that we haven't
-    // pinned down. The implementation (AnimatePressTag, SetPressTagWidth,
-    // the tap counters below) is left in place to revisit later; this just
-    // stops the two trigger points from calling it.
-    private const bool PressTagEasterEggEnabled = false;
-
-    // The card/action-bar content area's width — starts at InitialCardWidth,
-    // but grows (never shrinks) if a future tab needs more room than the
-    // existing tabs leave available. See AddActionBarTab/EnsureContentWidth.
-    private int _contentWidth = InitialCardWidth;
-
-    // The dashboard no longer has any outer padding — its visible content
-    // starts exactly at its own window edges — so there's no offset left
-    // for OverlayForm to account for when lining the two windows up.
+    // The dashboard has no outer padding — its visible content starts
+    // exactly at its own window edges — so there's no offset for
+    // OverlayForm to account for when lining the two windows up vertically.
     public const int TopInset = 0;
 
-    // The action bar: a horizontal strip of tabs across the top (currently
-    // the ten spoken-word tabs) plus the "Press" reminder in its own notch to
-    // the left. New kinds of tabs — a Profiles tab, a How-To tab, etc. — can
-    // be added later via AddActionBarTab without restructuring any of this;
-    // each just needs a short label and a Control to show when selected.
+    private Button _profileButton;
+    private Button _mouseToggleButton;
+    private Button _pressToggleButton;
+
+    private Panel _pressDrawer;
+    private Panel _mouseDrawer;
+    private Panel _profileDropdown;
+
     private ActionBar _actionBar;
     private Panel _actionBarContent;
-    private TableLayoutPanel _outer;
-    private Label _pressLabel;
+    private TableLayoutPanel _mouseStrip;
+    private Panel _mouseStripContent;
+    private Panel _profileContent;
 
-    // The Press tag's current width, animated between 0 (imploded away) and
-    // PressTagWidth (fully shown) — tap it 4 times to collapse it, tap Reset
-    // 4 times to bring it back.
-    private int _pressTagWidth = PressTagWidth;
-    private bool _pressTagVisible = true;
+    // Which of "profile"/"mouse"/"press" (if any) currently has its area
+    // revealed — independent of _selectedWord below, which is whichever
+    // specific sub-tab inside VPress's or Mouse's drawer is showing a card.
+    private string? _activePrimeTab;
 
     private readonly Dictionary<string, Control> _cards = new();
     private readonly Dictionary<string, Button> _tabButtons = new();
 
-    // The full height each tab's card currently needs (not just "extra" on
-    // top of a shared base) — different kinds of tabs don't all share the
-    // same base shape. The word cards use BaseCardHeight plus whatever
-    // accordions (Key's categories, Repeat/Hold's timing row) are open; the
-    // Profiles card computes its own height from however many rows it has.
+    // The full height each sub-tab's card currently needs. The word/mouse-
+    // button cards use BaseCardHeight plus whatever accordions (Key's
+    // categories, Repeat/Hold's timing row) are open; the Profiles card
+    // computes its own height from however many rows it has.
     private readonly Dictionary<string, int> _cardHeight = new();
     private string? _selectedWord;
 
-    // Whether the currently selected tab's card is showing. Clicking a tab
-    // that's already selected toggles this; clicking a different tab always
-    // sets it back to true (SelectTab). Only the current tab's state matters
-    // — switching away and back always re-expands, so nothing per-tab needs
-    // to be remembered.
+    // Whether the currently selected sub-tab's card is showing. Clicking a
+    // sub-tab that's already active toggles this; clicking a different one
+    // always sets it back to true (SelectTab).
     private bool _selectedTabExpanded = true;
 
     // The currently-open category key-list popup (from any card's Key
-    // accordion) — shared across cards since only one card is visible, and
-    // only one popup should ever be open, at a time. _openCategoryPopupAnchor
-    // is whichever category button opened it, so the popup can be
-    // re-positioned relative to it if the dashboard itself moves (see
-    // RepositionCategoryPopup, wired to LocationChanged in the constructor)
-    // — otherwise dragging the listener icon would leave the popup behind,
-    // no longer attached to the card it came from.
+    // accordion) — only one should ever be open at a time.
+    // _openCategoryPopupAnchor is whichever category button opened it, so
+    // the popup can be re-positioned relative to it if the dashboard itself
+    // moves (see RepositionCategoryPopup) — otherwise dragging the listener
+    // icon would leave the popup behind, no longer attached to its card.
     private Form? _openCategoryPopup;
     private Control? _openCategoryPopupAnchor;
 
@@ -84,6 +99,10 @@ public sealed class DashboardForm : Form
     // triple-tap "Reset All" easter egg can run every card's reset at once —
     // including ones that aren't currently visible.
     private readonly Dictionary<string, Action> _resetCardActions = new();
+
+    // Refreshes the Profiles list's own highlighting after a switch —
+    // registered by ProfilesTab itself via DashboardTabContext.OnProfileSwitched.
+    private Action? _refreshProfilesHighlight;
 
     static DashboardForm()
     {
@@ -94,10 +113,10 @@ public sealed class DashboardForm : Form
 
     // Windows erases a control's background to the default (white) just
     // before repainting it — normally invisible because it happens between
-    // frames, but resizing this irregularly-shaped (Region-set) window during
-    // an accordion expand/collapse makes that blank frame visible as a flash.
-    // Telling Windows "already handled" skips that erase; our own painting
-    // (solid BackColor + the card borders) covers the same area anyway.
+    // frames, but resizing this window during an accordion expand/collapse
+    // makes that blank frame visible as a flash. Telling Windows "already
+    // handled" skips that erase; our own painting (solid BackColor) covers
+    // the same area anyway.
     protected override void WndProc(ref Message m)
     {
         const int WM_ERASEBKGND = 0x14;
@@ -107,6 +126,44 @@ public sealed class DashboardForm : Form
             return;
         }
         base.WndProc(ref m);
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+    private const int WM_SETREDRAW = 0x000B;
+
+    // SuspendLayout only pauses .NET's own layout engine — it does nothing
+    // to stop Windows from actually painting in between the several
+    // Region/Visible/size changes TogglePrimeTab makes, which is what was
+    // showing up as a brief white flash across the fixed-group buttons
+    // (and everything else) on every prime-tab switch. WM_SETREDRAW tells
+    // Windows itself to stop flushing this window to the screen at all
+    // until EndScreenUpdate turns it back on and forces one clean repaint —
+    // the standard fix for exactly this kind of multi-step-change flicker.
+    // Reference-counted so these safely nest — e.g. TogglePrimeTab calls
+    // SelectTab, which calls AdjustHeight, and each wraps its own work in
+    // this same pair. Only the outermost Begin actually freezes the window,
+    // and only the matching outermost End thaws and repaints it; an inner
+    // End firing early would have re-enabled painting while the outer
+    // caller's own changes were still mid-flight.
+    private int _screenUpdateDepth = 0;
+
+    private void BeginScreenUpdate()
+    {
+        if (_screenUpdateDepth == 0)
+            SendMessage(Handle, WM_SETREDRAW, IntPtr.Zero, IntPtr.Zero);
+        _screenUpdateDepth++;
+    }
+
+    private void EndScreenUpdate()
+    {
+        _screenUpdateDepth--;
+        if (_screenUpdateDepth == 0)
+        {
+            SendMessage(Handle, WM_SETREDRAW, (IntPtr)1, IntPtr.Zero);
+            Invalidate(true);
+            Update();
+        }
     }
 
     public DashboardForm()
@@ -120,115 +177,140 @@ public sealed class DashboardForm : Form
         BackColor = Theme.Current.Background;
         DoubleBuffered = true; // cuts down on the flash when the key menu closes
 
-        // Starts collapsed — just the tab strip, nothing selected — rather
-        // than opening straight into tab "one"'s card.
-        ClientSize = new Size(
-            ProfileTabWidth + _pressTagWidth + _contentWidth,
-            TabStripHeight);
+        // Fixed for the entire lifetime of this window — see the class
+        // comment. Only ever the height changes afterward (AdjustHeight),
+        // never the width, and Location is set once by OverlayForm and
+        // otherwise only moves when the icon itself is dragged.
+        ClientSize = new Size(MaxWidth, TabStripHeight);
 
-        // A 2x3 grid: "Profile" and "Press" each sit over their own empty
-        // bottom cell, tabs sit over the card content to the right. The
-        // window's Region (set below) then cuts away both those empty
-        // bottom cells entirely, so it reads as an L-shaped flag — Profile
-        // and Press sticking out top-left — rather than a solid rectangle
-        // with a blank patch under them.
-        //
-        // No padding at all: every edge of the visible content sits flush
-        // against the window's true edge, so nothing reads as a border
-        // separate from the black/red theme itself.
-        _outer = new TableLayoutPanel
+        // --- The fixed group: VPress, Mouse, Profile, left to right,
+        // always at x:[DrawerWidth, DrawerWidth+FixedGroupWidth). ---
+        var fixedGroup = new TableLayoutPanel
         {
-            Dock = DockStyle.Fill,
+            Location = new Point(DrawerWidth, 0),
+            Size = new Size(FixedGroupWidth, TabStripHeight),
+            Margin = new Padding(0),
             ColumnCount = 3,
-            RowCount = 2,
-            Padding = new Padding(0),
+            RowCount = 1,
             BackColor = Theme.Current.Background,
         };
-        _outer.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ProfileTabWidth));
-        _outer.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, _pressTagWidth));
-        _outer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        _outer.RowStyles.Add(new RowStyle(SizeType.Absolute, TabStripHeight));
-        _outer.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        fixedGroup.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, PressTabWidth));
+        fixedGroup.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, MouseTabWidth));
+        fixedGroup.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ProfileTabWidth));
 
-        // Easter egg: tap Press twice within 2 seconds to have it implode and
-        // vanish from the action bar (no hover/selected look on it, unlike
-        // the other buttons — it's not meant to read as a normal button).
-        // Tap Reset twice within 1 second (see below) to bring it back.
-        //
-        // MouseDown, not Click: a Label's Click event doesn't reliably fire
-        // on the second click of a fast double-click — Windows reinterprets
-        // it as part of a double-click gesture instead of two separate
-        // clicks. MouseDown fires for every physical press regardless.
-        _pressLabel = new Label
-        {
-            Text = "Press",
-            Dock = DockStyle.Fill,
-            Margin = new Padding(0),
-            AutoSize = false,
-            TextAlign = ContentAlignment.MiddleCenter,
-            BackColor = Theme.Current.Button,
-            ForeColor = Theme.Current.Accent,
-            Font = new Font("Segoe UI", 12f),
-        };
-        var pressClickTimes = new List<DateTime>();
-        _pressLabel.MouseDown += (_, e) =>
-        {
-            if (!PressTagEasterEggEnabled || e.Button != MouseButtons.Left)
-                return;
+        _pressToggleButton = Theme.MakeTinyButton("VPress");
+        _pressToggleButton.Margin = new Padding(0);
+        _pressToggleButton.Font = new Font("Segoe UI", 9f);
+        _pressToggleButton.Click += (_, _) => TogglePrimeTab("press");
 
-            var now = DateTime.UtcNow;
-            pressClickTimes.Add(now);
-            pressClickTimes.RemoveAll(t => (now - t).TotalSeconds > 2.0);
+        _mouseToggleButton = Theme.MakeTinyButton("Mouse");
+        _mouseToggleButton.Margin = new Padding(0);
+        _mouseToggleButton.Font = new Font("Segoe UI", 9f);
+        _mouseToggleButton.Click += (_, _) => TogglePrimeTab("mouse");
 
-            if (pressClickTimes.Count >= 2)
-            {
-                pressClickTimes.Clear();
-                if (_pressTagVisible)
-                    AnimatePressTag(show: false);
-            }
-        };
+        _profileButton = Theme.MakeTinyButton("Profile");
+        _profileButton.Margin = new Padding(0);
+        _profileButton.Font = new Font("Segoe UI", 9f);
+        _profileButton.Click += (_, _) => TogglePrimeTab("profile");
 
-        _actionBar = new ActionBar(InitialCardWidth / KeyMap.RemappableWords.Length, EnsureContentWidth);
+        fixedGroup.Controls.Add(_pressToggleButton, 0, 0);
+        fixedGroup.Controls.Add(_mouseToggleButton, 1, 0);
+        fixedGroup.Controls.Add(_profileButton, 2, 0);
 
-        // All tabs' content lives in the same spot, stacked on top of each
-        // other — only the selected one is visible at a time.
+        // --- VPress's drawer: the ten numbered word tabs, plus whichever of
+        // their cards is currently selected. Fixed at x:[0, DrawerWidth). ---
+        _actionBar = new ActionBar(DrawerWidth / KeyMap.RemappableWords.Length, _ => { });
         _actionBarContent = new Panel { Dock = DockStyle.Fill, Margin = new Padding(0), BackColor = Theme.Current.Background };
 
-        // AddActionBarTab inserts at the left end of the bar, so this builds
-        // the initial ten in reverse (10 down to 1) — each new insert at
-        // index 0 pushes the previous ones right, leaving them in the
-        // correct 1..10 left-to-right order once the loop finishes.
+        // VPress sits at the LEFT of the fixed group, immediately next to
+        // this drawer's right edge — so "one" needs to end up rightmost
+        // (closest to VPress) and "ten" leftmost. Inserted in forward order
+        // (1 through 10) since ActionBar.Add always inserts at the left
+        // end — each insert-at-0 pushes the previous ones further right,
+        // leaving "one" as the last (rightmost) one in.
         var words = KeyMap.RemappableWords;
-        for (int i = words.Length - 1; i >= 0; i--)
+        for (int i = 0; i < words.Length; i++)
         {
             var wordTab = new WordCardTab(words[i]);
-            AddActionBarTab(wordTab.Id, wordTab.Label, wordTab.BuildContent(MakeTabContext(wordTab.Id)));
+            var tabButton = MakeSubTabButton(wordTab.Id, wordTab.Label, wordTab.BuildContent(MakeTabContext(wordTab.Id)), _actionBarContent);
+            _actionBar.Add(wordTab.Id, tabButton);
         }
 
-        // Profile gets its own fixed slot to the left of Press, instead of
-        // living in the action bar with the word tabs — it goes through the
-        // same MakeTabButton wiring as every other tab (so switching to it,
-        // highlighting it, etc. all work identically), it's just placed in
-        // its own outer-grid column rather than inserted into _actionBar.
-        // The numbered tabs' widths, order, and position are untouched.
-        var profilesTab = new ProfilesTab();
-        var profileButton = MakeTabButton(profilesTab.Id, profilesTab.Label, profilesTab.BuildContent(MakeTabContext(profilesTab.Id)));
-        profileButton.Margin = new Padding(0);
+        _pressDrawer = BuildDrawerShell(_actionBar.Control, _actionBarContent);
+        _pressDrawer.Location = new Point(0, 0);
+        _pressDrawer.Size = new Size(DrawerWidth, TabStripHeight);
 
-        _outer.Controls.Add(profileButton, 0, 0);
-        _outer.Controls.Add(_pressLabel, 1, 0);
-        _outer.Controls.Add(_actionBar.Control, 2, 0);
-        _outer.Controls.Add(_actionBarContent, 2, 1);
-        Controls.Add(_outer);
+        // --- Mouse's drawer: the six remappable-button tabs, plus whichever
+        // of their cards is currently selected. Also x:[0, DrawerWidth). ---
+        _mouseStrip = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0),
+            ColumnCount = MouseCatalog.Buttons.Length,
+            RowCount = 1,
+            BackColor = Theme.Current.Background,
+        };
+        _mouseStripContent = new Panel { Dock = DockStyle.Fill, Margin = new Padding(0), BackColor = Theme.Current.Background };
+
+        for (int i = 0; i < MouseCatalog.Buttons.Length; i++)
+        {
+            var buttonInfo = MouseCatalog.Buttons[i];
+            // Percent, not Absolute, so the six buttons stretch to fill
+            // DrawerWidth evenly rather than leaving a leftover sliver
+            // (360 doesn't divide DrawerWidth's 370 cleanly).
+            _mouseStrip.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f / MouseCatalog.Buttons.Length));
+
+            var mouseTab = new MouseButtonCardTab(buttonInfo.Id);
+            var tabButton = MakeSubTabButton(mouseTab.Id, mouseTab.Label, mouseTab.BuildContent(MakeTabContext(mouseTab.Id)), _mouseStripContent);
+            tabButton.Margin = new Padding(0);
+            new ToolTip().SetToolTip(tabButton, buttonInfo.Label);
+            _mouseStrip.Controls.Add(tabButton, i, 0);
+        }
+
+        _mouseDrawer = BuildDrawerShell(_mouseStrip, _mouseStripContent);
+        _mouseDrawer.Location = new Point(0, 0);
+        _mouseDrawer.Size = new Size(DrawerWidth, TabStripHeight);
+
+        // --- Profile's dropdown: just its list, no sub-tabs of its own.
+        // Fixed at x:[DrawerWidth, MaxWidth) — under the fixed group AND the
+        // extra reach past it — starting at y:TabStripHeight since the
+        // fixed group's own buttons already occupy that row at this x-range. ---
+        var profilesTab = new ProfilesTab();
+        _profileContent = new Panel { Dock = DockStyle.Fill, Margin = new Padding(0), BackColor = Theme.Current.Background };
+        var profileCard = profilesTab.BuildContent(MakeTabContext(profilesTab.Id));
+        profileCard.Visible = false;
+        _profileContent.Controls.Add(profileCard);
+        _cards[profilesTab.Id] = profileCard;
+
+        _profileDropdown = new Panel
+        {
+            Location = new Point(DrawerWidth, TabStripHeight),
+            Size = new Size(FixedGroupWidth + ProfileExtraWidth, 0),
+            Visible = false,
+            BackColor = Theme.Current.Background,
+        };
+        _profileDropdown.Controls.Add(_profileContent);
+
+        // --- Assemble. Z-order doesn't matter here for click purposes —
+        // the three x-ranges never overlap — but the fixed group is added
+        // last/frontmost purely so its buttons are never visually clipped
+        // by anything. ---
+        _pressDrawer.Visible = false;
+        _mouseDrawer.Visible = false;
+        Controls.Add(_pressDrawer);
+        Controls.Add(_mouseDrawer);
+        Controls.Add(_profileDropdown);
+        Controls.Add(fixedGroup);
 
         RecomputeRegion();
 
-        // Profile is the first control added to the form, so it's the
-        // implicit default ActiveControl — clicking the separate overlay
-        // icon shifts window activation away and back even though it never
-        // takes real focus, and that activation blip was enough to make
-        // Windows paint Profile's focus cue. Clearing ActiveControl on both
-        // transitions means there's never a control left to draw one on.
+        // The fixed group's buttons are among the first controls added, so
+        // one of them would otherwise be the implicit default ActiveControl
+        // — clicking the separate overlay icon shifts window activation
+        // away and back even though it never takes real focus, and that
+        // activation blip was enough to make Windows paint a focus cue on
+        // it. Clearing ActiveControl on both transitions means there's
+        // never a control left to draw one on.
         Activated += (_, _) => ActiveControl = null;
         Deactivate += (_, _) => ActiveControl = null;
 
@@ -238,27 +320,40 @@ public sealed class DashboardForm : Form
         LocationChanged += (_, _) => RepositionCategoryPopup();
     }
 
-    // Builds one tab's button and wires up its click behavior (toggle open/
-    // closed if it's already the active tab, otherwise switch to it), and
-    // registers its content in the shared display area. Shared by every
-    // tab regardless of where its button ends up living — the action bar,
-    // or the Profile tab's own fixed slot to the left of Press.
-    private Button MakeTabButton(string id, string label, Control content)
+    // A drawer is always the same shape: a fixed-height sub-tab-strip row on
+    // top, and whatever's currently selected within it below.
+    private static Panel BuildDrawerShell(Control tabStrip, Control content)
+    {
+        var shell = new TableLayoutPanel
+        {
+            Margin = new Padding(0),
+            ColumnCount = 1,
+            RowCount = 2,
+            BackColor = Theme.Current.Background,
+        };
+        shell.RowStyles.Add(new RowStyle(SizeType.Absolute, TabStripHeight));
+        shell.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        shell.Controls.Add(tabStrip, 0, 0);
+        shell.Controls.Add(content, 0, 1);
+        return shell;
+    }
+
+    // Builds one sub-tab's button (a numbered word, or a mouse button) and
+    // wires up its click behavior: toggle its own card open/closed if it's
+    // already the active one, otherwise switch to it. Shared by both of the
+    // two drawers that have sub-tabs at all — Profile doesn't, since it has
+    // nothing further to pick once its own dropdown is open.
+    private Button MakeSubTabButton(string id, string label, Control content, Panel targetContent)
     {
         var tabButton = Theme.MakeTinyButton(label);
         tabButton.Margin = new Padding(0);
         tabButton.Padding = new Padding(0);
         tabButton.Font = new Font("Segoe UI", 9f);
+        Theme.EnableTabUnderline(tabButton);
         tabButton.Click += (_, _) =>
         {
-            // Clicking the already-active tab toggles its card open/closed;
-            // clicking a different tab always opens (SelectTab handles that).
             if (_selectedWord == id)
             {
-                // SelectTab already closes this when switching tabs, but
-                // collapsing the current tab's own card is handled here
-                // instead — without this, the popup was left floating on
-                // screen with no card left open underneath it.
                 _openCategoryPopup?.Close();
                 _openCategoryPopup = null;
 
@@ -274,136 +369,88 @@ public sealed class DashboardForm : Form
         _tabButtons[id] = tabButton;
 
         content.Visible = false;
-        _actionBarContent.Controls.Add(content);
+        targetContent.Controls.Add(content);
         _cards[id] = content;
 
         return tabButton;
     }
 
-    // Adds one more tab to the action bar itself: a small button with the
-    // given label, showing the given content when selected, inserted at the
-    // left end of the bar. Existing tabs keep their exact size and position —
-    // this is how a future How-To tab (or similar) would get added, alongside
-    // the word tabs, without disturbing them.
-    private void AddActionBarTab(string id, string label, Control content, int? width = null)
+    private Panel GetDrawer(string primeTab) => primeTab switch
     {
-        var tabButton = MakeTabButton(id, label, content);
-        _actionBar.Add(id, tabButton, width);
-    }
+        "mouse" => _mouseDrawer,
+        "press" => _pressDrawer,
+        _ => throw new ArgumentOutOfRangeException(nameof(primeTab)),
+    };
 
-    // Grows (never shrinks) the card/action-bar content area to fit a
-    // minimum width — used when the action bar's tabs need more room than
-    // the window currently provides.
-    private void EnsureContentWidth(int minWidth)
+    private Button GetPrimeButton(string primeTab) => primeTab switch
     {
-        if (minWidth <= _contentWidth)
-            return;
+        "profile" => _profileButton,
+        "mouse" => _mouseToggleButton,
+        "press" => _pressToggleButton,
+        _ => throw new ArgumentOutOfRangeException(nameof(primeTab)),
+    };
 
-        _contentWidth = minWidth;
-        var newSize = new Size(ProfileTabWidth + _pressTagWidth + _contentWidth, ClientSize.Height);
+    // Opens/closes one of the three prime tabs. Clicking the one that's
+    // already open collapses it back down to nothing; clicking a different
+    // one swaps it in, closing whichever was open first — only one is ever
+    // open at a time. Unlike before, this never touches the window's own
+    // Location or Width — only which pre-positioned area is Visible, and
+    // the Region that makes the rest of it non-existent rather than just
+    // an empty black rectangle. See the class comment for why.
+    private void TogglePrimeTab(string primeTab)
+    {
+        bool wasOpen = _activePrimeTab == primeTab;
 
+        BeginScreenUpdate();
         SuspendLayout();
-        ClientSize = newSize;
-        RecomputeRegion();
-        ResumeLayout(true);
-        Invalidate(true);
-        Update();
-    }
-
-    // Cut the empty bottom-left cell out of the window's shape entirely, so
-    // nothing renders there — it's not just blank/black, it's gone. Called
-    // again whenever the window's height changes (expanding/collapsing an
-    // accordion), since the shape depends on ClientSize.
-    private void RecomputeRegion()
-    {
-        var shape = new Region(new Rectangle(Point.Empty, ClientSize));
-
-        // When the Profile tab's own card is open, it stretches back to
-        // cover the notch itself (see SelectTab) rather than leaving it as
-        // dead space — so there's nothing to cut away in that case.
-        bool profileCardOpen = _selectedWord == ProfilesTab.TabId && _selectedTabExpanded;
-        int notchWidth = profileCardOpen ? 0 : ProfileTabWidth + _pressTagWidth;
-        if (notchWidth > 0)
+        try
         {
-            shape.Exclude(new Rectangle(
-                0,
-                TabStripHeight,
-                notchWidth,
-                ClientSize.Height - TabStripHeight));
-        }
-
-        Region = shape;
-    }
-
-    // Animates the Press tag's width between 0 (imploded away) and its full
-    // size, growing/shrinking the window and re-cutting its L-shape at each
-    // step so it reads as the notch physically shrinking into (or growing
-    // out of) the main body, rather than just vanishing/appearing instantly.
-    private System.Windows.Forms.Timer? _pressTagAnimationTimer;
-
-    private void AnimatePressTag(bool show)
-    {
-        if (show == _pressTagVisible && _pressTagAnimationTimer == null)
-            return;
-
-        // Cancel any animation already running instead of letting a second
-        // one start alongside it — two timers independently calling
-        // SetPressTagWidth could stomp on each other's state.
-        _pressTagAnimationTimer?.Stop();
-        _pressTagAnimationTimer?.Dispose();
-
-        if (show)
-            _pressLabel.Visible = true;
-
-        const int steps = 8;
-        int stepsDone = 0;
-        int startWidth = _pressTagWidth;
-        int endWidth = show ? PressTagWidth : 0;
-
-        var timer = new System.Windows.Forms.Timer { Interval = 30 }; // 2x slower than the original 15ms
-        _pressTagAnimationTimer = timer;
-        timer.Tick += (_, _) =>
-        {
-            stepsDone++;
-            SetPressTagWidth(startWidth + (endWidth - startWidth) * stepsDone / steps);
-
-            if (stepsDone >= steps)
+            if (_activePrimeTab != null)
             {
-                timer.Stop();
-                timer.Dispose();
-                if (_pressTagAnimationTimer == timer)
-                    _pressTagAnimationTimer = null;
-                SetPressTagWidth(endWidth);
-                _pressTagVisible = show;
-                _pressLabel.Visible = show;
+                _openCategoryPopup?.Close();
+                _openCategoryPopup = null;
+                _selectedWord = null;
+                _selectedTabExpanded = false;
+                foreach (var (_, card) in _cards)
+                    card.Visible = false;
+                foreach (var (_, button) in _tabButtons)
+                    Theme.SetTabSelected(button, false);
+                Theme.SetToggleAppearance(GetPrimeButton(_activePrimeTab), false);
+
+                if (_activePrimeTab == "profile")
+                    _profileDropdown.Visible = false;
+                else
+                    GetDrawer(_activePrimeTab).Visible = false;
             }
-        };
-        timer.Start();
-    }
 
-    // Sets the Press tag to an exact width, keeping the tab/card area
-    // visually anchored in place — the window's left edge moves instead of
-    // its right edge, so shrinking the tag reads as it retracting into the
-    // main body rather than the whole window sliding sideways.
-    private void SetPressTagWidth(int width)
-    {
-        // Computed fresh from the current right edge every time (rather than
-        // applying a relative delta on top of whatever the last step left
-        // behind) so this is self-correcting — 8 animation steps of relative
-        // adjustment could accumulate a pixel or two of drift; this can't.
-        int rightEdgeX = Location.X + ClientSize.Width;
+            _activePrimeTab = wasOpen ? null : primeTab;
 
-        _pressTagWidth = width;
-        _outer.ColumnStyles[1].Width = width;
+            if (_activePrimeTab == "profile")
+            {
+                Theme.SetToggleAppearance(_profileButton, true);
+                _profileDropdown.Visible = true;
+                // Profile has no further sub-tab to pick — its content
+                // shows immediately. SelectTab also calls AdjustHeight.
+                SelectTab(ProfilesTab.TabId);
+            }
+            else if (_activePrimeTab != null)
+            {
+                GetDrawer(_activePrimeTab).Visible = true;
+                Theme.SetToggleAppearance(GetPrimeButton(_activePrimeTab), true);
+                AdjustHeight();
+            }
+            else
+            {
+                AdjustHeight();
+            }
 
-        int newWindowWidth = ProfileTabWidth + width + _contentWidth;
-
-        SuspendLayout();
-        Location = new Point(rightEdgeX - newWindowWidth, Location.Y);
-        ClientSize = new Size(newWindowWidth, ClientSize.Height);
-        RecomputeRegion();
-        ResumeLayout(true);
-        Invalidate(true);
+            RecomputeRegion();
+        }
+        finally
+        {
+            ResumeLayout(true);
+            EndScreenUpdate();
+        }
     }
 
     private void SelectTab(string word)
@@ -414,68 +461,68 @@ public sealed class DashboardForm : Form
         _selectedWord = word;
         _selectedTabExpanded = true;
 
-        // Every word card only ever drops down under the action bar (to the
-        // right of the Profile/Press notch) — but the Profile tab's own
-        // button lives further left, in the notch itself, so its card needs
-        // to stretch back to cover that same notch area instead. Otherwise
-        // it reads as a dropdown disconnected from the button that opened it.
-        if (word == ProfilesTab.TabId)
-        {
-            _outer.SetColumn(_actionBarContent, 0);
-            _outer.SetColumnSpan(_actionBarContent, 3);
-        }
-        else
-        {
-            _outer.SetColumn(_actionBarContent, 2);
-            _outer.SetColumnSpan(_actionBarContent, 1);
-        }
-
         foreach (var (w, card) in _cards)
             card.Visible = w == word;
         foreach (var (w, button) in _tabButtons)
-            Theme.SetToggleAppearance(button, w == word);
+            Theme.SetTabSelected(button, w == word);
 
         AdjustHeight();
     }
 
-    // Refreshes the Profiles tab's own highlighting after a switch —
-    // registered by ProfilesTab itself via DashboardTabContext.OnProfileSwitched.
-    private Action? _refreshProfilesHighlight;
-
     // Loads a different profile's key map/behaviors and rebuilds all ten
-    // word cards from scratch against it — "a full new set of ten numbered
-    // cards to adjust freely". The old cards are disposed (not just hidden)
-    // so their tap-counter timers actually stop. Stays on the Profiles tab
-    // afterward rather than jumping to a numbered tab.
+    // word cards, and all six mouse-button cards, from scratch against it —
+    // a full new set to adjust freely. The old cards are disposed (not just
+    // hidden) so their tap-counter timers actually stop. Stays on the
+    // Profiles dropdown afterward rather than jumping to a numbered tab.
     private void SwitchToProfile(string profileName)
     {
-        _openCategoryPopup?.Close();
-        _openCategoryPopup = null;
-
-        KeyMap.SwitchProfile(profileName);
-
-        foreach (var word in KeyMap.RemappableWords)
+        // Sixteen cards get torn down and rebuilt below — without freezing
+        // the screen for the duration, that was flashing visibly.
+        BeginScreenUpdate();
+        try
         {
-            var oldCard = _cards[word];
-            _actionBarContent.Controls.Remove(oldCard);
-            oldCard.Dispose();
+            _openCategoryPopup?.Close();
+            _openCategoryPopup = null;
 
-            var newCard = new WordCardTab(word).BuildContent(MakeTabContext(word));
-            newCard.Visible = false;
-            _actionBarContent.Controls.Add(newCard);
-            _cards[word] = newCard;
+            KeyMap.SwitchProfile(profileName);
+            MouseMap.SwitchProfile(profileName);
+
+            foreach (var word in KeyMap.RemappableWords)
+            {
+                var oldCard = _cards[word];
+                _actionBarContent.Controls.Remove(oldCard);
+                oldCard.Dispose();
+
+                var newCard = new WordCardTab(word).BuildContent(MakeTabContext(word));
+                newCard.Visible = false;
+                _actionBarContent.Controls.Add(newCard);
+                _cards[word] = newCard;
+            }
+
+            foreach (var button in MouseCatalog.Buttons)
+            {
+                var oldCard = _cards[button.Id];
+                _mouseStripContent.Controls.Remove(oldCard);
+                oldCard.Dispose();
+
+                var newCard = new MouseButtonCardTab(button.Id).BuildContent(MakeTabContext(button.Id));
+                newCard.Visible = false;
+                _mouseStripContent.Controls.Add(newCard);
+                _cards[button.Id] = newCard;
+            }
+
+            _refreshProfilesHighlight?.Invoke();
         }
-
-        // Stay on the Profiles tab — clicking a profile shouldn't yank you
-        // over to tab "one"; you just want to see it's now the active one
-        // (via the refreshed highlight) and switch to a numbered tab
-        // yourself whenever you're ready.
-        _refreshProfilesHighlight?.Invoke();
+        finally
+        {
+            EndScreenUpdate();
+        }
     }
 
     // Builds the small set of callbacks a tab (see IDashboardTab) gets
     // instead of reaching into this class's private fields directly. Bound
-    // to a specific tabId, so ReportHeight always resizes the right card.
+    // to a specific tabId, so ReportHeight always resizes against the right
+    // card's own stored height.
     private DashboardTabContext MakeTabContext(string tabId) => new()
     {
         ItemHeight = ItemHeight,
@@ -493,7 +540,7 @@ public sealed class DashboardForm : Form
         ShowCategoryPopup = (anchor, keys, onSelect) =>
         {
             _openCategoryPopup?.Close();
-            _openCategoryPopup = CategoryKeyPopup.Show(this, anchor, _contentWidth, keys, onSelect);
+            _openCategoryPopup = CategoryKeyPopup.Show(this, anchor, DrawerWidth, keys, onSelect);
             _openCategoryPopupAnchor = anchor;
         },
         CloseCategoryPopup = () =>
@@ -507,48 +554,114 @@ public sealed class DashboardForm : Form
             foreach (var reset in _resetCardActions.Values)
                 reset();
         },
-        PressTagEasterEggEnabled = PressTagEasterEggEnabled,
-        ShowPressTagIfHidden = () =>
-        {
-            if (!_pressTagVisible)
-                AnimatePressTag(show: true);
-        },
+        BeginScreenUpdate = BeginScreenUpdate,
+        EndScreenUpdate = EndScreenUpdate,
     };
 
-    // Grows/shrinks the window to fit however many accordion rows the
-    // selected card currently has open — so Key/Repeat/Hold/Reset always stay
-    // the same size, and each accordion adds height rather than taking it
-    // from them. If the selected tab's card is collapsed, the window shrinks
-    // to just the action bar, with no card showing at all.
+    // The height the currently-selected sub-tab's card actually needs right
+    // now (0 if nothing's selected/expanded) — the one authoritative source
+    // for window height.
+    private int CurrentCardHeight()
+    {
+        if (!_selectedTabExpanded || _selectedWord == null)
+            return 0;
+
+        return _cardHeight.TryGetValue(_selectedWord, out var value) ? value : BaseCardHeight;
+    }
+
+    // Grows/shrinks the window (height only — width is fixed for good, see
+    // the class comment) to fit however tall the selected sub-tab's card
+    // currently is, and keeps whichever of _pressDrawer/_mouseDrawer/
+    // _profileDropdown is actually active in sync with that same height —
+    // the other two don't matter since RecomputeRegion hides them anyway,
+    // but leaving their height stale would show through if the active one
+    // ever changed without a height change accompanying it.
     private void AdjustHeight()
     {
-        int cardHeight;
-        if (!_selectedTabExpanded || _selectedWord == null)
+        BeginScreenUpdate();
+        try
         {
-            cardHeight = 0;
+            int cardHeight = CurrentCardHeight();
+            int fullHeight = TabStripHeight + cardHeight;
+
+            if (_activePrimeTab == "profile")
+                _profileDropdown.Height = cardHeight;
+            else if (_activePrimeTab != null)
+                GetDrawer(_activePrimeTab).Height = fullHeight;
+
+            var newSize = new Size(ClientSize.Width, fullHeight);
+            if (ClientSize != newSize)
+            {
+                SuspendLayout();
+                ClientSize = newSize;
+                RecomputeRegion();
+                ResumeLayout(true);
+            }
+        }
+        finally
+        {
+            // EndScreenUpdate's own Invalidate+Update stands in for what
+            // used to be this method's own — still needed for the same
+            // reason (clearing a stray leftover fragment of the card's red
+            // border after a resize), just done once by whichever call in
+            // the current nest is outermost instead of by every level.
+            EndScreenUpdate();
+        }
+    }
+
+    // Cuts away whichever of the three zones (see the class comment) isn't
+    // currently relevant, so it's genuinely not there — not just painted
+    // black — matching how the window behaved before it grew a fixed
+    // maximum size: nothing to click, nothing extra to see.
+    private void RecomputeRegion()
+    {
+        var shape = new Region(new Rectangle(Point.Empty, ClientSize));
+
+        // The tab-strip row (y: 0 to TabStripHeight) and the card-content
+        // row beneath it (y: TabStripHeight onward) need different
+        // treatment — the fixed group's buttons live in the first and
+        // should always show there, but nothing of theirs lives in the
+        // second, so leaving it un-excluded was showing as a plain black
+        // slab under the buttons whenever a card below the drawer was
+        // taller than the tab strip alone.
+        int contentRowHeight = ClientSize.Height - TabStripHeight;
+
+        if (_activePrimeTab == "press" || _activePrimeTab == "mouse")
+        {
+            // Row 0: drawer's sub-tab-strip + fixed group both stay; only
+            // the profile-extra zone (where the listener icon sits) is cut.
+            shape.Exclude(new Rectangle(DrawerWidth + FixedGroupWidth, 0, ProfileExtraWidth, TabStripHeight));
+
+            // Row 1: only the drawer's own width is ever used here — the
+            // fixed group and profile-extra zone have nothing under them
+            // in this state, so both get cut for the card row's full height.
+            if (contentRowHeight > 0)
+                shape.Exclude(new Rectangle(DrawerWidth, TabStripHeight, ClientSize.Width - DrawerWidth, contentRowHeight));
+        }
+        else if (_activePrimeTab == "profile")
+        {
+            // Row 0: fixed group stays, the drawer's own zone doesn't; the
+            // small square where the listener icon sits gets cut too, or
+            // the window's plain background paints over the icon instead
+            // of letting it show through.
+            shape.Exclude(new Rectangle(0, 0, DrawerWidth, TabStripHeight));
+            shape.Exclude(new Rectangle(DrawerWidth + FixedGroupWidth, 0, ProfileExtraWidth, TabStripHeight));
+
+            // Row 1: Profile's dropdown spans the fixed group's width plus
+            // the extra reach past it; the drawer's own zone still isn't
+            // used here either.
+            if (contentRowHeight > 0)
+                shape.Exclude(new Rectangle(0, TabStripHeight, DrawerWidth, contentRowHeight));
         }
         else
         {
-            cardHeight = _cardHeight.TryGetValue(_selectedWord, out var value) ? value : BaseCardHeight;
+            // Nothing open — only the fixed group itself stays (there's no
+            // row 1 at all in this state; ClientSize.Height == TabStripHeight).
+            shape.Exclude(new Rectangle(0, 0, DrawerWidth, ClientSize.Height));
+            shape.Exclude(new Rectangle(DrawerWidth + FixedGroupWidth, 0, ProfileExtraWidth, ClientSize.Height));
         }
-        var newSize = new Size(ClientSize.Width, TabStripHeight + cardHeight);
-        if (ClientSize == newSize)
-            return;
 
-        SuspendLayout();
-        ClientSize = newSize;
-        RecomputeRegion();
-        ResumeLayout(true);
-
-        // Without this, resizing can leave a stray leftover fragment of the
-        // card's red border (drawn at its old height) visible in the newly
-        // exposed area — a full repaint clears it. Update() forces that
-        // repaint to happen immediately instead of waiting for the next
-        // message-loop pass, which narrows the window where a blank/white
-        // frame could show through during a bigger resize (e.g. Reset
-        // collapsing several accordions worth of height at once).
-        Invalidate(true);
-        Update();
+        Region = shape;
     }
 
     // Called whenever this window moves (see LocationChanged in the

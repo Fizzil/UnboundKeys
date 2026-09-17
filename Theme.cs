@@ -97,6 +97,32 @@ internal static class Theme
         button.FlatAppearance.MouseDownBackColor = on ? Current.Accent : Current.Hover;
     }
 
+    // A thinner alternative for buttons you click through repeatedly — the
+    // numbered/mouse-button sub-tabs — where a solid color fill on the
+    // selected one read as too heavy. A 2px accent-colored line along the
+    // bottom edge marks it instead; everything else about the button's
+    // normal (unselected) look stays as-is. Call EnableTabUnderline once,
+    // at creation, then SetTabSelected each time its state should change.
+    private const int TabUnderlineHeight = 2;
+
+    public static void EnableTabUnderline(Button button)
+    {
+        button.Paint += (_, e) =>
+        {
+            if (button.Tag is true)
+            {
+                using var brush = new SolidBrush(Current.Accent);
+                e.Graphics.FillRectangle(brush, 0, button.Height - TabUnderlineHeight, button.Width, TabUnderlineHeight);
+            }
+        };
+    }
+
+    public static void SetTabSelected(Button button, bool selected)
+    {
+        button.Tag = selected;
+        button.Invalidate();
+    }
+
     // Invariant culture so this always reads "0.0s" — without it, Windows
     // regions that use a comma for decimals (as this machine apparently does)
     // would render it as "0,0s".

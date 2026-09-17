@@ -42,13 +42,25 @@ static class Program
             Task.Run(() => KeyExecutor.Execute(word, keys, behavior));
         };
 
-        voice.Start();
+        using var mouse = new MouseInputWatcher();
+        mouse.ButtonPressed += id =>
+        {
+            // KeyExecutor tracks in-flight/engaged state per word string —
+            // a mouse button id (e.g. "middle") is just as valid a key into
+            // that as a spoken word, and the two never collide.
+            var keys = MouseMap.GetAllKeys(id);
+            var behavior = MouseMap.Behaviors[id];
+            Task.Run(() => KeyExecutor.Execute(id, keys, behavior));
+        };
 
-        using var overlay = new OverlayForm(voice);
+        voice.Start();
+        mouse.Start();
+
+        using var overlay = new OverlayForm(voice, mouse);
         Application.Run(overlay);
 
-        // In case a word was mid-"infinite hold" when the app was closed —
-        // don't leave a real keyboard key stuck down.
+        // In case a word (or mouse button) was mid-"infinite hold" when the
+        // app was closed — don't leave a real keyboard key stuck down.
         KeyExecutor.ReleaseAll();
 
         voice.Dispose();
