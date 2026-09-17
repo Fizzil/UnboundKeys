@@ -172,7 +172,7 @@ internal sealed class ProfilesTab : IDashboardTab
 
                 foreach (var row in profileRows)
                     if (row.Controls.Count > 0 && row.Controls[0] is Button nameButton)
-                        Theme.SetToggleAppearance(nameButton, nameButton.Text == KeyMap.ActiveProfile);
+                        Theme.SetTabSelected(nameButton, nameButton.Text == KeyMap.ActiveProfile);
 
                 ctx.ReportHeight(ctx.ItemHeight * rows.Count);
             }
@@ -201,6 +201,7 @@ internal sealed class ProfilesTab : IDashboardTab
                 row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20));
 
             var nameButton = Theme.MakeListButton(name);
+            Theme.EnableTabUnderline(nameButton);
             nameButton.Click += (_, _) =>
             {
                 // Picking a profile while the naming row is still open (from

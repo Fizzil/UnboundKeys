@@ -89,6 +89,7 @@ internal sealed class WordCardTab : IDashboardTab
         // 2. Key 1 — click to expand the category accordion above; click Key
         // again to collapse it. Picking a key rebinds the card's main key.
         var keyButton = Theme.MakeListButton(KeyLabelFor(word));
+        Theme.EnableTabUnderline(keyButton);
         bool keyExpanded = false;
         var categoryButtons = BuildCategoryButtons(entry =>
         {
@@ -122,7 +123,7 @@ internal sealed class WordCardTab : IDashboardTab
         void CollapseAllKeys()
         {
             keyExpanded = false;
-            Theme.SetToggleAppearance(keyButton, false);
+            Theme.SetTabSelected(keyButton, false);
             for (int idx = 0; idx < extraKeyExpanded.Count; idx++)
                 extraKeyExpanded[idx] = false;
         }
@@ -132,12 +133,14 @@ internal sealed class WordCardTab : IDashboardTab
         // it off closes it again.
         bool repeatOn = behavior.Repeat;
         var repeatButton = Theme.MakeListButton("Repeat");
-        Theme.SetToggleAppearance(repeatButton, repeatOn);
+        Theme.EnableTabUnderline(repeatButton);
+        Theme.SetTabSelected(repeatButton, repeatOn);
 
         // 3. Hold — same toggle-button treatment, same shared dropdown.
         bool holdOn = behavior.Hold;
         var holdButton = Theme.MakeListButton("Hold");
-        Theme.SetToggleAppearance(holdButton, holdOn);
+        Theme.EnableTabUnderline(holdButton);
+        Theme.SetTabSelected(holdButton, holdOn);
 
         // 4. Reset — resets everything about this card: the assigned key,
         // Repeat/Hold, and the duration. Tap it three times quickly for the
@@ -171,7 +174,8 @@ internal sealed class WordCardTab : IDashboardTab
         bool infiniteOn = behavior.Infinite;
         var infiniteButton = Theme.MakeTinyButton("∞");
         infiniteButton.Font = new Font("Segoe UI", 14f, FontStyle.Bold);
-        Theme.SetToggleAppearance(infiniteButton, infiniteOn);
+        Theme.EnableTabUnderline(infiniteButton);
+        Theme.SetTabSelected(infiniteButton, infiniteOn);
 
         var timingPanel = new TableLayoutPanel
         {
@@ -205,7 +209,8 @@ internal sealed class WordCardTab : IDashboardTab
         // repeats fall back to the plain fixed gap, same as any 1-key word.
         bool useCustomRepeatIntervals = behavior.UseCustomRepeatIntervals;
         var repeatIntervalButton = Theme.MakeListButton("Repeat Interval");
-        Theme.SetToggleAppearance(repeatIntervalButton, useCustomRepeatIntervals);
+        Theme.EnableTabUnderline(repeatIntervalButton);
+        Theme.SetTabSelected(repeatIntervalButton, useCustomRepeatIntervals);
 
         // One gap value per key (index 0 = K1, the primary key). Guarded
         // against stale/mismatched saved data — e.g. an old profile saved
@@ -244,7 +249,8 @@ internal sealed class WordCardTab : IDashboardTab
                 keyIntervalRowPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, colWidth));
 
                 var kButton = Theme.MakeTinyButton($"K{kIndex + 1}");
-                Theme.SetToggleAppearance(kButton, selectedKIndex == kIndex);
+                Theme.EnableTabUnderline(kButton);
+                Theme.SetTabSelected(kButton, selectedKIndex == kIndex);
                 kButton.Click += (_, _) =>
                 {
                     selectedKIndex = selectedKIndex == kIndex ? -1 : kIndex;
@@ -290,7 +296,8 @@ internal sealed class WordCardTab : IDashboardTab
                 // lives inside that dropdown instead of on the row itself
                 // (see below), so only the two added keys ever show one.
                 var label = Theme.MakeListButton(ExtraKeyLabel(slotIndex + 2, extras[slotIndex]));
-                Theme.SetToggleAppearance(label, extraKeyExpanded[slotIndex]);
+                Theme.EnableTabUnderline(label);
+                Theme.SetTabSelected(label, extraKeyExpanded[slotIndex]);
                 label.Click += (_, _) =>
                 {
                     ctx.CloseCategoryPopup();
@@ -369,7 +376,7 @@ internal sealed class WordCardTab : IDashboardTab
             if (!canCustomizeRepeatInterval && useCustomRepeatIntervals)
             {
                 useCustomRepeatIntervals = false;
-                Theme.SetToggleAppearance(repeatIntervalButton, false);
+                Theme.SetTabSelected(repeatIntervalButton, false);
             }
             if (!canCustomizeRepeatInterval)
                 selectedKIndex = -1;
@@ -438,7 +445,7 @@ internal sealed class WordCardTab : IDashboardTab
             bool opening = !keyExpanded;
             CollapseAllKeys();
             keyExpanded = opening;
-            Theme.SetToggleAppearance(keyButton, keyExpanded);
+            Theme.SetTabSelected(keyButton, keyExpanded);
             RebuildExtraKeyRows();
             RebuildList();
         };
@@ -461,7 +468,7 @@ internal sealed class WordCardTab : IDashboardTab
         repeatIntervalButton.Click += (_, _) =>
         {
             useCustomRepeatIntervals = !useCustomRepeatIntervals;
-            Theme.SetToggleAppearance(repeatIntervalButton, useCustomRepeatIntervals);
+            Theme.SetTabSelected(repeatIntervalButton, useCustomRepeatIntervals);
             if (!useCustomRepeatIntervals)
                 selectedKIndex = -1;
             SaveBehavior();
@@ -479,7 +486,7 @@ internal sealed class WordCardTab : IDashboardTab
             if (infiniteOn)
             {
                 infiniteOn = false;
-                Theme.SetToggleAppearance(infiniteButton, false);
+                Theme.SetTabSelected(infiniteButton, false);
             }
             KeyExecutor.ForceRelease(word);
         }
@@ -496,7 +503,7 @@ internal sealed class WordCardTab : IDashboardTab
                 keyIntervalSeconds[idx] = 0.0;
             useCustomRepeatIntervals = false;
             selectedKIndex = -1;
-            Theme.SetToggleAppearance(repeatIntervalButton, false);
+            Theme.SetTabSelected(repeatIntervalButton, false);
             RebuildKeyIntervalRow();
             DisengageInfinite();
         }
@@ -510,10 +517,10 @@ internal sealed class WordCardTab : IDashboardTab
             if (repeatOn)
             {
                 holdOn = false;
-                Theme.SetToggleAppearance(holdButton, false);
+                Theme.SetTabSelected(holdButton, false);
                 ResetTimingForModeSwitch();
             }
-            Theme.SetToggleAppearance(repeatButton, repeatOn);
+            Theme.SetTabSelected(repeatButton, repeatOn);
             SaveBehavior();
             RebuildList();
         };
@@ -523,17 +530,17 @@ internal sealed class WordCardTab : IDashboardTab
             if (holdOn)
             {
                 repeatOn = false;
-                Theme.SetToggleAppearance(repeatButton, false);
+                Theme.SetTabSelected(repeatButton, false);
                 ResetTimingForModeSwitch();
             }
-            Theme.SetToggleAppearance(holdButton, holdOn);
+            Theme.SetTabSelected(holdButton, holdOn);
             SaveBehavior();
             RebuildList();
         };
         infiniteButton.Click += (_, _) =>
         {
             infiniteOn = !infiniteOn;
-            Theme.SetToggleAppearance(infiniteButton, infiniteOn);
+            Theme.SetTabSelected(infiniteButton, infiniteOn);
             // Infinite ignores the duration entirely, so turning it on clears
             // whatever timer value was set — it'd otherwise look like a
             // leftover duration that doesn't actually do anything anymore.
@@ -622,12 +629,12 @@ internal sealed class WordCardTab : IDashboardTab
             infiniteOn = false;
             keyExpanded = false;
             resetAllExpanded = false;
-            Theme.SetToggleAppearance(repeatButton, false);
-            Theme.SetToggleAppearance(holdButton, false);
-            Theme.SetToggleAppearance(infiniteButton, false);
-            Theme.SetToggleAppearance(keyButton, false);
+            Theme.SetTabSelected(repeatButton, false);
+            Theme.SetTabSelected(holdButton, false);
+            Theme.SetTabSelected(infiniteButton, false);
+            Theme.SetTabSelected(keyButton, false);
             Theme.SetToggleAppearance(resetCardButton, false);
-            Theme.SetToggleAppearance(repeatIntervalButton, false);
+            Theme.SetTabSelected(repeatIntervalButton, false);
             RebuildList();
         }
         ctx.RegisterResetAction(ResetCard);
