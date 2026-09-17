@@ -93,8 +93,24 @@ public sealed class MouseInputWatcher : IDisposable
     {
         if (nCode >= 0 && !_paused)
         {
-            int msg = wParam.ToInt32();
             var data = Marshal.PtrToStructure<MSLLHOOKSTRUCT>(lParam);
+
+            // Ignore only VoicePress's own synthetic clicks (see
+            // NativeInput.InjectedByVoicePress), not every software-
+            // injected event in general — this hook is system-wide, so
+            // without this it would catch its own mouse-click output (a
+            // word/button mapped to click another *enabled* button could
+            // otherwise re-trigger itself, at worst in an infinite loop).
+            // Checking dwExtraInfo specifically, rather than the generic
+            // LLMHF_INJECTED flag, matters because many gaming mice relay
+            // real physical input through vendor driver software that
+            // itself injects via this same path — a blanket "ignore
+            // anything injected" check would swallow that real input too,
+            // not just VoicePress's own.
+            if (data.dwExtraInfo == NativeInput.InjectedByVoicePress)
+                return CallNextHookEx(_hookHandle, nCode, wParam, lParam);
+
+            int msg = wParam.ToInt32();
             short highWord = (short)(data.mouseData >> 16);
 
             string? downId = msg switch

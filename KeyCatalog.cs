@@ -32,6 +32,23 @@ public static class KeyCatalog
         new("Windows", 0x5B),
     };
 
+    // Windows' own reserved virtual-key codes for these five mouse buttons
+    // (what GetAsyncKeyState et al. already expect) — reusing them lets a
+    // "key" a word/button sends be a mouse click instead of a keyboard
+    // press, using the exact same ushort everything else already passes
+    // around. See NativeInput.KeyDown/KeyUp for where that's acted on.
+    // Wheel Up/Down aren't offered here: a wheel tick is an instantaneous
+    // scroll, not a press you can hold down, so Hold wouldn't mean anything
+    // for it.
+    private static readonly Entry[] MouseButtons =
+    {
+        new("Left Click", 0x01),
+        new("Right Click", 0x02),
+        new("Middle Click", 0x04),
+        new("Mouse Button 4", 0x05),
+        new("Mouse Button 5", 0x06),
+    };
+
     private static readonly Entry[] Punctuation =
     {
         new("- (minus)", 0xBD),
@@ -62,6 +79,7 @@ public static class KeyCatalog
         ("Function Keys", FunctionKeys()),
         ("Navigation", Navigation),
         ("Modifiers", Modifiers),
+        ("Mouse", MouseButtons),
         ("Punctuation", Punctuation),
         ("Other", Other),
     };
