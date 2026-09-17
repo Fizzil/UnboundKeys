@@ -2,12 +2,6 @@
 
 Remap mouse buttons and voice commands to keyboard keys, with full control over how each one gets pressed — a small Windows overlay built for playing **The Isle: Evrima**.
 
-## Why this exists
-
-VoicePress was built as an accessibility tool, for Fizzil — who is disabled — to be able to play *The Isle: Evrima*, using a normal mouse or a specialized **quad mouse** (a mouse with extra physical buttons). It is **not** intended as a way to play the game hands-free with voice alone.
-
-It's a mouse-button and voice remapper in one: six of a mouse's buttons (Right Click, Middle Click, Mouse 4/5, Wheel Up/Down — Left Click is deliberately left alone, so you always keep the ability to click) and up to ten spoken words each send a keyboard key, with full control over *how* — a single tap, held down, or repeated, for a fixed duration or until you say/press it again. Between the two, it covers game actions for moments a hand isn't free to reach a key.
-
 ## Screenshots
 
 <p float="left">
@@ -29,6 +23,12 @@ It's a mouse-button and voice remapper in one: six of a mouse's buttons (Right C
 - Runs fully offline — speech recognition ([Vosk](https://alphacephei.com/vosk/)) happens entirely on your machine. Nothing is sent anywhere.
 
 See [MANUAL.md](MANUAL.md) for the full details — exact voice commands, safety nets, profile behavior, and everything the dashboard does.
+
+## Why this exists
+
+VoicePress was built as an accessibility tool, for Fizzil — who is disabled — to be able to play *The Isle: Evrima*, using a normal mouse or a specialized **quad mouse** (a mouse with extra physical buttons). It is **not** intended as a way to play the game hands-free with voice alone.
+
+It's a mouse-button and voice remapper in one: six of a mouse's buttons (Right Click, Middle Click, Mouse 4/5, Wheel Up/Down — Left Click is deliberately left alone, so you always keep the ability to click) and up to ten spoken words each send a keyboard key, with full control over *how* — a single tap, held down, or repeated, for a fixed duration or until you say/press it again. Between the two, it covers game actions for moments a hand isn't free to reach a key.
 
 ## Installing
 
