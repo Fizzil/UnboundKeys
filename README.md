@@ -5,11 +5,9 @@ Remap mouse buttons and voice commands to keyboard keys, with full control over 
 ## Screenshots
 
 <p float="left">
-  <img src="Assets/screenshots/VP-Mouse.png" width="45%" alt="Middle Click's card, showing Key 1: S, Repeat with Infinite on, Hold, and Reset" />
-  <img src="Assets/screenshots/VP-Profiles.png" width="45%" alt="The Profile tab, showing Default and a custom 'the isle' profile, with the VPress/Mouse/Profile row above it" />
-</p>
-<p float="left">
-  <img src="Assets/screenshots/VP-MultiKey-RepeatInterval.png" width="45%" alt="A word card with a three-key combo, Repeat and Infinite on, and the Repeat Interval row with K1/K2/K3 timing" />
+  <img src="Assets/screenshots/VP-Mouse.png" width="32%" alt="Mouse Button 5's card, showing a Ctrl+V combo, Repeat, Hold, and Reset" />
+  <img src="Assets/screenshots/VP-MultiKey-RepeatInterval.png" width="32%" alt="A three-key A/B/C combo with Repeat and Infinite on, and the Repeat Interval row with K1/K2/K3 timing" />
+  <img src="Assets/screenshots/VP-Profiles.png" width="32%" alt="The Profile tab, showing Default and a custom 'the isle' profile, with the VPress/Mouse/Profile row above it" />
 </p>
 
 ## What it does
