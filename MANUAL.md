@@ -23,6 +23,8 @@ Each word or button can be set to:
 - **Hold** — holds the key down for a set duration.
 - **Infinite** — instead of a fixed duration, saying the word (or pressing the button) starts the hold/repeat, and saying/pressing it again stops it.
 
+Saying the word (or pressing the button) again while a Repeat or Hold is still running — Infinite or not — stops it early instead of waiting out its full duration. That makes a long fixed duration a usable stand-in for Infinite whenever you'd rather have a backstop maximum length than a truly indefinite hold.
+
 ## Multiple keys per word or button
 
 "Add Key," under a word's or button's Key row, adds up to two more keys to it — enough for a three-key combo like Ctrl+Alt+Delete, or a short sequence of abilities.

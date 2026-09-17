@@ -19,6 +19,7 @@ Remap mouse buttons and voice commands to keyboard keys, with full control over 
 - Remap which key each word or button sends, set it to tap, hold, or repeat, and manage multiple named profiles — right-click the skull icon for a small dashboard.
 - Add up to two more keys to a word or button for a combo, like Ctrl+C — tap and hold press them all together, and repeat cycles through them in sequence, with the timing between each adjustable.
 - Say "press stop" to release anything currently held down or repeating — a safety net for whenever a command can't be repeated in time.
+- Say the word (or press the button) again while it's mid-hold or mid-repeat to stop it early, instead of waiting out its full duration — handy for setting a long duration as a stand-in for indefinite.
 - Left-click (or drag) the skull icon to pause listening or move it around the screen.
 - Runs fully offline — speech recognition ([Vosk](https://alphacephei.com/vosk/)) happens entirely on your machine. Nothing is sent anywhere.
 
