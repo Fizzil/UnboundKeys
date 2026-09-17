@@ -201,16 +201,19 @@ public sealed class DashboardForm : Form
         _pressToggleButton = Theme.MakeTinyButton("VPress");
         _pressToggleButton.Margin = new Padding(0);
         _pressToggleButton.Font = new Font("Segoe UI", 9f);
+        Theme.EnableTabUnderline(_pressToggleButton);
         _pressToggleButton.Click += (_, _) => TogglePrimeTab("press");
 
         _mouseToggleButton = Theme.MakeTinyButton("Mouse");
         _mouseToggleButton.Margin = new Padding(0);
         _mouseToggleButton.Font = new Font("Segoe UI", 9f);
+        Theme.EnableTabUnderline(_mouseToggleButton);
         _mouseToggleButton.Click += (_, _) => TogglePrimeTab("mouse");
 
         _profileButton = Theme.MakeTinyButton("Profile");
         _profileButton.Margin = new Padding(0);
         _profileButton.Font = new Font("Segoe UI", 9f);
+        Theme.EnableTabUnderline(_profileButton);
         _profileButton.Click += (_, _) => TogglePrimeTab("profile");
 
         fixedGroup.Controls.Add(_pressToggleButton, 0, 0);
@@ -415,7 +418,7 @@ public sealed class DashboardForm : Form
                     card.Visible = false;
                 foreach (var (_, button) in _tabButtons)
                     Theme.SetTabSelected(button, false);
-                Theme.SetToggleAppearance(GetPrimeButton(_activePrimeTab), false);
+                Theme.SetTabSelected(GetPrimeButton(_activePrimeTab), false);
 
                 if (_activePrimeTab == "profile")
                     _profileDropdown.Visible = false;
@@ -427,7 +430,7 @@ public sealed class DashboardForm : Form
 
             if (_activePrimeTab == "profile")
             {
-                Theme.SetToggleAppearance(_profileButton, true);
+                Theme.SetTabSelected(_profileButton, true);
                 _profileDropdown.Visible = true;
                 // Profile has no further sub-tab to pick — its content
                 // shows immediately. SelectTab also calls AdjustHeight.
@@ -436,7 +439,7 @@ public sealed class DashboardForm : Form
             else if (_activePrimeTab != null)
             {
                 GetDrawer(_activePrimeTab).Visible = true;
-                Theme.SetToggleAppearance(GetPrimeButton(_activePrimeTab), true);
+                Theme.SetTabSelected(GetPrimeButton(_activePrimeTab), true);
                 AdjustHeight();
             }
             else

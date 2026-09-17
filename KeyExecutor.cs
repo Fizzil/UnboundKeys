@@ -129,26 +129,15 @@ internal static class KeyExecutor
             return;
         }
 
+        if ((behavior.Hold || behavior.Repeat) && behavior.DurationSeconds > 0)
+        {
+            ExecuteTimed(word, keys, behavior);
+            return;
+        }
+
         var token = _stopSignal.Token;
 
-        if (behavior.Hold && behavior.DurationSeconds > 0)
-        {
-            PressAllDown(keys);
-            InterruptibleSleep((int)(behavior.DurationSeconds * 1000), token);
-            ReleaseAllUp(keys);
-        }
-        else if (behavior.Repeat && behavior.DurationSeconds > 0)
-        {
-            var end = DateTime.UtcNow.AddSeconds(behavior.DurationSeconds);
-            int i = 0;
-            while (DateTime.UtcNow < end && !token.IsCancellationRequested)
-            {
-                TapKeySequentially(keys, i);
-                InterruptibleSleep(GapMsAfterKey(behavior, i, keys.Count), token);
-                i++;
-            }
-        }
-        else if (behavior.Repeat)
+        if (behavior.Repeat)
         {
             // No repeat duration set (0s) — still march through the whole
             // sequence once, respecting each key's own gap, instead of
@@ -165,6 +154,84 @@ internal static class KeyExecutor
         {
             PressAllDown(keys);
             ReleaseAllUp(keys);
+        }
+    }
+
+    // A word/button with a Repeat or Hold duration set behaves like a
+    // press-to-start, press-again-to-stop-early toggle, rather than two
+    // independent runs stacking on top of each other unaware of one
+    // another. Without this, a long Hold duration used as a stand-in for
+    // "as long as I need it" (e.g. 20s) could only ever let go on its own
+    // timer running out — pressing the button again just started a second,
+    // unrelated 20-second hold on top of the first, and never stopped
+    // anything early. Tracked separately from _engaged/InfiniteState above,
+    // since those are Infinite-only — this applies to plain timed
+    // Hold/Repeat instead.
+    private static readonly Dictionary<string, CancellationTokenSource> _activeTimedRuns = new();
+
+    private static void ExecuteTimed(string word, IReadOnlyList<(ushort Vk, bool Extended)> keys, KeyBehavior behavior)
+    {
+        CancellationTokenSource? toCancel = null;
+        CancellationTokenSource? mine = null;
+
+        lock (_lock)
+        {
+            if (_activeTimedRuns.TryGetValue(word, out var existing))
+            {
+                toCancel = existing;
+                _activeTimedRuns.Remove(word);
+            }
+            else
+            {
+                mine = new CancellationTokenSource();
+                _activeTimedRuns[word] = mine;
+            }
+        }
+
+        if (toCancel != null)
+        {
+            // Only ever Cancel here, never Dispose — the still-running
+            // Execute call that owns this token disposes it itself, in its
+            // own finally block below, once it's actually done reacting to
+            // the cancellation. CancellationTokenSource doesn't guarantee
+            // Dispose is safe to call from two threads at once, so letting
+            // exactly one owner (the run itself) be the one to dispose it
+            // avoids that race entirely.
+            toCancel.Cancel();
+            return;
+        }
+
+        try
+        {
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(mine!.Token, _stopSignal.Token);
+            var token = linked.Token;
+
+            if (behavior.Hold)
+            {
+                PressAllDown(keys);
+                InterruptibleSleep((int)(behavior.DurationSeconds * 1000), token);
+                ReleaseAllUp(keys);
+            }
+            else
+            {
+                var end = DateTime.UtcNow.AddSeconds(behavior.DurationSeconds);
+                int i = 0;
+                while (DateTime.UtcNow < end && !token.IsCancellationRequested)
+                {
+                    TapKeySequentially(keys, i);
+                    InterruptibleSleep(GapMsAfterKey(behavior, i, keys.Count), token);
+                    i++;
+                }
+            }
+        }
+        finally
+        {
+            lock (_lock)
+            {
+                if (_activeTimedRuns.TryGetValue(word, out var current) && current == mine)
+                    _activeTimedRuns.Remove(word);
+            }
+            mine!.Dispose();
         }
     }
 
