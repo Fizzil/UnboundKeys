@@ -5,9 +5,10 @@ Remap mouse buttons, voice commands, and a physical number row to keyboard keys,
 ## Screenshots
 
 <p float="left">
-  <img src="Assets/screenshots/VP-Mouse.png" width="32%" alt="Mouse Button 5's card, showing a Ctrl+V combo, Repeat, Hold, and Reset" />
-  <img src="Assets/screenshots/VP-MultiKey-RepeatInterval.png" width="32%" alt="A three-key A/B/C combo with Repeat and Infinite on, and the Repeat Interval row with K1/K2/K3 timing" />
-  <img src="Assets/screenshots/VP-Profiles.png" width="32%" alt="The Profile tab, showing Default and a custom 'the isle' profile, with the VPress/Mouse/Profile row above it" />
+  <img src="Assets/screenshots/VP-PressOptions.png" width="24%" alt="Press's Voice Press/Physical Press selector, dropped down below the Press button" />
+  <img src="Assets/screenshots/VP-Mouse.png" width="24%" alt="Middle Click's card, showing a 1/2/3 combo with Repeat, Repeat Interval, and the K1/K2/K3 timing row" />
+  <img src="Assets/screenshots/VP-MultiKey-RepeatInterval.png" width="24%" alt="A three-key A/B/C combo with Repeat and Infinite on, and the Repeat Interval row with K1/K2/K3 timing" />
+  <img src="Assets/screenshots/VP-Profiles.png" width="24%" alt="The Profile tab, showing Default and a custom 'the isle' profile, with the Press/Mouse/Profile row above it" />
 </p>
 
 ## What it does
