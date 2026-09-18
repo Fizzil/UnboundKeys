@@ -218,28 +218,8 @@ internal sealed class ProfilesTab : IDashboardTab
                 // Tap once to arm (lights up), tap again within 2 seconds to
                 // actually delete — same "confirm via a second tap" language
                 // as the rest of the app, since this is destructive.
-                var deleteButton = Theme.MakeTinyButton("✕");
-                bool armed = false;
-                var armTimer = new System.Windows.Forms.Timer { Interval = 2000 };
-                armTimer.Tick += (_, _) =>
+                var deleteButton = Theme.MakeConfirmDeleteButton(() =>
                 {
-                    armed = false;
-                    armTimer.Stop();
-                    Theme.SetToggleAppearance(deleteButton, false);
-                };
-                deleteButton.Click += (_, _) =>
-                {
-                    if (!armed)
-                    {
-                        armed = true;
-                        Theme.SetToggleAppearance(deleteButton, true);
-                        armTimer.Stop();
-                        armTimer.Start();
-                        return;
-                    }
-
-                    armTimer.Stop();
-                    armTimer.Dispose();
                     Settings.DeleteProfile(name);
                     existingNames.Remove(name);
                     profileRows.Remove(row);
@@ -249,7 +229,7 @@ internal sealed class ProfilesTab : IDashboardTab
                     RebuildProfilesList();
                     if (wasActive)
                         ctx.SwitchToProfile(Settings.DefaultProfileName);
-                };
+                });
                 row.Controls.Add(deleteButton, 1, 0);
             }
 
@@ -275,9 +255,9 @@ internal sealed class ProfilesTab : IDashboardTab
                 freshBehaviors[word] = new KeyBehavior();
             }
 
-            // Mouse buttons start unmapped in every new profile, same as a
-            // freshly-installed VoicePress — there's no equivalent of a
-            // word's "natural" default key for a mouse button.
+            // Mouse buttons and physical keys start unmapped in every new
+            // profile, same as a freshly-installed VoicePress — there's no
+            // equivalent of a word's "natural" default key for either.
             var freshMouseEnabled = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
             var freshMouseWords = new Dictionary<string, ushort>(StringComparer.OrdinalIgnoreCase);
             var freshMouseExtraWords = new Dictionary<string, List<ushort>>(StringComparer.OrdinalIgnoreCase);
@@ -290,9 +270,22 @@ internal sealed class ProfilesTab : IDashboardTab
                 freshMouseBehaviors[button.Id] = new KeyBehavior();
             }
 
+            var freshPhysicalEnabled = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+            var freshPhysicalWords = new Dictionary<string, ushort>(StringComparer.OrdinalIgnoreCase);
+            var freshPhysicalExtraWords = new Dictionary<string, List<ushort>>(StringComparer.OrdinalIgnoreCase);
+            var freshPhysicalBehaviors = new Dictionary<string, KeyBehavior>(StringComparer.OrdinalIgnoreCase);
+            foreach (var key in PhysicalKeyCatalog.Keys)
+            {
+                freshPhysicalEnabled[key.Id] = false;
+                freshPhysicalWords[key.Id] = 0;
+                freshPhysicalExtraWords[key.Id] = new List<ushort>();
+                freshPhysicalBehaviors[key.Id] = new KeyBehavior();
+            }
+
             Settings.CreateProfileIfMissing(
                 name, freshWords, freshExtraWords, freshBehaviors,
-                freshMouseEnabled, freshMouseWords, freshMouseExtraWords, freshMouseBehaviors);
+                freshMouseEnabled, freshMouseWords, freshMouseExtraWords, freshMouseBehaviors,
+                freshPhysicalEnabled, freshPhysicalWords, freshPhysicalExtraWords, freshPhysicalBehaviors);
 
             existingNames.Add(name);
             AddProfileRow(name);

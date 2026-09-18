@@ -45,22 +45,23 @@ internal static class KeyExecutor
         return RepeatIntervalMs;
     }
 
-    // Tracks which words/button-ids currently have an infinite hold/repeat
-    // running, so the next time it's heard/pressed we know to stop it
-    // instead of starting another one. Shared across both sources — a
-    // spoken word and a mouse button id never collide, so one dictionary is
-    // fine — but which SLOT (see InfiniteState below) a given key occupies
-    // does depend on its source.
+    // Tracks which words/button-ids/physical-key-ids currently have an
+    // infinite hold/repeat running, so the next time it's heard/pressed we
+    // know to stop it instead of starting another one. Shared across all
+    // three sources — a spoken word, a mouse button id, and a physical key
+    // id never collide, so one dictionary is fine — but which SLOT (see
+    // InfiniteState below) a given key occupies does depend on its source.
     private static readonly Dictionary<string, bool> _engaged = new();
     private static readonly object _lock = new();
 
     // Only one word may be doing an infinite hold at a time, and separately
     // only one may be doing an infinite repeat — engaging a new one bumps
-    // whichever word was already occupying that slot. Mouse buttons get
-    // their own completely independent pair of slots (see StateFor), so a
-    // voice-triggered infinite hold and a mouse-button-triggered infinite
-    // hold can run at the same time without bumping each other — only two
-    // words from the *same* source ever compete for the same slot.
+    // whichever word was already occupying that slot. Mouse buttons and
+    // physical keys each get their own completely independent pair of
+    // slots (see StateFor), so a voice-triggered infinite hold, a
+    // mouse-button-triggered one, and a physical-key-triggered one can all
+    // run at the same time without bumping each other — only two words
+    // from the *same* source ever compete for the same slot.
     private sealed class InfiniteState
     {
         public string? HoldWord;
@@ -75,12 +76,18 @@ internal static class KeyExecutor
 
     private static readonly InfiniteState _voiceState = new();
     private static readonly InfiniteState _mouseState = new();
+    private static readonly InfiniteState _physicalState = new();
 
     private static bool IsMouseSource(string word) => Array.IndexOf(MouseMap.ButtonIds, word) >= 0;
-    private static InfiniteState StateFor(string word) => IsMouseSource(word) ? _mouseState : _voiceState;
+    private static bool IsPhysicalSource(string word) => Array.IndexOf(PhysicalKeyMap.KeyIds, word) >= 0;
+
+    private static InfiniteState StateFor(string word) =>
+        IsMouseSource(word) ? _mouseState : IsPhysicalSource(word) ? _physicalState : _voiceState;
 
     private static List<(ushort Vk, bool Extended)> GetAllKeysForWord(string word) =>
-        IsMouseSource(word) ? MouseMap.GetAllKeys(word) : KeyMap.GetAllKeys(word);
+        IsMouseSource(word) ? MouseMap.GetAllKeys(word) :
+        IsPhysicalSource(word) ? PhysicalKeyMap.GetAllKeys(word) :
+        KeyMap.GetAllKeys(word);
 
     // The window (and its title, at the time) that was focused when each
     // slot was engaged — e.g. the game. If focus moves to a different window
@@ -256,7 +263,50 @@ internal static class KeyExecutor
             _engaged.Clear();
             ClearState(_voiceState);
             ClearState(_mouseState);
+            ClearState(_physicalState);
         }
+
+        foreach (var word in engagedWords)
+            ReleaseAllUp(GetAllKeysForWord(word));
+    }
+
+    // Called by PressMode when its active source switches (voice <->
+    // physical, see PressMode.SwitchTo) — that source can no longer hear a
+    // second press/word to toggle off whatever it left running, so
+    // switching away from it needs to clean up after itself, the same way
+    // ReleaseAll does for everything at once when the app pauses. Only
+    // this source's own engaged infinite state and in-flight timed runs
+    // are touched — deliberately doesn't cancel the shared _stopSignal
+    // (unlike ReleaseAll), since that would also interrupt whatever the
+    // source being switched *to* might already be running.
+    public static void ReleaseVoiceWords() => ReleaseSource(word => !IsMouseSource(word) && !IsPhysicalSource(word), _voiceState);
+    public static void ReleasePhysicalKeys() => ReleaseSource(IsPhysicalSource, _physicalState);
+
+    private static void ReleaseSource(Func<string, bool> isInSource, InfiniteState state)
+    {
+        List<string> engagedWords = new();
+        List<CancellationTokenSource> timedToCancel = new();
+
+        lock (_lock)
+        {
+            foreach (var (word, engaged) in _engaged)
+                if (engaged && isInSource(word))
+                    engagedWords.Add(word);
+            foreach (var word in engagedWords)
+                _engaged[word] = false;
+
+            foreach (var (word, cts) in _activeTimedRuns)
+                if (isInSource(word))
+                    timedToCancel.Add(cts);
+
+            ClearState(state);
+        }
+
+        // Same single-owner-disposes rule as ExecuteTimed's own toggle-cancel
+        // path — only ever Cancel here, the in-flight Execute call disposes
+        // its own token once it's done reacting.
+        foreach (var cts in timedToCancel)
+            cts.Cancel();
 
         foreach (var word in engagedWords)
             ReleaseAllUp(GetAllKeysForWord(word));
@@ -420,8 +470,8 @@ internal static class KeyExecutor
     // out of a game, clicking a different window) — or the same window's
     // title has changed (switching tabs in a browser) — that slot releases
     // automatically. A safety net for whenever saying the word (or pressing
-    // the button) again, or "press stop", isn't an option. Checks both
-    // sources' slots independently, since either or both can be engaged at once.
+    // the button) again, or "press stop", isn't an option. Checks all
+    // three sources' slots independently, since any or all can be engaged at once.
     // A window handle change is always a genuine focus switch (typing into
     // a target never makes some *other* window take focus), so that always
     // releases. A title change is ambiguous — it might be a real tab switch
@@ -448,7 +498,7 @@ internal static class KeyExecutor
 
         lock (_lock)
         {
-            foreach (var s in new[] { _voiceState, _mouseState })
+            foreach (var s in new[] { _voiceState, _mouseState, _physicalState })
             {
                 if (s.HoldWord != null && s.HoldWindow.HasValue)
                 {

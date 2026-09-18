@@ -35,16 +35,17 @@ internal static class NativeInput
     private const uint XBUTTON1 = 0x0001;
     private const uint XBUTTON2 = 0x0002;
 
-    // Tags every mouse click VoicePress itself sends, via MOUSEINPUT's
-    // dwExtraInfo field — a field that exists specifically for this kind
-    // of "mark an injected event as mine" use. MouseInputWatcher's hook
-    // checks for this exact value so it only ignores VoicePress's own
-    // synthetic clicks — not every software-injected event in general.
-    // That distinction matters: many gaming mice run vendor driver
-    // software that relays real physical input through the same
-    // SendInput-style injection path, so a blanket "ignore anything
-    // injected" check would also swallow genuinely real clicks/scrolls
-    // from a mouse like that, not just VoicePress's own output.
+    // Tags every mouse click and every keystroke VoicePress itself sends,
+    // via MOUSEINPUT/KEYBDINPUT's shared dwExtraInfo field — a field that
+    // exists specifically for this kind of "mark an injected event as
+    // mine" use. MouseInputWatcher's and PhysicalKeyWatcher's hooks check
+    // for this exact value so they only ignore VoicePress's own synthetic
+    // output — not every software-injected event in general. That
+    // distinction matters: many gaming mice (and some keyboards) run
+    // vendor driver software that relays real physical input through the
+    // same SendInput-style injection path, so a blanket "ignore anything
+    // injected" check would also swallow genuinely real input from a
+    // device like that, not just VoicePress's own output.
     internal static readonly IntPtr InjectedByVoicePress = (IntPtr)0x56505253; // "VPRS"
     // fizzil^.^ was here
 
@@ -147,7 +148,7 @@ internal static class NativeInput
         var down = new INPUT
         {
             type = INPUT_KEYBOARD,
-            U = new InputUnion { ki = new KEYBDINPUT { wScan = scanCode, dwFlags = flags } }
+            U = new InputUnion { ki = new KEYBDINPUT { wScan = scanCode, dwFlags = flags, dwExtraInfo = InjectedByVoicePress } }
         };
 
         SendInput(1, new[] { down }, Marshal.SizeOf<INPUT>());
@@ -167,7 +168,7 @@ internal static class NativeInput
         var up = new INPUT
         {
             type = INPUT_KEYBOARD,
-            U = new InputUnion { ki = new KEYBDINPUT { wScan = scanCode, dwFlags = flags } }
+            U = new InputUnion { ki = new KEYBDINPUT { wScan = scanCode, dwFlags = flags, dwExtraInfo = InjectedByVoicePress } }
         };
 
         SendInput(1, new[] { up }, Marshal.SizeOf<INPUT>());

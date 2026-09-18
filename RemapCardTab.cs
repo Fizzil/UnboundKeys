@@ -1,34 +1,129 @@
 namespace VoicePress;
 
-// One word's card — Key (click to expand a list of key categories, hover a
-// category to pop out its individual keys), Repeat, Hold, Reset (with the
-// "Reset All" easter egg on a triple tap), and the shared +1/+0.1/reset/
-// Infinite timing row that appears under whichever of Repeat/Hold is on.
-internal sealed class WordCardTab : IDashboardTab
+// The seam that lets RemapCardTab drive either KeyMap or MouseMap without
+// knowing which — every place the two used to differ (a word always has a
+// real key; a mouse button starts unmapped) is captured in KeyLabelFor and
+// AddKeySeed below, so the card-building logic itself never needs to ask
+// "am I a word or a button."
+internal interface IRemapSource
 {
-    private readonly string _word;
+    Dictionary<string, ushort> Words { get; }
+    Dictionary<string, List<ushort>> ExtraWords { get; }
+    Dictionary<string, KeyBehavior> Behaviors { get; }
 
-    public WordCardTab(string word) => _word = word;
+    void Rebind(string id, ushort vkCode);
+    void AddExtraKey(string id, ushort vkCode);
+    void SetExtraKey(string id, int index, ushort vkCode);
+    void RemoveExtraKey(string id, int index);
+    void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool useCustomRepeatIntervals, List<double> repeatKeyIntervalsSeconds);
+    void ResetToDefault(string id);
 
-    public string Id => _word;
+    // "Key 1: X" for a word (always has a real key); "Key 1: Not Mapped"
+    // for a button that hasn't been assigned one yet.
+    string KeyLabelFor(string id);
 
-    // The digit shown on the tab itself ("1".."10") — its position in the
-    // fixed word list, not the spoken word ("one".."ten") used as Id.
-    public string Label => (Array.IndexOf(KeyMap.RemappableWords, _word) + 1).ToString();
+    // Add Key's starting value for a new extra key slot — a word just
+    // copies its own already-real main key; an unmapped button has
+    // nothing sensible to copy, so it falls back to "A".
+    ushort AddKeySeed(string id);
+}
 
-    private static string KeyLabelFor(string word) => $"Key 1: {KeyCatalog.DisplayNameFor(KeyMap.Words[word])}";
+internal sealed class KeyMapSource : IRemapSource
+{
+    public static readonly KeyMapSource Instance = new();
+    private KeyMapSource() { }
 
-    // Extra keys are numbered from 2 (the primary key is "Key 1"), so the
-    // first extra reads "Key 2: ...", the second "Key 3: ...". Recomputed
-    // fresh from each row's live position every rebuild, so removing "Key 2"
-    // automatically renumbers "Key 3" down to "Key 2" rather than leaving a
-    // gap.
+    public Dictionary<string, ushort> Words => KeyMap.Words;
+    public Dictionary<string, List<ushort>> ExtraWords => KeyMap.ExtraWords;
+    public Dictionary<string, KeyBehavior> Behaviors => KeyMap.Behaviors;
+
+    public void Rebind(string id, ushort vkCode) => KeyMap.Rebind(id, vkCode);
+    public void AddExtraKey(string id, ushort vkCode) => KeyMap.AddExtraKey(id, vkCode);
+    public void SetExtraKey(string id, int index, ushort vkCode) => KeyMap.SetExtraKey(id, index, vkCode);
+    public void RemoveExtraKey(string id, int index) => KeyMap.RemoveExtraKey(id, index);
+    public void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool useCustomRepeatIntervals, List<double> repeatKeyIntervalsSeconds) =>
+        KeyMap.SetBehavior(id, repeat, hold, durationSeconds, infinite, useCustomRepeatIntervals, repeatKeyIntervalsSeconds);
+    public void ResetToDefault(string id) => KeyMap.ResetToDefault(id);
+
+    public string KeyLabelFor(string id) => $"Key 1: {KeyCatalog.DisplayNameFor(KeyMap.Words[id])}";
+    public ushort AddKeySeed(string id) => KeyMap.Words[id];
+}
+
+internal sealed class MouseMapSource : IRemapSource
+{
+    public static readonly MouseMapSource Instance = new();
+    private MouseMapSource() { }
+
+    public Dictionary<string, ushort> Words => MouseMap.Words;
+    public Dictionary<string, List<ushort>> ExtraWords => MouseMap.ExtraWords;
+    public Dictionary<string, KeyBehavior> Behaviors => MouseMap.Behaviors;
+
+    public void Rebind(string id, ushort vkCode) => MouseMap.Rebind(id, vkCode);
+    public void AddExtraKey(string id, ushort vkCode) => MouseMap.AddExtraKey(id, vkCode);
+    public void SetExtraKey(string id, int index, ushort vkCode) => MouseMap.SetExtraKey(id, index, vkCode);
+    public void RemoveExtraKey(string id, int index) => MouseMap.RemoveExtraKey(id, index);
+    public void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool useCustomRepeatIntervals, List<double> repeatKeyIntervalsSeconds) =>
+        MouseMap.SetBehavior(id, repeat, hold, durationSeconds, infinite, useCustomRepeatIntervals, repeatKeyIntervalsSeconds);
+    public void ResetToDefault(string id) => MouseMap.ResetToDefault(id);
+
+    public string KeyLabelFor(string id) =>
+        MouseMap.Enabled[id] ? $"Key 1: {KeyCatalog.DisplayNameFor(MouseMap.Words[id])}" : "Key 1: Not Mapped";
+    public ushort AddKeySeed(string id) => MouseMap.Enabled[id] ? MouseMap.Words[id] : (ushort)0x41;
+}
+
+internal sealed class PhysicalKeyMapSource : IRemapSource
+{
+    public static readonly PhysicalKeyMapSource Instance = new();
+    private PhysicalKeyMapSource() { }
+
+    public Dictionary<string, ushort> Words => PhysicalKeyMap.Words;
+    public Dictionary<string, List<ushort>> ExtraWords => PhysicalKeyMap.ExtraWords;
+    public Dictionary<string, KeyBehavior> Behaviors => PhysicalKeyMap.Behaviors;
+
+    public void Rebind(string id, ushort vkCode) => PhysicalKeyMap.Rebind(id, vkCode);
+    public void AddExtraKey(string id, ushort vkCode) => PhysicalKeyMap.AddExtraKey(id, vkCode);
+    public void SetExtraKey(string id, int index, ushort vkCode) => PhysicalKeyMap.SetExtraKey(id, index, vkCode);
+    public void RemoveExtraKey(string id, int index) => PhysicalKeyMap.RemoveExtraKey(id, index);
+    public void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool useCustomRepeatIntervals, List<double> repeatKeyIntervalsSeconds) =>
+        PhysicalKeyMap.SetBehavior(id, repeat, hold, durationSeconds, infinite, useCustomRepeatIntervals, repeatKeyIntervalsSeconds);
+    public void ResetToDefault(string id) => PhysicalKeyMap.ResetToDefault(id);
+
+    public string KeyLabelFor(string id) =>
+        PhysicalKeyMap.Enabled[id] ? $"Key 1: {KeyCatalog.DisplayNameFor(PhysicalKeyMap.Words[id])}" : "Key 1: Not Mapped";
+    public ushort AddKeySeed(string id) => PhysicalKeyMap.Enabled[id] ? PhysicalKeyMap.Words[id] : (ushort)0x41;
+}
+
+// One word's or mouse button's card — Key (click to expand a list of key
+// categories, hover a category to pop out its individual keys), Repeat,
+// Hold, Reset (with the "Reset All" easter egg on a triple tap), and the
+// shared +1/+0.1/reset/Infinite timing row that appears under whichever of
+// Repeat/Hold is on. Driven entirely through IRemapSource, so this same
+// class serves both VPress's ten words and Mouse's six buttons — previously
+// two ~90%-identical files (WordCardTab.cs/MouseButtonCardTab.cs) differing
+// only in which map they read and wrote.
+internal sealed class RemapCardTab : IDashboardTab
+{
+    private readonly IRemapSource _source;
+    private readonly string _id;
+    private readonly string _label;
+
+    public RemapCardTab(IRemapSource source, string id, string label)
+    {
+        _source = source;
+        _id = id;
+        _label = label;
+    }
+
+    public string Id => _id;
+    public string Label => _label;
+
     private static string ExtraKeyLabel(int slotNumber, ushort vk) => $"Key {slotNumber}: {KeyCatalog.DisplayNameFor(vk)}";
 
     public Control BuildContent(DashboardTabContext ctx)
     {
-        var word = _word;
-        var behavior = KeyMap.Behaviors[word];
+        var source = _source;
+        var id = _id;
+        var behavior = source.Behaviors[id];
         double duration = behavior.DurationSeconds;
 
         // The card: one red-bordered frame around everything (key, checkboxes,
@@ -88,13 +183,13 @@ internal sealed class WordCardTab : IDashboardTab
 
         // 2. Key 1 — click to expand the category accordion above; click Key
         // again to collapse it. Picking a key rebinds the card's main key.
-        var keyButton = Theme.MakeListButton(KeyLabelFor(word));
+        var keyButton = Theme.MakeListButton(source.KeyLabelFor(id));
         Theme.EnableTabUnderline(keyButton);
         bool keyExpanded = false;
         var categoryButtons = BuildCategoryButtons(entry =>
         {
-            KeyMap.Rebind(word, entry.VkCode);
-            keyButton.Text = KeyLabelFor(word);
+            source.Rebind(id, entry.VkCode);
+            keyButton.Text = source.KeyLabelFor(id);
         });
 
         // 1. Add Key — adds one more key that fires alongside the main one
@@ -111,10 +206,10 @@ internal sealed class WordCardTab : IDashboardTab
         // RebuildList too, same as this one does.)
         var addKeyButton = Theme.MakeListButton("Add Key");
         var extraKeyRows = new List<Control>();
-        // Parallel to KeyMap.ExtraWords[word] — seeded with one "false" per
-        // already-saved extra key, since a word can already have extras from
-        // a previous session by the time its card is first built.
-        var extraKeyExpanded = new List<bool>(new bool[KeyMap.ExtraWords[word].Count]);
+        // Parallel to source.ExtraWords[id] — seeded with one "false" per
+        // already-saved extra key, since a word/button can already have
+        // extras from a previous session by the time its card is first built.
+        var extraKeyExpanded = new List<bool>(new bool[source.ExtraWords[id].Count]);
 
         // Only one key's category dropdown should be open at a time — Key
         // 1's or any extra's. Called before opening a different one, so the
@@ -196,17 +291,17 @@ internal sealed class WordCardTab : IDashboardTab
         timingPanel.Controls.Add(infiniteButton, 3, 0);
         timingPanel.Controls.Add(durationLabel, 4, 0);
 
-        // Repeat Interval: only shown while Repeat is on for a word with 2+
-        // keys (see RebuildList) — a plain toggle button, no value of its
-        // own. Turning it on reveals a row below it with one "K1"/"K2"/...
-        // button per key (see RebuildKeyIntervalRow) — K1's own gap before
-        // K2, K2's before K3, and so on, wrapping back to K1 — each
-        // independently selectable so +1/+0.1/reset (from the timing row
-        // above) target that key's gap instead of the main duration. ∞
+        // Repeat Interval: only shown while Repeat is on for a word/button
+        // with 2+ keys (see RebuildList) — a plain toggle button, no value
+        // of its own. Turning it on reveals a row below it with one
+        // "K1"/"K2"/... button per key (see RebuildKeyIntervalRow) — K1's
+        // own gap before K2, K2's before K3, and so on, wrapping back to K1
+        // — each independently selectable so +1/+0.1/reset (from the timing
+        // row above) target that key's gap instead of the main duration. ∞
         // keeps doing what it already does regardless of what's selected,
-        // since it's a whole-word setting, not specific to one duration.
+        // since it's a whole-card setting, not specific to one duration.
         // Turning this off makes the custom gaps stop applying entirely —
-        // repeats fall back to the plain fixed gap, same as any 1-key word.
+        // repeats fall back to the plain fixed gap, same as any 1-key card.
         bool useCustomRepeatIntervals = behavior.UseCustomRepeatIntervals;
         var repeatIntervalButton = Theme.MakeListButton("Repeat Interval");
         Theme.EnableTabUnderline(repeatIntervalButton);
@@ -216,7 +311,7 @@ internal sealed class WordCardTab : IDashboardTab
         // against stale/mismatched saved data — e.g. an old profile saved
         // before this feature existed — by rebuilding to the right length
         // rather than trusting it blindly.
-        int totalKeyCount = 1 + KeyMap.ExtraWords[word].Count;
+        int totalKeyCount = 1 + source.ExtraWords[id].Count;
         List<double> keyIntervalSeconds = behavior.RepeatKeyIntervalsSeconds.Count == totalKeyCount
             ? new List<double>(behavior.RepeatKeyIntervalsSeconds)
             : new List<double>(new double[totalKeyCount]);
@@ -275,7 +370,7 @@ internal sealed class WordCardTab : IDashboardTab
         }
         RebuildKeyIntervalRow();
 
-        // Rebuilt fresh from KeyMap.ExtraWords[word] every time one is added,
+        // Rebuilt fresh from source.ExtraWords[id] every time one is added,
         // removed, or expanded/collapsed, so the "Key 2"/"Key 3" numbering
         // always matches actual position rather than going stale after a
         // delete. Declared here rather than up by Add Key's other fields
@@ -285,7 +380,7 @@ internal sealed class WordCardTab : IDashboardTab
         void RebuildExtraKeyRows()
         {
             extraKeyRows.Clear();
-            var extras = KeyMap.ExtraWords[word];
+            var extras = source.ExtraWords[id];
             for (int i = 0; i < extras.Count; i++)
             {
                 int slotIndex = i; // captured per-row, not the loop variable
@@ -319,7 +414,7 @@ internal sealed class WordCardTab : IDashboardTab
                     var deleteButton = Theme.MakeListButton("✕");
                     deleteButton.Click += (_, _) =>
                     {
-                        KeyMap.RemoveExtraKey(word, slotIndex);
+                        source.RemoveExtraKey(id, slotIndex);
                         extraKeyExpanded.RemoveAt(slotIndex);
 
                         // Keep the repeat-interval gaps in sync: slot 0 is
@@ -341,7 +436,7 @@ internal sealed class WordCardTab : IDashboardTab
 
                     var extraCategoryButtons = BuildCategoryButtons(entry =>
                     {
-                        KeyMap.SetExtraKey(word, slotIndex, entry.VkCode);
+                        source.SetExtraKey(id, slotIndex, entry.VkCode);
                         RebuildExtraKeyRows();
                         RebuildList();
                     });
@@ -364,15 +459,15 @@ internal sealed class WordCardTab : IDashboardTab
             list.Controls.Clear();
             list.RowStyles.Clear();
 
-            bool atExtraKeyCap = KeyMap.ExtraWords[word].Count >= 2;
+            bool atExtraKeyCap = source.ExtraWords[id].Count >= 2;
 
-            // A 2+ key word (at least one extra added) gets a repeat
-            // interval toggle to tune — a 1-key word has nothing between
+            // A 2+ key card (at least one extra added) gets a repeat
+            // interval toggle to tune — a 1-key card has nothing between
             // taps worth spacing out. If the toggle disappears (Repeat
-            // turned off, or the word drops back to 1 key) while it was on,
+            // turned off, or the card drops back to 1 key) while it was on,
             // switch it back off and drop the K selection so +1/+0.1/reset
             // don't silently target a hidden control.
-            bool canCustomizeRepeatInterval = repeatOn && KeyMap.ExtraWords[word].Count >= 1;
+            bool canCustomizeRepeatInterval = repeatOn && source.ExtraWords[id].Count >= 1;
             if (!canCustomizeRepeatInterval && useCustomRepeatIntervals)
             {
                 useCustomRepeatIntervals = false;
@@ -452,12 +547,8 @@ internal sealed class WordCardTab : IDashboardTab
 
         addKeyButton.Click += (_, _) =>
         {
-            // Starts as a copy of the main key — not because that's a
-            // meaningful default, just because a slot needs some value, and
-            // clicking it to pick a real one (like the main Key row) is the
-            // very next thing you'd do anyway.
             ctx.CloseCategoryPopup();
-            KeyMap.AddExtraKey(word, KeyMap.Words[word]);
+            source.AddExtraKey(id, source.AddKeySeed(id));
             extraKeyExpanded.Add(false);
             keyIntervalSeconds.Add(0.0);
             RebuildExtraKeyRows();
@@ -475,7 +566,7 @@ internal sealed class WordCardTab : IDashboardTab
             RebuildList();
         };
 
-        void SaveBehavior() => KeyMap.SetBehavior(word, repeatOn, holdOn, duration, infiniteOn, useCustomRepeatIntervals, keyIntervalSeconds);
+        void SaveBehavior() => source.SetBehavior(id, repeatOn, holdOn, duration, infiniteOn, useCustomRepeatIntervals, keyIntervalSeconds);
 
         // Editing the timer in any way — adding time or resetting it — means
         // you're moving away from infinite mode: turn the Infinite toggle
@@ -488,7 +579,7 @@ internal sealed class WordCardTab : IDashboardTab
                 infiniteOn = false;
                 Theme.SetTabSelected(infiniteButton, false);
             }
-            KeyExecutor.ForceRelease(word);
+            KeyExecutor.ForceRelease(id);
         }
 
         // Repeat and Hold each get their own independent timer/Infinite
@@ -613,8 +704,8 @@ internal sealed class WordCardTab : IDashboardTab
         void ResetCard()
         {
             ctx.CloseCategoryPopup();
-            KeyMap.ResetToDefault(word); // also clears this word's extra keys
-            keyButton.Text = KeyLabelFor(word);
+            source.ResetToDefault(id); // also clears extra keys (and, for a mouse button, disables it)
+            keyButton.Text = source.KeyLabelFor(id);
             extraKeyExpanded.Clear();
             RebuildExtraKeyRows();
             duration = 0.0;

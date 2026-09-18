@@ -36,6 +36,22 @@ internal static class Settings
         public Dictionary<string, ushort> MouseKeyMap { get; set; } = new();
         public Dictionary<string, List<ushort>> MouseExtraKeys { get; set; } = new();
         public Dictionary<string, KeyBehavior> MouseBehaviors { get; set; } = new();
+
+        // Physical-keyboard mappings (the number-row keys Physical Press
+        // remaps) — same shape as the mouse fields above, just keyed by
+        // PhysicalKeyCatalog id (e.g. "phys1") instead. Absent from
+        // settings files saved before this existed, same reasoning as
+        // MouseEnabled above — no migration needed.
+        public Dictionary<string, bool> PhysicalEnabled { get; set; } = new();
+        public Dictionary<string, ushort> PhysicalKeyMap { get; set; } = new();
+        public Dictionary<string, List<ushort>> PhysicalExtraKeys { get; set; } = new();
+        public Dictionary<string, KeyBehavior> PhysicalBehaviors { get; set; } = new();
+
+        // Which of "voice"/"physical" is this profile's active Press
+        // source (see PressMode) — empty/absent for a profile saved
+        // before this feature existed, in which case the caller's own
+        // default ("voice") applies instead.
+        public string ActivePressMode { get; set; } = "";
     }
 
     private sealed class SavedData
@@ -193,6 +209,63 @@ internal static class Settings
         return defaults;
     }
 
+    public static Dictionary<string, bool> LoadPhysicalEnabled(string profile, Dictionary<string, bool> defaults)
+    {
+        if (Read().Profiles.TryGetValue(profile, out var data))
+            foreach (var (id, enabled) in data.PhysicalEnabled)
+                if (defaults.ContainsKey(id))
+                    defaults[id] = enabled;
+
+        return defaults;
+    }
+
+    public static Dictionary<string, ushort> LoadPhysicalKeyMap(string profile, Dictionary<string, ushort> defaults)
+    {
+        if (Read().Profiles.TryGetValue(profile, out var data))
+            foreach (var (id, vk) in data.PhysicalKeyMap)
+                if (defaults.ContainsKey(id))
+                    defaults[id] = vk;
+
+        return defaults;
+    }
+
+    public static Dictionary<string, List<ushort>> LoadPhysicalExtraKeys(string profile, Dictionary<string, List<ushort>> defaults)
+    {
+        if (Read().Profiles.TryGetValue(profile, out var data))
+            foreach (var (id, extras) in data.PhysicalExtraKeys)
+                if (defaults.ContainsKey(id))
+                    defaults[id] = extras;
+
+        return defaults;
+    }
+
+    public static Dictionary<string, KeyBehavior> LoadPhysicalBehaviors(string profile, Dictionary<string, KeyBehavior> defaults)
+    {
+        if (Read().Profiles.TryGetValue(profile, out var data))
+            foreach (var (id, behavior) in data.PhysicalBehaviors)
+                if (defaults.ContainsKey(id))
+                    defaults[id] = behavior;
+
+        return defaults;
+    }
+
+    public static string LoadActivePressMode(string profile, string defaultMode)
+    {
+        if (Read().Profiles.TryGetValue(profile, out var data) && !string.IsNullOrEmpty(data.ActivePressMode))
+            return data.ActivePressMode;
+
+        return defaultMode;
+    }
+
+    public static void SaveActivePressMode(string profile, string mode)
+    {
+        var saved = Read();
+        var data = saved.Profiles.TryGetValue(profile, out var existing) ? existing : new ProfileData();
+        data.ActivePressMode = mode;
+        saved.Profiles[profile] = data;
+        Write(saved);
+    }
+
     // Each Save*/Create* method below reads the profile's current saved data,
     // patches only the fields it owns, and writes the whole thing back — so
     // saving a voice-word change never clobbers whatever mouse-button
@@ -220,12 +293,25 @@ internal static class Settings
         Write(saved);
     }
 
+    public static void SavePhysicalProfile(string profile, Dictionary<string, bool> enabled, Dictionary<string, ushort> keyMap, Dictionary<string, List<ushort>> extraKeys, Dictionary<string, KeyBehavior> behaviors)
+    {
+        var saved = Read();
+        var data = saved.Profiles.TryGetValue(profile, out var existing) ? existing : new ProfileData();
+        data.PhysicalEnabled = enabled;
+        data.PhysicalKeyMap = keyMap;
+        data.PhysicalExtraKeys = extraKeys;
+        data.PhysicalBehaviors = behaviors;
+        saved.Profiles[profile] = data;
+        Write(saved);
+    }
+
     // Creates a profile with the given defaults if it doesn't already exist —
     // a no-op if it does, so this is safe to call speculatively.
     public static void CreateProfileIfMissing(
         string profile,
         Dictionary<string, ushort> keyMap, Dictionary<string, List<ushort>> extraKeys, Dictionary<string, KeyBehavior> behaviors,
-        Dictionary<string, bool> mouseEnabled, Dictionary<string, ushort> mouseKeyMap, Dictionary<string, List<ushort>> mouseExtraKeys, Dictionary<string, KeyBehavior> mouseBehaviors)
+        Dictionary<string, bool> mouseEnabled, Dictionary<string, ushort> mouseKeyMap, Dictionary<string, List<ushort>> mouseExtraKeys, Dictionary<string, KeyBehavior> mouseBehaviors,
+        Dictionary<string, bool> physicalEnabled, Dictionary<string, ushort> physicalKeyMap, Dictionary<string, List<ushort>> physicalExtraKeys, Dictionary<string, KeyBehavior> physicalBehaviors)
     {
         var saved = Read();
         if (saved.Profiles.ContainsKey(profile))
@@ -240,6 +326,10 @@ internal static class Settings
             MouseKeyMap = mouseKeyMap,
             MouseExtraKeys = mouseExtraKeys,
             MouseBehaviors = mouseBehaviors,
+            PhysicalEnabled = physicalEnabled,
+            PhysicalKeyMap = physicalKeyMap,
+            PhysicalExtraKeys = physicalExtraKeys,
+            PhysicalBehaviors = physicalBehaviors,
         };
         Write(saved);
     }

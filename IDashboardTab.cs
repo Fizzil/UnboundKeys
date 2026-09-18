@@ -42,8 +42,8 @@ internal sealed class DashboardTabContext
     public required Action<Action> OnProfileSwitched { get; init; }
 
     // The fixed height of an accordion row (the +1/+0.1/reset/Infinite
-    // timing strip) and of a whole word card with nothing expanded —
-    // WordCardTab needs both to compute its own required height.
+    // timing strip) and of a whole card with nothing expanded —
+    // RemapCardTab needs both to compute its own required height.
     public required int AccordionHeight { get; init; }
     public required int BaseCardHeight { get; init; }
 

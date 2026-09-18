@@ -4,8 +4,16 @@ using System.Runtime.InteropServices;
 
 namespace VoicePress;
 
-// The overlay is just the skull image, sitting in the corner. Click it to
-// toggle listening on/off (dimmed = paused). Close via the taskbar icon.
+// The overlay is just the skull image, sitting in the corner. Left-click
+// opens the dashboard; right-click toggles listening on/off (dimmed =
+// paused). Close via the taskbar icon.
+//
+// Dashboard access deliberately rides on Left Click specifically, not
+// Right Click: Left Click is the one mouse button that can never be
+// remapped (see MouseCatalog), so no matter what's mapped to Right Click
+// — even something that swallows every Right Click system-wide — the
+// dashboard is always reachable to go fix it. Right Click doesn't need
+// that same protection now that it's not the way in.
 public sealed class OverlayForm : Form
 {
     private const int WS_EX_NOACTIVATE = 0x08000000;
@@ -25,6 +33,7 @@ public sealed class OverlayForm : Form
 
     private readonly VoiceEngine _voice;
     private readonly MouseInputWatcher _mouse;
+    private readonly PhysicalKeyWatcher _physical;
     private readonly PictureBox _icon;
     private readonly Image _listeningImage;
     private readonly Image _pausedImage;
@@ -83,10 +92,11 @@ public sealed class OverlayForm : Form
         base.WndProc(ref m);
     }
 
-    public OverlayForm(VoiceEngine voice, MouseInputWatcher mouse)
+    public OverlayForm(VoiceEngine voice, MouseInputWatcher mouse, PhysicalKeyWatcher physical)
     {
         _voice = voice;
         _mouse = mouse;
+        _physical = physical;
 
         // Pulled from the project file's <Version> at build time rather
         // than hardcoded here, so it never falls out of sync — bump it in
@@ -140,7 +150,7 @@ public sealed class OverlayForm : Form
         new ToolTip().SetToolTip(_icon, $"VoicePress v{versionText}");
         // Left-button drag moves the whole icon; a left/right press that
         // never moves past DragThreshold still counts as a plain click
-        // (pause toggle / dashboard toggle) same as before.
+        // (dashboard toggle / pause toggle) same as before.
         _icon.MouseDown += (_, e) =>
         {
             if (e.Button == MouseButtons.Left)
@@ -207,9 +217,9 @@ public sealed class OverlayForm : Form
             }
 
             if (e.Button == MouseButtons.Left)
-                TogglePause();
-            else if (e.Button == MouseButtons.Right)
                 ToggleDashboard();
+            else if (e.Button == MouseButtons.Right)
+                TogglePause();
         };
 
         Controls.Add(_icon);
@@ -320,6 +330,7 @@ public sealed class OverlayForm : Form
         {
             _voice.Pause();
             _mouse.Pause();
+            _physical.Pause();
             _icon.Image = _pausedImage;
             // Otherwise a key left mid-infinite-hold/repeat would stay stuck
             // that way — with listening off, there's no way to say the word
@@ -330,6 +341,7 @@ public sealed class OverlayForm : Form
         {
             _voice.Resume();
             _mouse.Resume();
+            _physical.Resume();
             _icon.Image = _listeningImage;
         }
     }
