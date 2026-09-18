@@ -7,26 +7,37 @@ refactoring code that might still need behavior changes from real testing.
 
 ## Worth doing
 
-- **Collapse the voice/mouse duplication.** `WordCardTab.cs` and
-  `MouseButtonCardTab.cs` are ~90% identical (678 vs 541 lines); `KeyMap.cs`
-  and `MouseMap.cs` are the same story (~85% identical); `Settings.cs` has
-  two parallel sets of `Load*`/`Save*` methods for the same reason. All
-  three pairs differ mainly in "which map" they point at. Together that's
-  roughly 900 of the app's 4,650 lines. The fix: one generic card builder
-  and one generic map class, parameterized by source (voice word vs. mouse
-  button), instead of hand-copied pairs. Biggest payoff: a future behavior
-  change (like Repeat Interval) only needs to happen once instead of twice
-  in files that don't know about each other and can quietly drift apart —
-  which already almost happened once.
+- ~~Collapse the WordCardTab/MouseButtonCardTab duplication~~ — **done.**
+  The two ~90%-identical card files are now one `RemapCardTab.cs`, driven
+  through a small `IRemapSource` interface (`KeyMapSource`/`MouseMapSource`
+  adapters forward to the existing static `KeyMap`/`MouseMap` classes,
+  which weren't touched). This was the highest-risk half of the original
+  duplication item — the specific place a real drift bug (Repeat Interval
+  visibility) already almost happened.
+
+- **Collapse the `KeyMap.cs`/`MouseMap.cs`/`PhysicalKeyMap.cs` duplication**
+  (deliberately deferred twice now, not done alongside either the card
+  merge or Physical Press). These are ~85% identical (~570 lines total
+  across three files) but much shorter and simpler than the card files
+  were — mostly mechanical CRUD, less prone to silent drift. The real cost
+  of doing it: all three are referenced directly from `VoiceEngine.cs`
+  (grammar building), `MouseInputWatcher.cs`/`PhysicalKeyWatcher.cs`
+  (suppression checks), `ProfilesTab.cs` (profile creation),
+  `KeyExecutor.cs`, and `Program.cs` — a wider blast radius than the card
+  merge for a smaller LOC payoff. There's also a real semantic split to
+  reconcile: `MouseMap` and `PhysicalKeyMap` both have an `Enabled`/
+  unmapped state that `KeyMap` doesn't — meaning those two could likely
+  share one generic implementation immediately, with `KeyMap` staying the
+  odd one out. `Settings.cs`'s three parallel `Load*`/`Save*` groups
+  should fold into this same pass if it happens, since they exist for the
+  same reason. **Now backed by a concrete third duplicate instead of a
+  hypothetical one — worth prioritizing sooner than "eventually."**
 
 ## Minor cleanup, low priority
 
-- `ActionBar.cs`'s `onWidthChanged` callback is now a no-op — a leftover
-  from before the dashboard became fixed-width. Safe to remove along with
-  the now-stale "the bar just grows wider" comment.
-- `ProfilesTab.cs` hand-rolls its own "tap twice to confirm delete" button
-  instead of reusing `Theme.MakeConfirmDeleteButton`, which already does
-  the same thing.
+- ~~`ActionBar.cs`'s dead `onWidthChanged` callback~~ — **done.**
+- ~~`ProfilesTab.cs` hand-rolling its own confirm-delete button~~ — **done,**
+  now uses `Theme.MakeConfirmDeleteButton`.
 
 ## Deliberately not on this list
 

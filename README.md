@@ -1,6 +1,6 @@
 # VoicePress
 
-Remap mouse buttons and voice commands to keyboard keys, with full control over how each one gets pressed — a small Windows overlay built for playing **The Isle: Evrima**.
+Remap mouse buttons, voice commands, and a physical number row to keyboard keys, with full control over how each one gets pressed — a small Windows overlay built for playing **The Isle: Evrima**.
 
 ## Screenshots
 
@@ -12,13 +12,13 @@ Remap mouse buttons and voice commands to keyboard keys, with full control over 
 
 ## What it does
 
-- Say "press one" through "press ten" to send the matching key.
+- Say "press one" through "press ten" to send the matching key — or skip voice entirely and press the physical `1`–`9`/`0` number-row keys instead, remapped the same way. Only one of Voice Press or Physical Press is active at a time, switchable right from the dashboard — mainly for able-bodied friends who'd rather use the physical keys than talk.
 - Remap Right Click, Middle Click, Mouse 4/5, and Wheel Up/Down to send a key too — Left Click is left alone on purpose, so you can never lose the ability to click.
-- Remap which key each word or button sends — each one taps its key by default, or can be set to hold or repeat instead — and manage multiple named profiles, right-click the skull icon for a small dashboard.
+- Remap which key each word or button sends — each one taps its key by default, or can be set to hold or repeat instead — and manage multiple named profiles, left-click the skull icon for a small dashboard.
 - Add up to two more keys to a word or button for a combo, like Ctrl+C — tap and hold press them all together, and repeat cycles through them in sequence, with the timing between each adjustable.
-- Say "press stop" to release anything currently held down or repeating — a safety net for whenever a command can't be repeated in time.
+- Say "press stop," or double-tap the physical Caps Lock key, to release anything currently held down or repeating — a safety net for whenever a command can't be repeated in time. Works no matter which Press source is active, and never interferes with Caps Lock's normal function (its on/off state ends up right back where it started, since two real toggles cancel out).
 - Say the word (or press the button) again while it's mid-hold or mid-repeat to stop it early, instead of waiting out its full duration — handy for setting a long duration as a stand-in for indefinite.
-- Left-click (or drag) the skull icon to pause listening or move it around the screen.
+- Right-click the skull icon to pause listening, or drag it to move it around the screen.
 - Runs fully offline — speech recognition ([Vosk](https://alphacephei.com/vosk/)) happens entirely on your machine. Nothing is sent anywhere.
 
 See [MANUAL.md](MANUAL.md) for the full details — exact voice commands, safety nets, profile behavior, and everything the dashboard does.
@@ -27,7 +27,7 @@ See [MANUAL.md](MANUAL.md) for the full details — exact voice commands, safety
 
 VoicePress was built as an accessibility tool, for Fizzil — who is disabled — to be able to play *The Isle: Evrima*, using a normal mouse or a specialized **quad mouse** (a mouse with extra physical buttons). It is **not** intended as a way to play the game hands-free with voice alone.
 
-It's a mouse-button and voice remapper in one: six of a mouse's buttons (Right Click, Middle Click, Mouse 4/5, Wheel Up/Down — Left Click is deliberately left alone, so you always keep the ability to click) and up to ten spoken words each send a keyboard key, with full control over *how* — a single tap, held down, or repeated, for a fixed duration or until you say/press it again. Between the two, it covers game actions for moments a hand isn't free to reach a key.
+It's a mouse-button, voice, and physical-keyboard remapper in one: six of a mouse's buttons (Right Click, Middle Click, Mouse 4/5, Wheel Up/Down — Left Click is deliberately left alone, so you always keep the ability to click) run independently alongside up to ten spoken words, each sending a keyboard key with full control over *how* — a single tap, held down, or repeated, for a fixed duration or until you say/press it again. Those same ten actions can also be triggered by the physical `1`–`9`/`0` keys instead of your voice — added mainly so able-bodied friends testing the app could use it without needing to talk to it.
 
 ## Installing
 
