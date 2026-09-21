@@ -57,3 +57,7 @@ Each profile has its own full set of key mappings — the ten words, the ten phy
 ## Saved data
 
 Everything is saved to `%AppData%\VoicePress\settings.json` and reloaded automatically next launch.
+
+## Troubleshooting
+
+**A mapped mouse button (or physical key) does nothing in a specific game — the game still reacts to the real click/key instead of the mapped one, even though Voice Press works fine in the same game.** Try running VoicePress as Administrator (right-click its shortcut → **Run as administrator**). Some games require elevated privileges to run, and Windows can prevent a non-elevated app's input remapping from affecting an elevated one — VoicePress needs to be running at least as high a privilege level as the game. If running as Administrator doesn't fix it, the game's anti-cheat (EasyAntiCheat, BattlEye, Vanguard, etc.) may be specifically blocking the kind of low-level input hook VoicePress uses, since it's the same technique some cheat tools use — that's not something VoicePress can work around.
