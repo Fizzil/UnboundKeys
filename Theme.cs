@@ -1,10 +1,10 @@
 namespace VoicePress;
 
 // The dashboard's black/red visual style. Colors live in one swappable
-// object (Theme.Current) rather than as scattered constants — a future
-// alternate palette (dark/light, or anything else) would mean assigning a
-// new ThemeColors here instead of hunting through every file that uses a
-// color. No second palette exists yet; this is just the groundwork for one.
+// object (Theme.Current) rather than as scattered constants — swapping
+// the whole palette (see the named presets and SetByName below) means
+// assigning a new ThemeColors here instead of hunting through every file
+// that uses a color.
 internal sealed record ThemeColors(Color Background, Color Button, Color Accent, Color Hover);
 
 // The shared button styling and small formatting helpers every card/tab
@@ -12,11 +12,40 @@ internal sealed record ThemeColors(Color Background, Color Button, Color Accent,
 // for it.
 internal static class Theme
 {
-    public static ThemeColors Current { get; set; } = new(
+    // Background/Button stay identical across every preset below —
+    // switching color only ever changes Accent/Hover, so the black
+    // dashboard backdrop never shifts, just the one color it's built
+    // around. Hover is each Accent scaled down to roughly a quarter
+    // brightness, matching Red's own original ratio.
+    public static readonly ThemeColors Red = new(
         Background: Color.Black,
         Button: Color.FromArgb(18, 18, 18),
         Accent: Color.FromArgb(230, 70, 30),
         Hover: Color.FromArgb(60, 20, 12));
+
+    public static readonly ThemeColors Green = new(
+        Background: Color.Black,
+        Button: Color.FromArgb(18, 18, 18),
+        Accent: Color.FromArgb(60, 200, 90),
+        Hover: Color.FromArgb(15, 55, 25));
+
+    public static readonly ThemeColors Blue = new(
+        Background: Color.Black,
+        Button: Color.FromArgb(18, 18, 18),
+        Accent: Color.FromArgb(60, 140, 230),
+        Hover: Color.FromArgb(15, 40, 70));
+
+    public static ThemeColors Current { get; set; } = Red;
+
+    // Looked up by name (see ThemeMode) rather than switched on directly
+    // at each call site, so a new color option only ever means adding one
+    // more case here.
+    public static ThemeColors ByName(string name) => name switch
+    {
+        "Green" => Green,
+        "Blue" => Blue,
+        _ => Red,
+    };
 
     public static Button MakeTinyButton(string text)
     {

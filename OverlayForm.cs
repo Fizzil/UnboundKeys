@@ -1,12 +1,13 @@
 using System.Drawing.Imaging;
 using System.Reflection;
-using System.Runtime.InteropServices;
 
 namespace VoicePress;
 
 // The overlay is just the skull image, sitting in the corner. Left-click
 // opens the dashboard; right-click toggles listening on/off (dimmed =
-// paused). Close via the taskbar icon.
+// paused); four rapid right-clicks opens a small color picker instead
+// (see ThemeColorPopup) — Red/Green/Blue, re-theming every accent color
+// in the app at once, not just the icon. Close via the taskbar icon.
 //
 // Dashboard access deliberately rides on Left Click specifically, not
 // Right Click: Left Click is the one mouse button that can never be
@@ -14,9 +15,8 @@ namespace VoicePress;
 // — even something that swallows every Right Click system-wide — the
 // dashboard is always reachable to go fix it. Right Click doesn't need
 // that same protection now that it's not the way in.
-public sealed class OverlayForm : Form
+public sealed class OverlayForm : NonActivatingForm
 {
-    private const int WS_EX_NOACTIVATE = 0x08000000;
     // Shrunk to match the size the taskbar's own (now-removed) listener icon
     // used to be, since this is now the only listener icon there is.
     // Internal rather than private — DashboardForm's Profile dropdown needs
@@ -35,62 +35,24 @@ public sealed class OverlayForm : Form
     private readonly MouseInputWatcher _mouse;
     private readonly PhysicalKeyWatcher _physical;
     private readonly PictureBox _icon;
-    private readonly Image _listeningImage;
-    private readonly Image _pausedImage;
+    private Image _listeningImage;
+    private Image _pausedImage;
     private bool _paused;
     private DashboardForm? _dashboard;
     private Point _dragMouseStart;
     private bool _dragging;
 
-    // Keeps this window from ever taking keyboard focus, so clicking it can never
-    // steal focus away from the game.
-    protected override CreateParams CreateParams
-    {
-        get
-        {
-            var cp = base.CreateParams;
-            cp.ExStyle |= WS_EX_NOACTIVATE;
-            return cp;
-        }
-    }
-
-    protected override bool ShowWithoutActivation => true;
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct POINT
-    {
-        public int X;
-        public int Y;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct MINMAXINFO
-    {
-        public POINT ptReserved;
-        public POINT ptMaxSize;
-        public POINT ptMaxPosition;
-        public POINT ptMinTrackSize;
-        public POINT ptMaxTrackSize;
-    }
-
-    // Windows enforces a minimum trackable window size (well over 100px
-    // wide) on every top-level window by default, regardless of how small
-    // ClientSize is set to — below that floor, the OS silently widens the
-    // real window back up, which is exactly what stretched the shrunk skull
-    // image sideways. Intercepting WM_GETMINMAXINFO and reporting a tiny
-    // minimum lets this window actually be as small as TargetWidth asks.
-    protected override void WndProc(ref Message m)
-    {
-        const int WM_GETMINMAXINFO = 0x0024;
-        if (m.Msg == WM_GETMINMAXINFO)
-        {
-            var info = (MINMAXINFO)Marshal.PtrToStructure(m.LParam, typeof(MINMAXINFO))!;
-            info.ptMinTrackSize.X = 1;
-            info.ptMinTrackSize.Y = 1;
-            Marshal.StructureToPtr(info, m.LParam, true);
-        }
-        base.WndProc(ref m);
-    }
+    // Four rapid right-clicks opens the color picker (see ThemeColorPopup)
+    // instead of just pausing — reset if the gap between two clicks
+    // exceeds the window, same shape as PhysicalKeyWatcher's Caps Lock
+    // double-tap. TogglePause() still fires on every right-click
+    // regardless (never suppressed, same reasoning as Caps Lock too), so
+    // four taps land pause back in its original state — deliberately an
+    // even count for exactly that reason.
+    private const int ColorPopupTapWindowMs = 1000;
+    private int _colorPopupTapCount;
+    private DateTime _lastColorPopupTap = DateTime.MinValue;
+    private Form? _colorPopup;
 
     public OverlayForm(VoiceEngine voice, MouseInputWatcher mouse, PhysicalKeyWatcher physical)
     {
@@ -113,21 +75,6 @@ public sealed class OverlayForm : Form
         BackColor = Color.Black;
         DoubleBuffered = true; // cuts down on repaint artifacts while being dragged
 
-        // The source asset has a solid gray band baked into its bottom ~9
-        // pixels (a leftover crop artifact from however it was made) —
-        // invisible back when the icon was shown at its natural aspect
-        // ratio, but stretched into a visible strip once the icon became a
-        // fixed square. Cropped off here rather than editing the asset
-        // file itself.
-        // The asset's background is plain black, which reads as a stark
-        // square next to the dashboard's own dark-gray button color once
-        // they're sitting flush against each other — recoloring it to that
-        // same gray blends the icon into the dashboard instead of clashing
-        // with it.
-        var cropped = CropBottom(LoadEmbeddedImage("VoicePress.Assets.skull.png"), 10);
-        _listeningImage = RecolorBackground(cropped, Theme.Current.Button);
-        _pausedImage = MakeDimmed(_listeningImage);
-
         // A square window, exactly TabStripHeight tall — not the image's own
         // aspect ratio — so the dashboard's top strip and this icon are the
         // exact same height. Whenever the dashboard is collapsed down to
@@ -142,11 +89,19 @@ public sealed class OverlayForm : Form
 
         _icon = new PictureBox
         {
-            Image = _listeningImage,
             SizeMode = PictureBoxSizeMode.StretchImage,
             Dock = DockStyle.Fill,
             Cursor = Cursors.Hand,
         };
+        // Builds _listeningImage/_pausedImage from whichever color is
+        // currently active and sets _icon.Image — the one-time initial
+        // build here, and every later rebuild when the color changes (see
+        // ThemeMode.Changed below), go through this same method.
+        _listeningImage = null!;
+        _pausedImage = null!;
+        RebuildIconImages();
+        ThemeMode.Changed += OnThemeChanged;
+
         new ToolTip().SetToolTip(_icon, $"VoicePress v{versionText}");
         // Left-button drag moves the whole icon; a left/right press that
         // never moves past DragThreshold still counts as a plain click
@@ -216,13 +171,34 @@ public sealed class OverlayForm : Form
                 return;
             }
 
+            // While the color picker is showing, either button just
+            // dismisses it instead of doing its normal thing — the same
+            // "click away to cancel" a dropdown menu would give you,
+            // rather than also opening the dashboard or toggling pause
+            // as a side effect of the click that closed it.
+            if (_colorPopup != null && !_colorPopup.IsDisposed)
+            {
+                _colorPopup.Close();
+                return;
+            }
+
             if (e.Button == MouseButtons.Left)
                 ToggleDashboard();
             else if (e.Button == MouseButtons.Right)
+            {
                 TogglePause();
+                HandleColorPopupTap();
+            }
         };
 
         Controls.Add(_icon);
+
+        // Keeps an open color popup glued to the icon whenever this window
+        // itself moves (e.g. while it's being dragged) — same idea as
+        // DashboardForm's own RepositionCategoryPopup, for the same reason:
+        // without this, dragging the icon leaves the popup stranded at its
+        // old position instead of following along.
+        LocationChanged += (_, _) => RepositionColorPopup();
 
         FormClosed += (_, _) => Application.Exit();
     }
@@ -233,16 +209,6 @@ public sealed class OverlayForm : Form
         using var stream = assembly.GetManifestResourceStream(resourceName)
             ?? throw new InvalidOperationException($"Embedded resource not found: {resourceName}");
         return Image.FromStream(stream);
-    }
-
-    private static Bitmap CropBottom(Image original, int pixels)
-    {
-        int newHeight = original.Height - pixels;
-        var bitmap = new Bitmap(original.Width, newHeight);
-        using var g = Graphics.FromImage(bitmap);
-        g.DrawImage(original, new Rectangle(0, 0, original.Width, newHeight),
-            0, 0, original.Width, newHeight, GraphicsUnit.Pixel);
-        return bitmap;
     }
 
     // Fills a new bitmap with backgroundColor, then draws the original image
@@ -344,5 +310,86 @@ public sealed class OverlayForm : Form
             _physical.Resume();
             _icon.Image = _listeningImage;
         }
+    }
+
+    // Builds _listeningImage/_pausedImage from whichever color's skull
+    // asset ThemeMode.Current currently names, through the same crop-free
+    // recolor-then-dim pipeline as always — RecolorBackground only ever
+    // touches the background behind the transparent-keyed skull, so it
+    // naturally keeps working once handed a different source image. Called
+    // once up front (see the constructor) and again every time the color
+    // changes (see OnThemeChanged).
+    private void RebuildIconImages()
+    {
+        _listeningImage = BuildSkullImage(ThemeMode.Current);
+        _pausedImage = MakeDimmed(_listeningImage);
+        _icon.Image = _paused ? _pausedImage : _listeningImage;
+    }
+
+    // The "listening" rendering of one color's skull, background-blended
+    // to match the current theme's button color — the same image
+    // RebuildIconImages uses for whichever color is actually active,
+    // shared with ThemeColorPopup so its swatches show the real skull
+    // art (not just a color name) for every color, active or not.
+    internal static Image BuildSkullImage(string colorName)
+    {
+        var resourceName = $"VoicePress.Assets.skull-{colorName.ToLowerInvariant()}.png";
+        var source = LoadEmbeddedImage(resourceName);
+        return RecolorBackground(source, Theme.Current.Button);
+    }
+
+    // Reacts to a color change from anywhere — the popup below, or a
+    // profile switch happening inside an already-open dashboard (see
+    // DashboardForm.SwitchToProfile). Rebuilding the icon images is always
+    // safe to do immediately, but closing _dashboard is deferred via
+    // BeginInvoke: ThemeMode.Changed can fire from partway through
+    // SwitchToProfile's own call stack, and disposing a Form while it's
+    // still mid-method on its own stack is a real hazard, not just untidy.
+    // A fresh, correctly-colored dashboard gets built the next time it's
+    // opened — a fully seamless in-place re-theme of an already-open one
+    // is a bigger change than this feature calls for.
+    private void OnThemeChanged()
+    {
+        RebuildIconImages();
+
+        if (_dashboard != null && !_dashboard.IsDisposed)
+        {
+            var dashboard = _dashboard;
+            BeginInvoke(() =>
+            {
+                if (!dashboard.IsDisposed)
+                    dashboard.Close();
+            });
+        }
+    }
+
+    // Four rapid right-clicks opens the color picker instead of just
+    // pausing — see the field comments up top for why this doesn't
+    // suppress the normal pause toggle.
+    private void HandleColorPopupTap()
+    {
+        var now = DateTime.UtcNow;
+        if ((now - _lastColorPopupTap).TotalMilliseconds > ColorPopupTapWindowMs)
+            _colorPopupTapCount = 0;
+        _colorPopupTapCount++;
+        _lastColorPopupTap = now;
+
+        if (_colorPopupTapCount < 4)
+            return;
+
+        _colorPopupTapCount = 0;
+
+        _colorPopup?.Close();
+        _colorPopup = ThemeColorPopup.Show(this, _icon, ThemeMode.SwitchTo);
+    }
+
+    // Called whenever this window moves (see LocationChanged in the
+    // constructor). Without this, dragging the icon around would leave an
+    // open color popup stranded at its old position, disconnected from
+    // the icon it belongs to.
+    private void RepositionColorPopup()
+    {
+        if (_colorPopup != null && !_colorPopup.IsDisposed)
+            ThemeColorPopup.Reposition(_colorPopup, _icon);
     }
 }

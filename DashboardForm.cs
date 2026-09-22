@@ -619,6 +619,13 @@ public sealed class DashboardForm : Form
             PhysicalKeyMap.SwitchProfile(profileName);
             PressMode.SwitchProfile(profileName);
             RefreshPressModeHighlight();
+            // If this profile's saved color differs, ThemeMode.Changed
+            // fires here and OverlayForm closes this very dashboard out
+            // from under the rest of this method (deferred, so the card
+            // rebuild below still runs and completes normally against the
+            // old colors on a window that's about to disappear anyway —
+            // see OverlayForm.OnThemeChanged for why it's deferred).
+            ThemeMode.SwitchProfile(profileName);
 
             foreach (var word in KeyMap.RemappableWords)
             {

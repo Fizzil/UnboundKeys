@@ -52,6 +52,11 @@ internal static class Settings
         // before this feature existed, in which case the caller's own
         // default ("voice") applies instead.
         public string ActivePressMode { get; set; } = "";
+
+        // Which named color palette ("Red"/"Green"/"Blue", see ThemeMode)
+        // this profile uses — same empty-means-use-the-caller's-default
+        // reasoning as ActivePressMode above.
+        public string ThemeColor { get; set; } = "";
     }
 
     private sealed class SavedData
@@ -262,6 +267,23 @@ internal static class Settings
         var saved = Read();
         var data = saved.Profiles.TryGetValue(profile, out var existing) ? existing : new ProfileData();
         data.ActivePressMode = mode;
+        saved.Profiles[profile] = data;
+        Write(saved);
+    }
+
+    public static string LoadThemeColor(string profile, string defaultColor)
+    {
+        if (Read().Profiles.TryGetValue(profile, out var data) && !string.IsNullOrEmpty(data.ThemeColor))
+            return data.ThemeColor;
+
+        return defaultColor;
+    }
+
+    public static void SaveThemeColor(string profile, string color)
+    {
+        var saved = Read();
+        var data = saved.Profiles.TryGetValue(profile, out var existing) ? existing : new ProfileData();
+        data.ThemeColor = color;
         saved.Profiles[profile] = data;
         Write(saved);
     }

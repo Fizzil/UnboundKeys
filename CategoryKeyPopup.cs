@@ -71,23 +71,4 @@ internal static class CategoryKeyPopup
         var anchorScreenPoint = anchor.PointToScreen(Point.Empty);
         popup.Location = new Point(anchorScreenPoint.X - popup.Width, anchorScreenPoint.Y);
     }
-
-    // A borderless popup that never takes window activation, so it can't
-    // steal focus away from the dashboard the way a normal Form would.
-    private sealed class NonActivatingForm : Form
-    {
-        private const int WS_EX_NOACTIVATE = 0x08000000;
-
-        protected override CreateParams CreateParams
-        {
-            get
-            {
-                var cp = base.CreateParams;
-                cp.ExStyle |= WS_EX_NOACTIVATE;
-                return cp;
-            }
-        }
-
-        protected override bool ShowWithoutActivation => true;
-    }
 }
