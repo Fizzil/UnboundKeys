@@ -35,6 +35,32 @@
                 <Button x:Name="ResetButton" Grid.Column="2" Content="Reset" Click="ResetButton_Click" Style="{StaticResource ListButtonStyle}"/>
             </Grid>
 
+            <!-- The timing row: duration first and biggest (it's the one
+                 piece of information here), then the +1/+0.1/reset
+                 cluster that adjusts it, then a plain spacer, then
+                 Infinite set apart on its own since it replaces the whole
+                 idea of a duration rather than adjusting it — same layout
+                 as RemapCardTab's own timingPanel (WinForms), shown only
+                 while Repeat or Hold is on, animated open/closed the same
+                 way the category lists are. -->
+            <Grid x:Name="TimingPanel" Height="0" Visibility="Collapsed" ClipToBounds="True">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="36*"/>
+                    <ColumnDefinition Width="14*"/>
+                    <ColumnDefinition Width="14*"/>
+                    <ColumnDefinition Width="14*"/>
+                    <ColumnDefinition Width="4*"/>
+                    <ColumnDefinition Width="18*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="DurationText" Grid.Column="0" Foreground="{DynamicResource MutedBrush}"
+                           FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <Button x:Name="PlusOneButton" Grid.Column="1" Content="1" Click="PlusOneButton_Click" Style="{StaticResource TinyButtonStyle}"/>
+                <Button x:Name="PlusTenthButton" Grid.Column="2" Content=".1" Click="PlusTenthButton_Click" Style="{StaticResource TinyButtonStyle}"/>
+                <Button x:Name="ResetDurationButton" Grid.Column="3" Content="&#8635;" Click="ResetDurationButton_Click" Style="{StaticResource TinyButtonStyle}"/>
+                <Border Grid.Column="4" Background="Transparent"/>
+                <Button x:Name="InfiniteButton" Grid.Column="5" Content="&#8734;" Click="InfiniteButton_Click" Style="{StaticResource TinyButtonStyle}"/>
+            </Grid>
+
         </StackPanel>
     </Border>
 </UserControl>

@@ -9,16 +9,17 @@ using Size = System.Windows.Size;
 namespace UnboundKeys.Wpf;
 
 // RemapCardTab.cs (WinForms) ported to WPF, one increment at a time —
-// this slice adds Key 1, "Add Key", and up to two extra keys (each with
-// its own always-visible, two-tap confirm delete "✕"), plus the merged
-// Repeat/Hold/Reset row. Still to come: the timing row, Repeat Interval,
-// and the Reset All easter egg.
+// this slice adds the timing row (duration, +1/+0.1/reset, Infinite) and
+// wires Repeat/Hold up to real persistence. Still to come: Repeat
+// Interval and the Reset All easter egg.
 public partial class RemapCard
 {
     private readonly IRemapSource _source;
     private readonly string _id;
     private bool _repeatOn;
     private bool _holdOn;
+    private double _duration;
+    private bool _infiniteOn;
     private Window? _openCategoryPopup;
 
     // internal, not public — the generated UserControl partial class
@@ -31,7 +32,18 @@ public partial class RemapCard
         _id = id;
         InitializeComponent();
 
+        var behavior = _source.Behaviors[_id];
+        _repeatOn = behavior.Repeat;
+        _holdOn = behavior.Hold;
+        _duration = behavior.DurationSeconds;
+        _infiniteOn = behavior.Infinite;
+
         RebuildKeyGroup();
+        RepeatButton.Tag = _repeatOn;
+        HoldButton.Tag = _holdOn;
+        InfiniteButton.Tag = _infiniteOn;
+        UpdateDurationText();
+        SetTimingPanelVisible(_repeatOn || _holdOn, animate: false);
     }
 
     // Every "Key N: X" string IRemapSource builds follows the same
@@ -129,7 +141,12 @@ public partial class RemapCard
         {
             expanded = !expanded;
             valueButton.Tag = expanded;
-            ToggleList(categoryList, expanded);
+            if (!expanded)
+            {
+                _openCategoryPopup?.Close();
+                _openCategoryPopup = null;
+            }
+            AnimateHeight(categoryList, expanded);
         };
 
         if (onDelete != null)
@@ -173,49 +190,75 @@ public partial class RemapCard
     }
 
     // The animated-expand/collapse upgrade Fizzil asked for: grows/shrinks
-    // a list's Height instead of snapping straight to its final size the
-    // way the WinForms version's accordion-via-resize did.
-    private void ToggleList(StackPanel list, bool expanded)
+    // an element's Height instead of snapping straight to its final size
+    // the way the WinForms version's accordion-via-resize did. Shared by
+    // every category list and the timing panel below — a plain
+    // FrameworkElement, not specifically a StackPanel, since the timing
+    // panel is a Grid.
+    private void AnimateHeight(FrameworkElement element, bool expand)
     {
-        if (expanded)
+        if (expand)
         {
-            list.Visibility = Visibility.Visible;
-            list.Height = double.NaN;
-            list.Measure(new Size(ActualWidth > 0 ? ActualWidth : Width, double.PositiveInfinity));
-            double targetHeight = list.DesiredSize.Height;
-            list.Height = 0;
+            element.Visibility = Visibility.Visible;
+            element.Height = double.NaN;
+            element.Measure(new Size(ActualWidth > 0 ? ActualWidth : Width, double.PositiveInfinity));
+            double targetHeight = element.DesiredSize.Height;
+            element.Height = 0;
 
             var anim = new DoubleAnimation(0, targetHeight, TimeSpan.FromMilliseconds(180))
             {
                 EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut },
             };
             // Clears the explicit Height once the animation lands, so the
-            // list still sizes naturally to itself afterward instead of
-            // staying pinned to whatever height it happened to measure at
-            // the moment it opened.
-            anim.Completed += (_, _) => list.ClearValue(HeightProperty);
-            list.BeginAnimation(HeightProperty, anim);
+            // element still sizes naturally to itself afterward instead
+            // of staying pinned to whatever height it happened to measure
+            // at the moment it opened.
+            anim.Completed += (_, _) => element.ClearValue(HeightProperty);
+            element.BeginAnimation(HeightProperty, anim);
         }
         else
         {
-            _openCategoryPopup?.Close();
-            _openCategoryPopup = null;
-
-            double currentHeight = list.ActualHeight;
+            double currentHeight = element.ActualHeight;
             var anim = new DoubleAnimation(currentHeight, 0, TimeSpan.FromMilliseconds(150))
             {
                 EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn },
             };
-            anim.Completed += (_, _) => list.Visibility = Visibility.Collapsed;
-            list.BeginAnimation(HeightProperty, anim);
+            anim.Completed += (_, _) => element.Visibility = Visibility.Collapsed;
+            element.BeginAnimation(HeightProperty, anim);
         }
     }
 
-    // Repeat/Hold aren't wired to real persistence yet — SetBehavior needs
-    // a duration/infinite value, which comes from the timing row (not
-    // part of this slice yet) — so for now this is just the visual
-    // toggle + mutual-exclusivity behavior, same underline treatment the
-    // real thing will use once the timing row exists.
+    private void SetTimingPanelVisible(bool visible, bool animate)
+    {
+        if (animate)
+        {
+            AnimateHeight(TimingPanel, visible);
+        }
+        else if (visible)
+        {
+            TimingPanel.Visibility = Visibility.Visible;
+            TimingPanel.ClearValue(HeightProperty);
+        }
+        else
+        {
+            TimingPanel.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private void UpdateDurationText() => DurationText.Text = $"{_duration:0.0}s";
+
+    // Preserves whatever Repeat Interval settings are already saved
+    // (UseCustomRepeatIntervals/RepeatKeyIntervalsSeconds) rather than
+    // overwriting them — that row isn't part of this slice yet, so
+    // there's nothing here to read them FROM except what's already on
+    // disk.
+    private void SaveBehavior()
+    {
+        var existing = _source.Behaviors[_id];
+        _source.SetBehavior(_id, _repeatOn, _holdOn, _duration, _infiniteOn,
+            existing.UseCustomRepeatIntervals, existing.RepeatKeyIntervalsSeconds);
+    }
+
     private void RepeatButton_Click(object sender, RoutedEventArgs e)
     {
         _repeatOn = !_repeatOn;
@@ -225,6 +268,8 @@ public partial class RemapCard
             HoldButton.Tag = false;
         }
         RepeatButton.Tag = _repeatOn;
+        SetTimingPanelVisible(_repeatOn || _holdOn, animate: true);
+        SaveBehavior();
     }
 
     private void HoldButton_Click(object sender, RoutedEventArgs e)
@@ -236,15 +281,67 @@ public partial class RemapCard
             RepeatButton.Tag = false;
         }
         HoldButton.Tag = _holdOn;
+        SetTimingPanelVisible(_repeatOn || _holdOn, animate: true);
+        SaveBehavior();
+    }
+
+    // +1/+0.1 disengage Infinite the same way RemapCardTab's own
+    // DisengageInfinite does — adjusting a concrete duration only makes
+    // sense once Infinite (which ignores duration entirely) is off.
+    private void PlusOneButton_Click(object sender, RoutedEventArgs e)
+    {
+        _duration = Math.Round(_duration + 1.0, 1);
+        _infiniteOn = false;
+        InfiniteButton.Tag = false;
+        UpdateDurationText();
+        SaveBehavior();
+    }
+
+    private void PlusTenthButton_Click(object sender, RoutedEventArgs e)
+    {
+        _duration = Math.Round(_duration + 0.1, 1);
+        _infiniteOn = false;
+        InfiniteButton.Tag = false;
+        UpdateDurationText();
+        SaveBehavior();
+    }
+
+    private void ResetDurationButton_Click(object sender, RoutedEventArgs e)
+    {
+        _duration = 0.0;
+        UpdateDurationText();
+        SaveBehavior();
+    }
+
+    // Infinite ignores the duration entirely, so turning it on clears
+    // whatever value was set — otherwise it'd look like a leftover
+    // duration that doesn't actually do anything anymore.
+    private void InfiniteButton_Click(object sender, RoutedEventArgs e)
+    {
+        _infiniteOn = !_infiniteOn;
+        InfiniteButton.Tag = _infiniteOn;
+        if (_infiniteOn)
+        {
+            _duration = 0.0;
+            UpdateDurationText();
+        }
+        SaveBehavior();
     }
 
     private void ResetButton_Click(object sender, RoutedEventArgs e)
     {
         _source.ResetToDefault(_id);
         RebuildKeyGroup();
-        _repeatOn = false;
-        _holdOn = false;
-        RepeatButton.Tag = false;
-        HoldButton.Tag = false;
+
+        var behavior = _source.Behaviors[_id];
+        _repeatOn = behavior.Repeat;
+        _holdOn = behavior.Hold;
+        _duration = behavior.DurationSeconds;
+        _infiniteOn = behavior.Infinite;
+        RepeatButton.Tag = _repeatOn;
+        HoldButton.Tag = _holdOn;
+        InfiniteButton.Tag = _infiniteOn;
+        UpdateDurationText();
+        SetTimingPanelVisible(_repeatOn || _holdOn, animate: true);
     }
 }
