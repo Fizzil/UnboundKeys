@@ -10,13 +10,15 @@ namespace UnboundKeys;
 internal static class VirtualKeyRemapPopup
 {
     // RemapCardTab was designed against DashboardForm's own drawer/card
-    // sizing constants — reused unchanged here (as plain local copies, same
-    // as DashboardForm's own WM_SETREDRAW pair below) so the card looks and
-    // behaves identically to Mouse's, just in a standalone window.
+    // sizing constants. CardWidth still needs its own copy here (matching
+    // DashboardForm.DrawerWidth, which isn't about card sizing specifically
+    // so isn't worth coupling to) — but Item/Accordion/BaseCardHeight are
+    // referenced directly from DashboardForm itself below, rather than
+    // kept as a second copy that has to be remembered and changed in
+    // lockstep (which used to be plain local copies here, same as
+    // DashboardForm's own WM_SETREDRAW pair below is for a different,
+    // load-bearing reason).
     private const int CardWidth = 370;
-    private const int ItemHeight = 81;
-    private const int AccordionHeight = 56;
-    private const int BaseCardHeight = 324;
 
     [System.Runtime.InteropServices.DllImport("user32.dll")]
     private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
@@ -36,7 +38,7 @@ internal static class VirtualKeyRemapPopup
             TopMost = true,
             ShowInTaskbar = false,
             BackColor = Theme.Current.Background,
-            ClientSize = new Size(CardWidth, BaseCardHeight),
+            ClientSize = new Size(CardWidth, DashboardForm.BaseCardHeight),
         };
 
         void BeginScreenUpdate()
@@ -59,7 +61,7 @@ internal static class VirtualKeyRemapPopup
 
         var ctx = new DashboardTabContext
         {
-            ItemHeight = ItemHeight,
+            ItemHeight = DashboardForm.ItemHeight,
             ReportHeight = height =>
             {
                 BeginScreenUpdate();
@@ -74,8 +76,8 @@ internal static class VirtualKeyRemapPopup
             // no-ops here.
             SwitchToProfile = _ => { },
             OnProfileSwitched = _ => { },
-            AccordionHeight = AccordionHeight,
-            BaseCardHeight = BaseCardHeight,
+            AccordionHeight = DashboardForm.AccordionHeight,
+            BaseCardHeight = DashboardForm.BaseCardHeight,
             ShowCategoryPopup = (categoryAnchor, keys, onSelect) =>
             {
                 openCategoryPopup?.Close();

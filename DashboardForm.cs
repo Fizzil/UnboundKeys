@@ -80,9 +80,21 @@ public sealed class DashboardForm : Form
     // far left the icon-adjacent content reaches" the way it used to.
     public const int LeftEdgeOffsetFromIcon = DrawerWidth + FixedGroupWidth;
 
-    private const int BaseCardHeight = 324;
-    private const int ItemHeight = BaseCardHeight / 4;
-    private const int AccordionHeight = 56;
+    // Halved from the original 324/56 — Fizzil's playtester found every
+    // card (Mouse Keys, Voice Keys, and the virtual keyboard's own remap
+    // popup, which reuses these same values — see VirtualKeyRemapPopup)
+    // way too tall for what's just a single line of button text per row.
+    // Internal (not private) so that popup can reference these directly
+    // instead of keeping its own separately-maintained copy in sync.
+    internal const int BaseCardHeight = 162;
+    internal const int ItemHeight = BaseCardHeight / 4;
+    // Not halved the same way — the timing row's own content (the
+    // +1/+0.1/reset/Infinite buttons) runs at a bigger 14pt font than the
+    // 12pt everything else uses, so it needs closer to a full row's worth
+    // of room rather than the roughly-70%-of-ItemHeight it used to get
+    // (56 of 81) — at that same ratio applied to the new ItemHeight it
+    // came out too cramped, crowding into the row below it.
+    internal const int AccordionHeight = ItemHeight;
 
     // The dashboard has no outer padding — its visible content starts
     // exactly at its own window edges — so there's no offset for
@@ -315,6 +327,18 @@ public sealed class DashboardForm : Form
             RowCount = 1,
             BackColor = Theme.Current.Background,
         };
+        // A thin frame around the button row, on all four sides — reads as
+        // a clean, deliberate box on its own when collapsed, and (paired
+        // with each content panel's own border below, which skips its top
+        // edge) as one continuous outer frame with this row's own bottom
+        // edge doubling as the divider between it and whatever's revealed
+        // underneath, when something is. Same border-drawing technique
+        // RemapCardTab's own cards already use.
+        _fixedGroup.Paint += (_, e) =>
+        {
+            using var pen = new Pen(Theme.Current.Muted);
+            e.Graphics.DrawRectangle(pen, 0, 0, _fixedGroup.Width - 1, _fixedGroup.Height - 1);
+        };
 
         _keyboardToggleButton = Theme.MakeTinyButton("Keyboard");
         _keyboardToggleButton.Margin = new Padding(0);
@@ -374,9 +398,11 @@ public sealed class DashboardForm : Form
         _actionBar.Control.Dock = DockStyle.None;
         _actionBar.Control.Location = new Point(RevealedContentX, TabStripHeight);
         _actionBar.Control.Size = new Size(RevealedContentWidth, TabStripHeight);
+        _actionBar.Control.Paint += DrawOpenTopBorder;
         _actionBarContent = new Panel { Dock = DockStyle.None, Margin = new Padding(0), BackColor = Theme.Current.Background };
         _actionBarContent.Location = new Point(RevealedContentX, TabStripHeight * 2);
         _actionBarContent.Size = new Size(RevealedContentWidth, 0);
+        _actionBarContent.Paint += DrawOpenTopBorder;
 
         // Voice Keys sits at the LEFT of the fixed group, immediately next
         // to this drawer's right edge — so "one" needs to end up rightmost
@@ -407,9 +433,11 @@ public sealed class DashboardForm : Form
             RowCount = 1,
             BackColor = Theme.Current.Background,
         };
+        _mouseStrip.Paint += DrawOpenTopBorder;
         _mouseStripContent = new Panel { Dock = DockStyle.None, Margin = new Padding(0), BackColor = Theme.Current.Background };
         _mouseStripContent.Location = new Point(RevealedContentX, TabStripHeight * 2);
         _mouseStripContent.Size = new Size(RevealedContentWidth, 0);
+        _mouseStripContent.Paint += DrawOpenTopBorder;
 
         for (int i = 0; i < MouseCatalog.Buttons.Length; i++)
         {
@@ -444,6 +472,7 @@ public sealed class DashboardForm : Form
             Visible = false,
             BackColor = Theme.Current.Background,
         };
+        _profileDropdown.Paint += DrawOpenTopBorder;
         _profileDropdown.Controls.Add(_profileContent);
 
         // --- Assemble. Z-order doesn't matter here for click purposes —
@@ -834,6 +863,23 @@ public sealed class DashboardForm : Form
             // the current nest is outermost instead of by every level.
             EndScreenUpdate();
         }
+    }
+
+    // Shared by every control that sits directly below another bordered
+    // one in the fixed-group/tab-strip/content stack (see the border-
+    // wiring comment on _fixedGroup itself) — left, right, and bottom
+    // only, so the piece above it can supply the top edge as a shared
+    // divider line instead of two borders sitting flush against each
+    // other (which would just look like a slightly thicker single line,
+    // at best, or a visible double line if they don't land on the exact
+    // same pixel).
+    private static void DrawOpenTopBorder(object? sender, PaintEventArgs e)
+    {
+        var control = (Control)sender!;
+        using var pen = new Pen(Theme.Current.Muted);
+        e.Graphics.DrawLine(pen, 0, 0, 0, control.Height - 1);
+        e.Graphics.DrawLine(pen, control.Width - 1, 0, control.Width - 1, control.Height - 1);
+        e.Graphics.DrawLine(pen, 0, control.Height - 1, control.Width - 1, control.Height - 1);
     }
 
     // Cuts away whichever parts of the fixed MaxWidth×(current height)

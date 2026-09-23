@@ -118,6 +118,16 @@ internal sealed class RemapCardTab : IDashboardTab
 
     private static string ExtraKeyLabel(int slotNumber, ushort vk) => $"Key {slotNumber}: {KeyCatalog.DisplayNameFor(vk)}";
 
+    // Every "Key N: X" string this class builds (KeyLabelFor, ExtraKeyLabel)
+    // follows the same "label: value" shape — split on the first ": " so a
+    // row can show "Key 1" flush left and "X" flush right instead of one
+    // run-together string, without changing IRemapSource's own contract.
+    private static (string Label, string Value) SplitKeyLabel(string full)
+    {
+        int i = full.IndexOf(": ", StringComparison.Ordinal);
+        return i < 0 ? (full, "") : (full[..i], full[(i + 2)..]);
+    }
+
     public Control BuildContent(DashboardTabContext ctx)
     {
         var source = _source;
@@ -137,7 +147,7 @@ internal sealed class RemapCardTab : IDashboardTab
         };
         card.Paint += (_, e) =>
         {
-            using var pen = new Pen(Theme.Current.Accent);
+            using var pen = new Pen(Theme.Current.Muted);
             e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
         };
 
@@ -153,6 +163,23 @@ internal sealed class RemapCardTab : IDashboardTab
             Margin = new Padding(0),
             ColumnCount = 1,
             RowCount = 4,
+            BackColor = Theme.Current.Background,
+        };
+
+        // A blank strip between the Key group and the Repeat/Hold/Reset
+        // row — same background as the card itself, so it just reads as
+        // empty space rather than another row. Every other row is already
+        // packed edge-to-edge with only a 1px divider between them (see
+        // RebuildList's own comment on that); without this, the card reads
+        // as one undifferentiated grid of cells instead of two distinct
+        // sections. A fixed instance (not built fresh per rebuild) since it
+        // always appears exactly once, regardless of which accordions are
+        // open.
+        const int GroupGapHeight = 8;
+        var keyRepeatGap = new Panel
+        {
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0),
             BackColor = Theme.Current.Background,
         };
 
@@ -173,22 +200,81 @@ internal sealed class RemapCardTab : IDashboardTab
             var buttons = new List<Control>();
             foreach (var (category, keys) in KeyCatalog.Groups)
             {
-                var categoryButton = Theme.MakeListButton(category);
+                var categoryButton = Theme.MakeNestedButton(category);
                 categoryButton.MouseEnter += (_, _) => ctx.ShowCategoryPopup(categoryButton, keys, onSelect);
                 buttons.Add(categoryButton);
             }
             return buttons;
         }
 
+        // A "Key 1" / "A" row: a label half (full accent, flush left) and a
+        // value half (muted, flush right) sitting in one row instead of a
+        // single "Key 1: A" string bunched to the left — the same
+        // label-left/value-right shape as the K1/0.0s repeat-interval row
+        // below, and as the reference layout Fizzil pointed at. Only the
+        // value side is clickable (matching that reference exactly — a
+        // plain label next to its own dropdown) rather than both halves
+        // doing the same thing; one underline still spans the whole row so
+        // it reads as one unit despite only half of it responding to a
+        // click.
+        //
+        // onDelete adds a third column with an always-visible, arm-then-
+        // confirm "✕" (same two-tap pattern as a Profile's own delete) —
+        // only extra keys pass it, since Key 1 itself can't be removed.
+        // Previously this lived hidden inside the row's own expanded
+        // dropdown; putting it on the row directly means one less click to
+        // reach it, hence the confirm step it didn't need when it was
+        // already a deliberate, out-of-the-way tap.
+        (TableLayoutPanel Row, Label LabelDisplay, Button ValueButton) BuildKeyLabelRow(string fullLabel, Action? onDelete = null)
+        {
+            var (label, value) = SplitKeyLabel(fullLabel);
+            var labelDisplay = Theme.MakeLabelDisplay(label);
+            var valueButton = Theme.MakeValueButton(value, alignRight: true);
+            valueButton.Margin = new Padding(0);
+
+            var row = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                Margin = new Padding(0, 1, 0, 1),
+                ColumnCount = onDelete == null ? 2 : 3,
+                RowCount = 1,
+                BackColor = Theme.Current.Button,
+            };
+            if (onDelete == null)
+            {
+                row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+                row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+            }
+            else
+            {
+                row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 40));
+                row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 40));
+                row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20));
+                var deleteButton = Theme.MakeConfirmDeleteButton(onDelete);
+                deleteButton.Margin = new Padding(0);
+                row.Controls.Add(deleteButton, 2, 0);
+            }
+            row.Controls.Add(labelDisplay, 0, 0);
+            row.Controls.Add(valueButton, 1, 0);
+            Theme.EnableTabUnderline(row);
+            return (row, labelDisplay, valueButton);
+        }
+
+        void SetKeyRowText(Label labelDisplay, Button valueButton, string fullLabel)
+        {
+            var (label, value) = SplitKeyLabel(fullLabel);
+            labelDisplay.Text = label;
+            valueButton.Text = value;
+        }
+
         // 2. Key 1 — click to expand the category accordion above; click Key
         // again to collapse it. Picking a key rebinds the card's main key.
-        var keyButton = Theme.MakeListButton(source.KeyLabelFor(id));
-        Theme.EnableTabUnderline(keyButton);
+        var (keyRow, keyLabelDisplay, keyValueButton) = BuildKeyLabelRow(source.KeyLabelFor(id));
         bool keyExpanded = false;
         var categoryButtons = BuildCategoryButtons(entry =>
         {
             source.Rebind(id, entry.VkCode);
-            keyButton.Text = source.KeyLabelFor(id);
+            SetKeyRowText(keyLabelDisplay, keyValueButton, source.KeyLabelFor(id));
         });
 
         // 1. Add Key — adds one more key that fires alongside the main one
@@ -217,7 +303,7 @@ internal sealed class RemapCardTab : IDashboardTab
         void CollapseAllKeys()
         {
             keyExpanded = false;
-            Theme.SetTabSelected(keyButton, false);
+            Theme.SetTabSelected(keyRow, false);
             for (int idx = 0; idx < extraKeyExpanded.Count; idx++)
                 extraKeyExpanded[idx] = false;
         }
@@ -242,13 +328,43 @@ internal sealed class RemapCardTab : IDashboardTab
         // button that resets every card, not just this one.
         var resetCardButton = Theme.MakeListButton("Reset");
         bool resetAllExpanded = false;
-        var resetAllButton = Theme.MakeListButton("Reset All");
+        var resetAllButton = Theme.MakeNestedButton("Reset All");
 
-        // The timing row: +1 / +0.1 / reset / Infinite, plus the running
-        // total. It's inserted right after whichever of Repeat/Hold is on
-        // (see RebuildList), and applies regardless of which of the two that
-        // is, since the duration and Infinite settings aren't specific to
-        // one mode.
+        // Repeat / Hold / Reset share one compact row instead of three
+        // stacked full-width bars — same "reference layout" idea as the
+        // Key rows above, just three short actions side by side instead of
+        // one long list of them. Each keeps its own independent toggle
+        // state/underline (Repeat and Hold are mutually exclusive, but
+        // that's existing behavior, not something this layout enforces).
+        var actionRow = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0, 1, 0, 1),
+            ColumnCount = 3,
+            RowCount = 1,
+            BackColor = Theme.Current.Button,
+        };
+        actionRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 34));
+        actionRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33));
+        actionRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33));
+        repeatButton.Margin = new Padding(0);
+        holdButton.Margin = new Padding(0);
+        resetCardButton.Margin = new Padding(0);
+        actionRow.Controls.Add(repeatButton, 0, 0);
+        actionRow.Controls.Add(holdButton, 1, 0);
+        actionRow.Controls.Add(resetCardButton, 2, 0);
+
+        // The timing row: the running total first and biggest (it's the
+        // one piece of information here, same reasoning as muting it
+        // earlier), then the +1/+0.1/reset cluster that adjusts it, then a
+        // plain black spacer strip, then Infinite set apart on its own —
+        // it doesn't adjust the duration, it replaces the whole idea of
+        // one, so grouping it with +1/+0.1/reset as a same-weight fifth
+        // cell (the original flat 5-equal-cells layout) undersold that
+        // difference. It's inserted right after whichever of Repeat/Hold
+        // is on (see RebuildList), and applies regardless of which of the
+        // two that is, since the duration and Infinite settings aren't
+        // specific to one mode.
         var durationLabel = new Label
         {
             Text = Theme.FormatDuration(duration),
@@ -256,39 +372,56 @@ internal sealed class RemapCardTab : IDashboardTab
             Margin = new Padding(1),
             AutoSize = false,
             TextAlign = ContentAlignment.MiddleCenter,
-            ForeColor = Theme.Current.Accent,
+            ForeColor = Theme.Current.Muted,
             BackColor = Theme.Current.Button,
-            Font = new Font("Segoe UI", 12f),
+            Font = new Font("Segoe UI", 14f),
         };
         var plusOne = Theme.MakeTinyButton("1");
         var plusTenth = Theme.MakeTinyButton(".1");
+        // Left at MakeTinyButton's own default size/padding rather than a
+        // bumped-up 14pt with a hand-tuned nudge to compensate — that nudge
+        // was a fixed pixel count that stopped working once this row's
+        // height changed (see git history), and "↻" specifically seems to
+        // have unusual enough glyph metrics at larger sizes to render
+        // clipped/garbled even after correcting the nudge. Matching
+        // plusOne/plusTenth's plain styling renders reliably, at the small
+        // cost of being a little less prominent than it was.
         var resetDurationButton = Theme.MakeTinyButton("↻");
-        resetDurationButton.Font = new Font("Segoe UI", 14f);
-        resetDurationButton.Padding = new Padding(0, 0, 0, 9);
         bool infiniteOn = behavior.Infinite;
         var infiniteButton = Theme.MakeTinyButton("∞");
         infiniteButton.Font = new Font("Segoe UI", 14f, FontStyle.Bold);
         Theme.EnableTabUnderline(infiniteButton);
         Theme.SetTabSelected(infiniteButton, infiniteOn);
+        // Plain black strip — same trick as the group gaps above, just
+        // vertical — marking the boundary between "adjusts the duration"
+        // and "replaces it" without adding a third button style.
+        var infiniteSpacer = new Panel
+        {
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0),
+            BackColor = Theme.Current.Background,
+        };
 
         var timingPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             Margin = new Padding(1),
-            ColumnCount = 5,
+            ColumnCount = 6,
             RowCount = 1,
             BackColor = Theme.Current.Button,
         };
-        timingPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 15));
-        timingPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 15));
-        timingPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 15));
-        timingPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 15));
-        timingPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 40));
-        timingPanel.Controls.Add(plusOne, 0, 0);
-        timingPanel.Controls.Add(plusTenth, 1, 0);
-        timingPanel.Controls.Add(resetDurationButton, 2, 0);
-        timingPanel.Controls.Add(infiniteButton, 3, 0);
-        timingPanel.Controls.Add(durationLabel, 4, 0);
+        timingPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 36));
+        timingPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 14));
+        timingPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 14));
+        timingPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 14));
+        timingPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 4));
+        timingPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 18));
+        timingPanel.Controls.Add(durationLabel, 0, 0);
+        timingPanel.Controls.Add(plusOne, 1, 0);
+        timingPanel.Controls.Add(plusTenth, 2, 0);
+        timingPanel.Controls.Add(resetDurationButton, 3, 0);
+        timingPanel.Controls.Add(infiniteSpacer, 4, 0);
+        timingPanel.Controls.Add(infiniteButton, 5, 0);
 
         // Repeat Interval: only shown while Repeat is on for a word/button
         // with 2+ keys (see RebuildList) — a plain toggle button, no value
@@ -358,7 +491,7 @@ internal sealed class RemapCardTab : IDashboardTab
                     Margin = new Padding(1),
                     AutoSize = false,
                     TextAlign = ContentAlignment.MiddleCenter,
-                    ForeColor = Theme.Current.Accent,
+                    ForeColor = Theme.Current.Muted,
                     BackColor = Theme.Current.Button,
                     Font = new Font("Segoe UI", 11f),
                 };
@@ -384,34 +517,16 @@ internal sealed class RemapCardTab : IDashboardTab
             {
                 int slotIndex = i; // captured per-row, not the loop variable
 
-                // A plain full-width label, same as the primary Key button —
-                // clicking it expands/collapses this row's own category
-                // picker, exactly like Key does. The "✕" to remove this key
-                // lives inside that dropdown instead of on the row itself
-                // (see below), so only the two added keys ever show one.
-                var label = Theme.MakeListButton(ExtraKeyLabel(slotIndex + 2, extras[slotIndex]));
-                Theme.EnableTabUnderline(label);
-                Theme.SetTabSelected(label, extraKeyExpanded[slotIndex]);
-                label.Click += (_, _) =>
-                {
-                    ctx.CloseCategoryPopup();
-                    bool opening = !extraKeyExpanded[slotIndex];
-                    CollapseAllKeys();
-                    extraKeyExpanded[slotIndex] = opening;
-                    RebuildExtraKeyRows();
-                    RebuildList();
-                };
-                extraKeyRows.Add(label);
-
-                if (extraKeyExpanded[slotIndex])
-                {
-                    // The "✕" is the first row of the dropdown, above the
-                    // category buttons — full-width, one click and it's
-                    // gone (no arm/confirm here, unlike Reset or a profile
-                    // delete — the key's own row is already a deliberate,
-                    // out-of-the-way place to find this button).
-                    var deleteButton = Theme.MakeListButton("✕");
-                    deleteButton.Click += (_, _) =>
+                // The same label/value split row as the primary Key —
+                // clicking either half expands/collapses this row's own
+                // category picker, exactly like Key does — plus an
+                // always-visible delete "✕" of its own (see
+                // BuildKeyLabelRow's own comment on why that one gets an
+                // arm-then-confirm tap instead of the old hidden one-tap
+                // version).
+                var (extraRow, _, extraValueButton) = BuildKeyLabelRow(
+                    ExtraKeyLabel(slotIndex + 2, extras[slotIndex]),
+                    onDelete: () =>
                     {
                         source.RemoveExtraKey(id, slotIndex);
                         extraKeyExpanded.RemoveAt(slotIndex);
@@ -430,9 +545,22 @@ internal sealed class RemapCardTab : IDashboardTab
                         RebuildExtraKeyRows();
                         RebuildKeyIntervalRow();
                         RebuildList();
-                    };
-                    extraKeyRows.Add(deleteButton);
+                    });
+                Theme.SetTabSelected(extraRow, extraKeyExpanded[slotIndex]);
+                void OnExtraRowClick(object? _, EventArgs e)
+                {
+                    ctx.CloseCategoryPopup();
+                    bool opening = !extraKeyExpanded[slotIndex];
+                    CollapseAllKeys();
+                    extraKeyExpanded[slotIndex] = opening;
+                    RebuildExtraKeyRows();
+                    RebuildList();
+                }
+                extraValueButton.Click += OnExtraRowClick;
+                extraKeyRows.Add(extraRow);
 
+                if (extraKeyExpanded[slotIndex])
+                {
                     var extraCategoryButtons = BuildCategoryButtons(entry =>
                     {
                         source.SetExtraKey(id, slotIndex, entry.VkCode);
@@ -479,12 +607,13 @@ internal sealed class RemapCardTab : IDashboardTab
             var rows = new List<Control>();
             if (!atExtraKeyCap)
                 rows.Add(addKeyButton);
-            rows.Add(keyButton);
+            rows.Add(keyRow);
             if (keyExpanded)
                 rows.AddRange(categoryButtons);
             rows.AddRange(extraKeyRows);
-            rows.Add(repeatButton);
-            if (repeatOn)
+            rows.Add(keyRepeatGap);
+            rows.Add(actionRow);
+            if (repeatOn || holdOn)
             {
                 rows.Add(timingPanel);
                 if (canCustomizeRepeatInterval)
@@ -494,17 +623,15 @@ internal sealed class RemapCardTab : IDashboardTab
                         rows.Add(keyIntervalRowPanel);
                 }
             }
-            rows.Add(holdButton);
-            if (holdOn)
-                rows.Add(timingPanel);
-            rows.Add(resetCardButton);
             if (resetAllExpanded)
                 rows.Add(resetAllButton);
 
             list.RowCount = rows.Count;
             for (int i = 0; i < rows.Count; i++)
             {
-                int height = rows[i] == timingPanel ? ctx.AccordionHeight : ctx.ItemHeight;
+                int height = rows[i] == timingPanel ? ctx.AccordionHeight
+                    : rows[i] == keyRepeatGap ? GroupGapHeight
+                    : ctx.ItemHeight;
                 list.RowStyles.Add(new RowStyle(SizeType.Absolute, height));
                 list.Controls.Add(rows[i], 0, i);
 
@@ -529,20 +656,37 @@ internal sealed class RemapCardTab : IDashboardTab
                 + (repeatOn || holdOn ? ctx.AccordionHeight : 0)
                 + (canCustomizeRepeatInterval ? ctx.ItemHeight : 0)
                 + (showKeyIntervalRow ? ctx.ItemHeight : 0)
-                + (resetAllExpanded ? ctx.ItemHeight : 0);
+                + (resetAllExpanded ? ctx.ItemHeight : 0)
+                // The group gap above is unconditional — it adds a flat
+                // amount every time, same as BaseCardHeight itself.
+                + GroupGapHeight;
             ctx.ReportHeight(ctx.BaseCardHeight + extraHeight);
+
+            // timingPanel is built once and reused (see its own comment
+            // above) rather than rebuilt fresh like every other accordion
+            // row here — its interior only reliably repaints once it's
+            // actually attached to a visible window, so this has to run
+            // *after* it's been added to list.Controls and the card is
+            // done resizing above, not once at construction time (too
+            // early — nothing is shown yet, so it was a no-op).
+            if (repeatOn || holdOn)
+            {
+                timingPanel.PerformLayout();
+                timingPanel.Invalidate(true);
+            }
         }
 
-        keyButton.Click += (_, _) =>
+        void OnKeyRowClick(object? sender, EventArgs e)
         {
             ctx.CloseCategoryPopup();
             bool opening = !keyExpanded;
             CollapseAllKeys();
             keyExpanded = opening;
-            Theme.SetTabSelected(keyButton, keyExpanded);
+            Theme.SetTabSelected(keyRow, keyExpanded);
             RebuildExtraKeyRows();
             RebuildList();
-        };
+        }
+        keyValueButton.Click += OnKeyRowClick;
 
         addKeyButton.Click += (_, _) =>
         {
@@ -704,7 +848,7 @@ internal sealed class RemapCardTab : IDashboardTab
         {
             ctx.CloseCategoryPopup();
             source.ResetToDefault(id); // also clears extra keys (and, for a mouse button, disables it)
-            keyButton.Text = source.KeyLabelFor(id);
+            SetKeyRowText(keyLabelDisplay, keyValueButton, source.KeyLabelFor(id));
             extraKeyExpanded.Clear();
             RebuildExtraKeyRows();
             duration = 0.0;
@@ -722,7 +866,7 @@ internal sealed class RemapCardTab : IDashboardTab
             Theme.SetTabSelected(repeatButton, false);
             Theme.SetTabSelected(holdButton, false);
             Theme.SetTabSelected(infiniteButton, false);
-            Theme.SetTabSelected(keyButton, false);
+            Theme.SetTabSelected(keyRow, false);
             Theme.SetToggleAppearance(resetCardButton, false);
             Theme.SetTabSelected(repeatIntervalButton, false);
             RebuildList();

@@ -21,7 +21,7 @@ internal sealed class ProfilesTab : IDashboardTab
         };
         card.Paint += (_, e) =>
         {
-            using var pen = new Pen(Theme.Current.Accent);
+            using var pen = new Pen(Theme.Current.Muted);
             e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
         };
 
