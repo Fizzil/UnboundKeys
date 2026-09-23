@@ -1,0 +1,34 @@
+<local:NoActivateWindow x:Class="UnboundKeys.Themes.NoActivatePreview"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:UnboundKeys"
+        Title="Phase 3 preview — NoActivateWindow"
+        Width="280" Height="150"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        Background="{DynamicResource BackgroundBrush}"
+        Topmost="True"
+        ShowInTaskbar="False"
+        WindowStartupLocation="Manual"
+        Left="60" Top="60">
+    <local:NoActivateWindow.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Theme.Red.xaml"/>
+                <ResourceDictionary Source="Theme.Controls.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </local:NoActivateWindow.Resources>
+    <Border BorderBrush="{DynamicResource MutedBrush}" BorderThickness="1">
+        <StackPanel Margin="12" VerticalAlignment="Center">
+            <TextBlock Text="Real NoActivateWindow class — same check as the Phase 0 spike."
+                       Foreground="{DynamicResource AccentBrush}"
+                       FontSize="13" TextWrapping="Wrap" TextAlignment="Center" Margin="0,0,0,10"/>
+            <TextBlock Text="Keep another window focused, then click the button — it should never lose focus."
+                       Foreground="{DynamicResource MutedBrush}"
+                       FontSize="11" TextWrapping="Wrap" TextAlignment="Center" Margin="0,0,0,10"/>
+            <Button x:Name="ClickMeButton" Content="Click count: 0" Click="ClickMeButton_Click"
+                    Height="32" Style="{StaticResource ListButtonStyle}"/>
+        </StackPanel>
+    </Border>
+</local:NoActivateWindow>
