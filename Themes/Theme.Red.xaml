@@ -7,11 +7,24 @@
          different one of these three files into Application.Resources in
          place of this one; every control using DynamicResource re-themes
          itself immediately, with no need to walk the control tree and
-         re-apply colors by hand the way WinForms' Theme.Current required. -->
-    <SolidColorBrush x:Key="BackgroundBrush" Color="#FF000000"/>
-    <SolidColorBrush x:Key="ButtonBrush" Color="#FF121212"/>
-    <SolidColorBrush x:Key="AccentBrush" Color="#FFE6461E"/>
-    <SolidColorBrush x:Key="HoverBrush" Color="#FF3C140C"/>
-    <SolidColorBrush x:Key="MutedBrush" Color="#FF962E14"/>
+         re-apply colors by hand the way WinForms' Theme.Current required.
+
+         Colors are defined once, then wrapped in a same-keyed-plus-"Brush"
+         SolidColorBrush — Theme.Controls.xaml's hover/press fades need to
+         animate a brush's Color property directly (SolidColorBrush.Color
+         is what ColorAnimation targets), which only works on a real Color
+         resource; anything binding a plain fill (a TextBlock's Foreground,
+         say) uses the Brush ones instead of building a brush inline. -->
+    <Color x:Key="BackgroundColor">#FF000000</Color>
+    <Color x:Key="ButtonColor">#FF121212</Color>
+    <Color x:Key="AccentColor">#FFE6461E</Color>
+    <Color x:Key="HoverColor">#FF3C140C</Color>
+    <Color x:Key="MutedColor">#FF962E14</Color>
+
+    <SolidColorBrush x:Key="BackgroundBrush" Color="{StaticResource BackgroundColor}"/>
+    <SolidColorBrush x:Key="ButtonBrush" Color="{StaticResource ButtonColor}"/>
+    <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}"/>
+    <SolidColorBrush x:Key="HoverBrush" Color="{StaticResource HoverColor}"/>
+    <SolidColorBrush x:Key="MutedBrush" Color="{StaticResource MutedColor}"/>
 
 </ResourceDictionary>

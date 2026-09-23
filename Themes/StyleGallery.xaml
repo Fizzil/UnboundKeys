@@ -16,7 +16,11 @@
 
     <StackPanel Margin="16">
 
-        <TextBlock Text="ListButtonStyle (Repeat/Hold/Reset)" Foreground="#666" FontSize="11" Margin="0,0,0,2"/>
+        <TextBlock Text="CardShadow (accent-colored glow, not a plain drop shadow)" Foreground="#666" FontSize="11" Margin="0,0,0,2"/>
+        <Border Background="{DynamicResource ButtonBrush}" CornerRadius="8" Height="60" Margin="20,10"
+                Effect="{StaticResource CardShadow}"/>
+
+        <TextBlock Text="ListButtonStyle (Repeat/Hold/Reset) — hover/press now fade smoothly, corners are soft" Foreground="#666" FontSize="11" Margin="0,10,0,2"/>
         <Button Content="Repeat" Height="40" Style="{StaticResource ListButtonStyle}"/>
         <Button Content="Hold" Height="40" Margin="0,1,0,0" Style="{StaticResource ListButtonStyle}"/>
 
