@@ -61,6 +61,24 @@
                 <Button x:Name="InfiniteButton" Grid.Column="5" Content="&#8734;" Click="InfiniteButton_Click" Style="{StaticResource TinyButtonStyle}"/>
             </Grid>
 
+            <!-- Repeat Interval: only shown while Repeat is on for a card
+                 with 2+ keys — a plain toggle, no value of its own.
+                 Turning it on reveals KeyIntervalRow below (one K button
+                 per key, built dynamically since the count varies — see
+                 RebuildKeyIntervalRow). Matches RemapCardTab's own
+                 repeatIntervalButton/keyIntervalRowPanel (WinForms). -->
+            <Button x:Name="RepeatIntervalButton" Content="Repeat Interval" Height="0" Visibility="Collapsed"
+                    Click="RepeatIntervalButton_Click" Style="{StaticResource ListButtonStyle}"/>
+            <Grid x:Name="KeyIntervalRow" Height="0" Visibility="Collapsed" ClipToBounds="True"/>
+
+            <!-- Reset All: hidden until the Reset button's own three-rapid-
+                 taps easter egg reveals it (see ResetButton_Click) — resets
+                 every card, not just this one, once the dashboard shell
+                 exists to coordinate that (not part of this slice yet, so
+                 for now it just resets this card again). -->
+            <Button x:Name="ResetAllButton" Content="Reset All" Height="0" Visibility="Collapsed"
+                    Click="ResetAllButton_Click" Style="{StaticResource NestedButtonStyle}"/>
+
         </StackPanel>
     </Border>
 </UserControl>

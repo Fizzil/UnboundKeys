@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Animation;
+using System.Windows.Threading;
 using UnboundKeys.Themes;
 using Button = System.Windows.Controls.Button;
 using Size = System.Windows.Size;
@@ -9,9 +11,10 @@ using Size = System.Windows.Size;
 namespace UnboundKeys.Wpf;
 
 // RemapCardTab.cs (WinForms) ported to WPF, one increment at a time —
-// this slice adds the timing row (duration, +1/+0.1/reset, Infinite) and
-// wires Repeat/Hold up to real persistence. Still to come: Repeat
-// Interval and the Reset All easter egg.
+// this slice adds Repeat Interval (per-key gaps) and the Reset All
+// easter egg, completing the card's feature set. Reset All can't yet
+// coordinate with other cards the way DashboardForm does (that shell
+// doesn't exist yet), so for now it just resets this card again.
 public partial class RemapCard
 {
     private readonly IRemapSource _source;
@@ -20,6 +23,16 @@ public partial class RemapCard
     private bool _holdOn;
     private double _duration;
     private bool _infiniteOn;
+    private bool _useCustomRepeatIntervals;
+    // One gap value per key (index 0 = K1, the primary key) — same
+    // "guard against stale/mismatched saved data" reasoning as
+    // RemapCardTab's own keyIntervalSeconds (WinForms): rebuilt to the
+    // right length rather than trusting a saved value blindly.
+    private List<double> _keyIntervalSeconds = new();
+    // -1 = no key selected -> +1/+0.1/reset target the main duration.
+    private int _selectedKIndex = -1;
+    private int _resetTapCount;
+    private readonly DispatcherTimer _resetTapTimer = new() { Interval = TimeSpan.FromMilliseconds(600) };
     private Window? _openCategoryPopup;
 
     // internal, not public — the generated UserControl partial class
@@ -37,13 +50,27 @@ public partial class RemapCard
         _holdOn = behavior.Hold;
         _duration = behavior.DurationSeconds;
         _infiniteOn = behavior.Infinite;
+        _useCustomRepeatIntervals = behavior.UseCustomRepeatIntervals;
+
+        int totalKeyCount = 1 + _source.ExtraWords[_id].Count;
+        _keyIntervalSeconds = behavior.RepeatKeyIntervalsSeconds.Count == totalKeyCount
+            ? new List<double>(behavior.RepeatKeyIntervalsSeconds)
+            : new List<double>(new double[totalKeyCount]);
+
+        _resetTapTimer.Tick += (_, _) =>
+        {
+            _resetTapCount = 0;
+            _resetTapTimer.Stop();
+        };
 
         RebuildKeyGroup();
         RepeatButton.Tag = _repeatOn;
         HoldButton.Tag = _holdOn;
         InfiniteButton.Tag = _infiniteOn;
         UpdateDurationText();
-        SetTimingPanelVisible(_repeatOn || _holdOn, animate: false);
+        SetElementVisible(TimingPanel, _repeatOn || _holdOn, animate: false);
+        RebuildKeyIntervalRow();
+        UpdateRepeatIntervalVisibility(animate: false);
     }
 
     // Every "Key N: X" string IRemapSource builds follows the same
@@ -80,7 +107,10 @@ public partial class RemapCard
             addKeyButton.Click += (_, _) =>
             {
                 _source.AddExtraKey(_id, _source.AddKeySeed(_id));
+                _keyIntervalSeconds.Add(0.0);
                 RebuildKeyGroup();
+                RebuildKeyIntervalRow();
+                UpdateRepeatIntervalVisibility(animate: true);
             };
             KeyGroup.Children.Add(addKeyButton);
         }
@@ -102,7 +132,22 @@ public partial class RemapCard
             }, onDelete: () =>
             {
                 _source.RemoveExtraKey(_id, slotIndex);
+
+                // Keep the repeat-interval gaps in sync: slot 0 is always
+                // the primary key, so an extra at slotIndex is K-slot
+                // (slotIndex + 1). Matches RemapCardTab's own delete
+                // handler (WinForms).
+                int removedKIndex = slotIndex + 1;
+                if (removedKIndex < _keyIntervalSeconds.Count)
+                    _keyIntervalSeconds.RemoveAt(removedKIndex);
+                if (_selectedKIndex == removedKIndex)
+                    _selectedKIndex = -1;
+                else if (_selectedKIndex > removedKIndex)
+                    _selectedKIndex--;
+
                 RebuildKeyGroup();
+                RebuildKeyIntervalRow();
+                UpdateRepeatIntervalVisibility(animate: true);
             });
         }
     }
@@ -228,36 +273,11 @@ public partial class RemapCard
         }
     }
 
-    private void SetTimingPanelVisible(bool visible, bool animate)
-    {
-        if (animate)
-        {
-            AnimateHeight(TimingPanel, visible);
-        }
-        else if (visible)
-        {
-            TimingPanel.Visibility = Visibility.Visible;
-            TimingPanel.ClearValue(HeightProperty);
-        }
-        else
-        {
-            TimingPanel.Visibility = Visibility.Collapsed;
-        }
-    }
-
     private void UpdateDurationText() => DurationText.Text = $"{_duration:0.0}s";
 
-    // Preserves whatever Repeat Interval settings are already saved
-    // (UseCustomRepeatIntervals/RepeatKeyIntervalsSeconds) rather than
-    // overwriting them — that row isn't part of this slice yet, so
-    // there's nothing here to read them FROM except what's already on
-    // disk.
-    private void SaveBehavior()
-    {
-        var existing = _source.Behaviors[_id];
+    private void SaveBehavior() =>
         _source.SetBehavior(_id, _repeatOn, _holdOn, _duration, _infiniteOn,
-            existing.UseCustomRepeatIntervals, existing.RepeatKeyIntervalsSeconds);
-    }
+            _useCustomRepeatIntervals, _keyIntervalSeconds);
 
     private void RepeatButton_Click(object sender, RoutedEventArgs e)
     {
@@ -268,7 +288,8 @@ public partial class RemapCard
             HoldButton.Tag = false;
         }
         RepeatButton.Tag = _repeatOn;
-        SetTimingPanelVisible(_repeatOn || _holdOn, animate: true);
+        SetElementVisible(TimingPanel, _repeatOn || _holdOn, animate: true);
+        UpdateRepeatIntervalVisibility(animate: true);
         SaveBehavior();
     }
 
@@ -281,15 +302,25 @@ public partial class RemapCard
             RepeatButton.Tag = false;
         }
         HoldButton.Tag = _holdOn;
-        SetTimingPanelVisible(_repeatOn || _holdOn, animate: true);
+        SetElementVisible(TimingPanel, _repeatOn || _holdOn, animate: true);
+        UpdateRepeatIntervalVisibility(animate: true);
         SaveBehavior();
     }
 
-    // +1/+0.1 disengage Infinite the same way RemapCardTab's own
-    // DisengageInfinite does — adjusting a concrete duration only makes
-    // sense once Infinite (which ignores duration entirely) is off.
+    // +1/+0.1/reset target whichever K is selected in the repeat interval
+    // row instead of the main duration — editing a key's gap isn't
+    // "moving away from Infinite" the way editing the main duration is,
+    // so Infinite is left alone for it. Matches RemapCardTab's own
+    // plusOne/plusTenth/resetDurationButton handlers (WinForms).
     private void PlusOneButton_Click(object sender, RoutedEventArgs e)
     {
+        if (_selectedKIndex >= 0)
+        {
+            _keyIntervalSeconds[_selectedKIndex] = Math.Round(_keyIntervalSeconds[_selectedKIndex] + 1.0, 1);
+            RebuildKeyIntervalRow();
+            SaveBehavior();
+            return;
+        }
         _duration = Math.Round(_duration + 1.0, 1);
         _infiniteOn = false;
         InfiniteButton.Tag = false;
@@ -299,6 +330,13 @@ public partial class RemapCard
 
     private void PlusTenthButton_Click(object sender, RoutedEventArgs e)
     {
+        if (_selectedKIndex >= 0)
+        {
+            _keyIntervalSeconds[_selectedKIndex] = Math.Round(_keyIntervalSeconds[_selectedKIndex] + 0.1, 1);
+            RebuildKeyIntervalRow();
+            SaveBehavior();
+            return;
+        }
         _duration = Math.Round(_duration + 0.1, 1);
         _infiniteOn = false;
         InfiniteButton.Tag = false;
@@ -306,11 +344,119 @@ public partial class RemapCard
         SaveBehavior();
     }
 
+    // Reset targets exactly whichever one K is selected, same as
+    // +1/+0.1 — just that key's own gap. With the row visible but no
+    // particular K selected, it resets every key's gap at once instead.
+    // Otherwise it's just the main duration.
     private void ResetDurationButton_Click(object sender, RoutedEventArgs e)
     {
+        if (_selectedKIndex >= 0)
+        {
+            _keyIntervalSeconds[_selectedKIndex] = 0.0;
+            RebuildKeyIntervalRow();
+            SaveBehavior();
+            return;
+        }
+        if (_useCustomRepeatIntervals)
+        {
+            for (int i = 0; i < _keyIntervalSeconds.Count; i++)
+                _keyIntervalSeconds[i] = 0.0;
+            RebuildKeyIntervalRow();
+            SaveBehavior();
+            return;
+        }
         _duration = 0.0;
         UpdateDurationText();
         SaveBehavior();
+    }
+
+    private void RepeatIntervalButton_Click(object sender, RoutedEventArgs e)
+    {
+        _useCustomRepeatIntervals = !_useCustomRepeatIntervals;
+        RepeatIntervalButton.Tag = _useCustomRepeatIntervals;
+        if (!_useCustomRepeatIntervals)
+            _selectedKIndex = -1;
+        SaveBehavior();
+        UpdateRepeatIntervalVisibility(animate: true);
+    }
+
+    // Rebuilt whenever a key is added/removed (the K count changes) or a
+    // different K is selected (to refresh which one is lit up) — mirrors
+    // RemapCardTab's own RebuildKeyIntervalRow (WinForms): one K button
+    // plus its gap readout per key, laid out as column pairs.
+    private void RebuildKeyIntervalRow()
+    {
+        KeyIntervalRow.Children.Clear();
+        KeyIntervalRow.ColumnDefinitions.Clear();
+
+        for (int idx = 0; idx < _keyIntervalSeconds.Count; idx++)
+        {
+            int kIndex = idx; // captured per-button, not the loop variable
+            KeyIntervalRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            KeyIntervalRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+            var kButton = new Button
+            {
+                Content = $"K{kIndex + 1}",
+                Tag = _selectedKIndex == kIndex,
+                Style = (System.Windows.Style)FindResource("TinyButtonStyle"),
+            };
+            kButton.Click += (_, _) =>
+            {
+                _selectedKIndex = _selectedKIndex == kIndex ? -1 : kIndex;
+                RebuildKeyIntervalRow();
+            };
+            Grid.SetColumn(kButton, idx * 2);
+            KeyIntervalRow.Children.Add(kButton);
+
+            var kLabel = new TextBlock
+            {
+                Text = $"{_keyIntervalSeconds[kIndex]:0.0}s",
+                Foreground = (System.Windows.Media.Brush)FindResource("MutedBrush"),
+                FontSize = 14,
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            Grid.SetColumn(kLabel, idx * 2 + 1);
+            KeyIntervalRow.Children.Add(kLabel);
+        }
+    }
+
+    // Recomputes whether Repeat Interval can even apply (Repeat is on and
+    // there are 2+ keys), turning it off if the eligibility just
+    // disappeared — same guard as RemapCardTab's own canCustomizeRepeatInterval
+    // check (WinForms) — then shows/hides the button and, if it's on, the
+    // K-row beneath it.
+    private void UpdateRepeatIntervalVisibility(bool animate)
+    {
+        bool canCustomize = _repeatOn && _source.ExtraWords[_id].Count >= 1;
+        if (!canCustomize && _useCustomRepeatIntervals)
+        {
+            _useCustomRepeatIntervals = false;
+            RepeatIntervalButton.Tag = false;
+        }
+        if (!canCustomize)
+            _selectedKIndex = -1;
+
+        SetElementVisible(RepeatIntervalButton, canCustomize, animate);
+        SetElementVisible(KeyIntervalRow, canCustomize && _useCustomRepeatIntervals, animate);
+    }
+
+    private void SetElementVisible(FrameworkElement element, bool visible, bool animate)
+    {
+        if (animate)
+        {
+            AnimateHeight(element, visible);
+        }
+        else if (visible)
+        {
+            element.Visibility = Visibility.Visible;
+            element.ClearValue(HeightProperty);
+        }
+        else
+        {
+            element.Visibility = Visibility.Collapsed;
+        }
     }
 
     // Infinite ignores the duration entirely, so turning it on clears
@@ -328,9 +474,15 @@ public partial class RemapCard
         SaveBehavior();
     }
 
-    private void ResetButton_Click(object sender, RoutedEventArgs e)
+    // Resets everything about this card: the assigned key(s), Repeat/
+    // Hold/Infinite, the duration, and every key's repeat-interval gap.
+    // Matches RemapCardTab's own ResetCard local function (WinForms).
+    private void ResetCard()
     {
-        _source.ResetToDefault(_id);
+        _openCategoryPopup?.Close();
+        _openCategoryPopup = null;
+
+        _source.ResetToDefault(_id); // also clears extra keys (and, for a mouse button, disables it)
         RebuildKeyGroup();
 
         var behavior = _source.Behaviors[_id];
@@ -338,10 +490,44 @@ public partial class RemapCard
         _holdOn = behavior.Hold;
         _duration = behavior.DurationSeconds;
         _infiniteOn = behavior.Infinite;
+        _keyIntervalSeconds = new List<double> { 0.0 }; // only the primary key remains after reset
+        _selectedKIndex = -1;
+        _useCustomRepeatIntervals = false;
+
         RepeatButton.Tag = _repeatOn;
         HoldButton.Tag = _holdOn;
         InfiniteButton.Tag = _infiniteOn;
+        RepeatIntervalButton.Tag = false;
         UpdateDurationText();
-        SetTimingPanelVisible(_repeatOn || _holdOn, animate: true);
+        SetElementVisible(TimingPanel, _repeatOn || _holdOn, animate: true);
+        RebuildKeyIntervalRow();
+        UpdateRepeatIntervalVisibility(animate: true);
+        SetElementVisible(ResetAllButton, false, animate: true);
     }
+
+    // Easter egg: 3 taps within 600ms expands a "Reset All" row underneath
+    // (an accordion, same as everything else here) with a button that
+    // resets every card, not just this one — every tap resets THIS card
+    // immediately regardless, same as RemapCardTab's own resetCardButton
+    // handler (WinForms): tapping Reset 3 times fast just resets an
+    // already-reset card 3 times, and also reveals Reset All on the third.
+    private void ResetButton_Click(object sender, RoutedEventArgs e)
+    {
+        _resetTapCount++;
+        _resetTapTimer.Stop();
+        _resetTapTimer.Start();
+
+        ResetCard();
+
+        if (_resetTapCount == 3)
+        {
+            _resetTapCount = 0;
+            SetElementVisible(ResetAllButton, true, animate: true);
+        }
+    }
+
+    // Can't yet coordinate with other cards (DashboardForm, which would
+    // own that, doesn't exist yet — see the plan doc's Phase 6) — resets
+    // this card again for now.
+    private void ResetAllButton_Click(object sender, RoutedEventArgs e) => ResetCard();
 }
