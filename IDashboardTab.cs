@@ -1,4 +1,4 @@
-namespace VoicePress;
+namespace UnboundKeys;
 
 // A tab hosted in the dashboard's action bar (or, like Profile, pinned to
 // its own slot to the left of it) — the shell (DashboardForm) only ever

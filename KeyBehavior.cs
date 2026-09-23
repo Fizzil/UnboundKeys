@@ -1,4 +1,4 @@
-namespace VoicePress;
+namespace UnboundKeys;
 
 // How a word's key should be pressed: a single tap (the default, when neither
 // flag is set), held down for Duration seconds, or tapped repeatedly for

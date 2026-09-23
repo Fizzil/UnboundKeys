@@ -1,4 +1,4 @@
-namespace VoicePress;
+namespace UnboundKeys;
 
 // The Profiles tab: "Add Profile" is always first; clicking it expands an
 // inline naming row. Existing profiles list below it — Default first
@@ -256,7 +256,7 @@ internal sealed class ProfilesTab : IDashboardTab
             }
 
             // Mouse buttons and physical keys start unmapped in every new
-            // profile, same as a freshly-installed VoicePress — there's no
+            // profile, same as a freshly-installed UnboundKeys — there's no
             // equivalent of a word's "natural" default key for either.
             var freshMouseEnabled = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
             var freshMouseWords = new Dictionary<string, ushort>(StringComparer.OrdinalIgnoreCase);
@@ -270,22 +270,9 @@ internal sealed class ProfilesTab : IDashboardTab
                 freshMouseBehaviors[button.Id] = new KeyBehavior();
             }
 
-            var freshPhysicalEnabled = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
-            var freshPhysicalWords = new Dictionary<string, ushort>(StringComparer.OrdinalIgnoreCase);
-            var freshPhysicalExtraWords = new Dictionary<string, List<ushort>>(StringComparer.OrdinalIgnoreCase);
-            var freshPhysicalBehaviors = new Dictionary<string, KeyBehavior>(StringComparer.OrdinalIgnoreCase);
-            foreach (var key in PhysicalKeyCatalog.Keys)
-            {
-                freshPhysicalEnabled[key.Id] = false;
-                freshPhysicalWords[key.Id] = 0;
-                freshPhysicalExtraWords[key.Id] = new List<ushort>();
-                freshPhysicalBehaviors[key.Id] = new KeyBehavior();
-            }
-
             Settings.CreateProfileIfMissing(
                 name, freshWords, freshExtraWords, freshBehaviors,
-                freshMouseEnabled, freshMouseWords, freshMouseExtraWords, freshMouseBehaviors,
-                freshPhysicalEnabled, freshPhysicalWords, freshPhysicalExtraWords, freshPhysicalBehaviors);
+                freshMouseEnabled, freshMouseWords, freshMouseExtraWords, freshMouseBehaviors);
 
             existingNames.Add(name);
             AddProfileRow(name);

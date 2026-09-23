@@ -1,4 +1,4 @@
-namespace VoicePress;
+namespace UnboundKeys;
 
 // Maps the word you say after "press" to a Windows virtual-key code.
 public static class KeyMap
@@ -19,19 +19,31 @@ public static class KeyMap
     // SwitchProfile) replaces the contents of Words/Behaviors in place.
     public static string ActiveProfile { get; private set; } = Settings.LoadActiveProfileName();
 
+    // The actual data + Rebind/AddExtraKey/.../SwitchProfile logic — shared
+    // with MouseMap/VirtualKeyMap, see RemapStore's own class comment for
+    // why. Must be declared after DefaultWords/ActiveProfile above: its
+    // constructor arguments (BuildMap() etc.) read both, and static field
+    // initializers run in declaration order.
+    private static readonly RemapStore _store = new(
+        BuildMap(), DefaultWords, BuildExtraWords(), BuildBehaviors(),
+        profile => Settings.LoadKeyMap(profile, FreshDefaultWords()),
+        profile => Settings.LoadExtraKeys(profile, FreshDefaultExtraWords()),
+        profile => Settings.LoadBehaviors(profile, FreshDefaultBehaviors()),
+        (words, extraWords, behaviors) => Settings.SaveProfile(ActiveProfile, words, extraWords, behaviors));
+
     // Spoken word -> key it currently presses. Loaded from the active
     // profile's saved settings (if any) on top of the defaults below.
-    public static readonly Dictionary<string, ushort> Words = BuildMap();
+    public static Dictionary<string, ushort> Words => _store.Words;
 
     // Spoken word -> up to two additional keys pressed alongside the one in
     // Words, all at once (e.g. binding Ctrl and C alongside the main key
     // makes the word send Ctrl+C as a combo). Empty by default. Loaded from
     // the active profile the same way Words is.
-    public static readonly Dictionary<string, List<ushort>> ExtraWords = BuildExtraWords();
+    public static Dictionary<string, List<ushort>> ExtraWords => _store.ExtraWords;
 
     // Spoken word -> how that key gets pressed (tap/repeat/hold, and for how
     // long). Also loaded from the active profile's saved settings.
-    public static readonly Dictionary<string, KeyBehavior> Behaviors = BuildBehaviors();
+    public static Dictionary<string, KeyBehavior> Behaviors => _store.Behaviors;
 
     private static Dictionary<string, ushort> BuildDefaultMap()
     {
@@ -73,116 +85,46 @@ public static class KeyMap
         Settings.LoadBehaviors(ActiveProfile, FreshDefaultBehaviors());
 
     // Called by the dashboard when the user picks a new key for a word.
-    public static void Rebind(string word, ushort vkCode)
-    {
-        Words[word] = vkCode;
-        Save();
-    }
+    public static void Rebind(string word, ushort vkCode) => _store.Rebind(word, vkCode);
 
     // Called by the dashboard's "Add Key" — adds one more key that fires
-    // alongside the word's main key, as a combo. Capped at two extras (three
-    // keys total per word); a no-op past that, so it's safe to call
-    // speculatively without checking the count first.
-    public static void AddExtraKey(string word, ushort vkCode)
-    {
-        if (ExtraWords[word].Count >= 2)
-            return;
-
-        ExtraWords[word].Add(vkCode);
-        Save();
-    }
+    // alongside the word's main key, as a combo.
+    public static void AddExtraKey(string word, ushort vkCode) => _store.AddExtraKey(word, vkCode);
 
     // Called by the dashboard when the user picks a different key for an
     // already-added extra key slot — same idea as Rebind, but for one of
     // the extras instead of the main key.
-    public static void SetExtraKey(string word, int index, ushort vkCode)
-    {
-        var extras = ExtraWords[word];
-        if (index < 0 || index >= extras.Count)
-            return;
-
-        extras[index] = vkCode;
-        Save();
-    }
+    public static void SetExtraKey(string word, int index, ushort vkCode) => _store.SetExtraKey(word, index, vkCode);
 
     // Called by the dashboard's "✕" on an extra key row.
-    public static void RemoveExtraKey(string word, int index)
-    {
-        var extras = ExtraWords[word];
-        if (index < 0 || index >= extras.Count)
-            return;
+    public static void RemoveExtraKey(string word, int index) => _store.RemoveExtraKey(word, index);
 
-        extras.RemoveAt(index);
-        Save();
-    }
-
-    // The full set of keys a word should press — its main key followed by
-    // any extras — each paired with whether SendInput needs to treat it as
-    // an extended key. Used everywhere a word is actually executed, instead
-    // of just looking up Words[word] alone.
-    public static List<(ushort Vk, bool Extended)> GetAllKeys(string word)
-    {
-        var keys = new List<(ushort, bool)> { (Words[word], IsExtendedKey(Words[word])) };
-        foreach (var vk in ExtraWords[word])
-            keys.Add((vk, IsExtendedKey(vk)));
-        return keys;
-    }
+    public static List<(ushort Vk, bool Extended)> GetAllKeys(string word) => _store.GetAllKeys(word);
 
     // Called by the dashboard when the user changes a word's Repeat/Hold/
     // Infinite checkboxes, its duration, or (for a 2+ key word) its
     // per-key repeat intervals.
-    public static void SetBehavior(string word, bool repeat, bool hold, double durationSeconds, bool infinite, bool useCustomRepeatIntervals, List<double> repeatKeyIntervalsSeconds)
-    {
-        Behaviors[word] = new KeyBehavior
-        {
-            Repeat = repeat,
-            Hold = hold,
-            DurationSeconds = durationSeconds,
-            Infinite = infinite,
-            UseCustomRepeatIntervals = useCustomRepeatIntervals,
-            RepeatKeyIntervalsSeconds = new List<double>(repeatKeyIntervalsSeconds),
-        };
-        Save();
-    }
+    public static void SetBehavior(string word, bool repeat, bool hold, double durationSeconds, bool infinite, bool useCustomRepeatIntervals, List<double> repeatKeyIntervalsSeconds) =>
+        _store.SetBehavior(word, repeat, hold, durationSeconds, infinite, useCustomRepeatIntervals, repeatKeyIntervalsSeconds);
 
     // Called by the dashboard's card-level reset button: puts a word back to
     // its original key with no repeat/hold/duration set, and no extra keys.
-    public static void ResetToDefault(string word)
-    {
-        Words[word] = DefaultWords[word];
-        ExtraWords[word].Clear();
-        Behaviors[word] = new KeyBehavior();
-        Save();
-    }
-
-    private static void Save() => Settings.SaveProfile(ActiveProfile, Words, ExtraWords, Behaviors);
+    public static void ResetToDefault(string word) => _store.ResetToDefault(word);
 
     // Switches to a different profile: loads its key map and behaviors into
     // the same Words/ExtraWords/Behaviors dictionaries in place (so
     // everything that reads them sees the new profile automatically), and
     // remembers the choice for next launch. Releases anything currently
     // engaged first — an infinite hold from the old profile's word meanings
-    // shouldn't carry over into the new profile's context.
+    // shouldn't carry over into the new profile's context. Only this
+    // wrapper (not RemapStore.SwitchProfile itself) calls ReleaseAll —
+    // DashboardForm.SwitchToProfile calls this one first, before
+    // MouseMap's/VirtualKeyMap's own SwitchProfile, relying on that order
+    // to release everything before either of those touch anything.
     public static void SwitchProfile(string profileName)
     {
         KeyExecutor.ReleaseAll();
-
-        var newWords = Settings.LoadKeyMap(profileName, FreshDefaultWords());
-        var newExtraWords = Settings.LoadExtraKeys(profileName, FreshDefaultExtraWords());
-        var newBehaviors = Settings.LoadBehaviors(profileName, FreshDefaultBehaviors());
-
-        Words.Clear();
-        foreach (var (word, vk) in newWords)
-            Words[word] = vk;
-
-        ExtraWords.Clear();
-        foreach (var (word, extras) in newExtraWords)
-            ExtraWords[word] = extras;
-
-        Behaviors.Clear();
-        foreach (var (word, behavior) in newBehaviors)
-            Behaviors[word] = behavior;
-
+        _store.SwitchProfile(profileName);
         ActiveProfile = profileName;
         Settings.SetActiveProfile(profileName);
     }

@@ -1,4 +1,4 @@
-namespace VoicePress;
+namespace UnboundKeys;
 
 // Same idea as KeyMap, but for the six remappable mouse buttons (see
 // MouseCatalog) instead of the ten spoken words. The one real difference: a
@@ -17,9 +17,24 @@ public static class MouseMap
     public static string ActiveProfile => KeyMap.ActiveProfile;
 
     public static readonly Dictionary<string, bool> Enabled = BuildEnabled();
-    public static readonly Dictionary<string, ushort> Words = BuildMap();
-    public static readonly Dictionary<string, List<ushort>> ExtraWords = BuildExtraWords();
-    public static readonly Dictionary<string, KeyBehavior> Behaviors = BuildBehaviors();
+
+    // See RemapStore's own class comment. Must be declared after ButtonIds/
+    // Enabled above: its constructor arguments (BuildMap() etc., and the
+    // save delegate's own closure over Enabled) read both, and static
+    // field initializers run in declaration order. DefaultWords is never
+    // exposed publicly here (unlike KeyMap/VirtualKeyMap) — an all-zero
+    // dict, built fresh just for this constructor call, since no mouse
+    // button has a "natural" default the way a word or virtual key does.
+    private static readonly RemapStore _store = new(
+        BuildMap(), FreshDefaultWords(), BuildExtraWords(), BuildBehaviors(),
+        profile => Settings.LoadMouseKeyMap(profile, FreshDefaultWords()),
+        profile => Settings.LoadMouseExtraKeys(profile, FreshDefaultExtraWords()),
+        profile => Settings.LoadMouseBehaviors(profile, FreshDefaultBehaviors()),
+        (words, extraWords, behaviors) => Settings.SaveMouseProfile(ActiveProfile, Enabled, words, extraWords, behaviors));
+
+    public static Dictionary<string, ushort> Words => _store.Words;
+    public static Dictionary<string, List<ushort>> ExtraWords => _store.ExtraWords;
+    public static Dictionary<string, KeyBehavior> Behaviors => _store.Behaviors;
 
     private static string[] BuildButtonIds()
     {
@@ -79,102 +94,42 @@ public static class MouseMap
 
     // Called by the dashboard the first time a key is picked for a button —
     // assigns the key and (if this is the first key ever picked for it)
-    // switches it on, so MouseInputWatcher starts intercepting it.
+    // switches it on, so MouseInputWatcher starts intercepting it. Enabled
+    // is set before the store's own Rebind (which saves) runs, so the save
+    // it triggers picks up the new Enabled value too.
     public static void Rebind(string id, ushort vkCode)
     {
-        Words[id] = vkCode;
         Enabled[id] = true;
-        Save();
+        _store.Rebind(id, vkCode);
     }
 
-    public static void AddExtraKey(string id, ushort vkCode)
-    {
-        if (ExtraWords[id].Count >= 2)
-            return;
+    public static void AddExtraKey(string id, ushort vkCode) => _store.AddExtraKey(id, vkCode);
+    public static void SetExtraKey(string id, int index, ushort vkCode) => _store.SetExtraKey(id, index, vkCode);
+    public static void RemoveExtraKey(string id, int index) => _store.RemoveExtraKey(id, index);
+    public static List<(ushort Vk, bool Extended)> GetAllKeys(string id) => _store.GetAllKeys(id);
 
-        ExtraWords[id].Add(vkCode);
-        Save();
-    }
-
-    public static void SetExtraKey(string id, int index, ushort vkCode)
-    {
-        var extras = ExtraWords[id];
-        if (index < 0 || index >= extras.Count)
-            return;
-
-        extras[index] = vkCode;
-        Save();
-    }
-
-    public static void RemoveExtraKey(string id, int index)
-    {
-        var extras = ExtraWords[id];
-        if (index < 0 || index >= extras.Count)
-            return;
-
-        extras.RemoveAt(index);
-        Save();
-    }
-
-    public static List<(ushort Vk, bool Extended)> GetAllKeys(string id)
-    {
-        var keys = new List<(ushort, bool)> { (Words[id], KeyMap.IsExtendedKey(Words[id])) };
-        foreach (var vk in ExtraWords[id])
-            keys.Add((vk, KeyMap.IsExtendedKey(vk)));
-        return keys;
-    }
-
-    public static void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool useCustomRepeatIntervals, List<double> repeatKeyIntervalsSeconds)
-    {
-        Behaviors[id] = new KeyBehavior
-        {
-            Repeat = repeat,
-            Hold = hold,
-            DurationSeconds = durationSeconds,
-            Infinite = infinite,
-            UseCustomRepeatIntervals = useCustomRepeatIntervals,
-            RepeatKeyIntervalsSeconds = new List<double>(repeatKeyIntervalsSeconds),
-        };
-        Save();
-    }
+    public static void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool useCustomRepeatIntervals, List<double> repeatKeyIntervalsSeconds) =>
+        _store.SetBehavior(id, repeat, hold, durationSeconds, infinite, useCustomRepeatIntervals, repeatKeyIntervalsSeconds);
 
     // Puts a button back to fully unmapped — no key, no extras, default
     // behavior, and (unlike a word's ResetToDefault) switched back off, so
     // its click passes through normally again.
     public static void ResetToDefault(string id)
     {
-        Words[id] = 0;
+        _store.ResetToDefault(id);
         Enabled[id] = false;
-        ExtraWords[id].Clear();
-        Behaviors[id] = new KeyBehavior();
-        Save();
     }
-
-    private static void Save() => Settings.SaveMouseProfile(KeyMap.ActiveProfile, Enabled, Words, ExtraWords, Behaviors);
 
     // Called by DashboardForm alongside KeyMap.SwitchProfile — loads the new
     // profile's mouse mappings into these same dictionaries in place.
     public static void SwitchProfile(string profileName)
     {
         var newEnabled = Settings.LoadMouseEnabled(profileName, FreshDefaultEnabled());
-        var newWords = Settings.LoadMouseKeyMap(profileName, FreshDefaultWords());
-        var newExtraWords = Settings.LoadMouseExtraKeys(profileName, FreshDefaultExtraWords());
-        var newBehaviors = Settings.LoadMouseBehaviors(profileName, FreshDefaultBehaviors());
 
         Enabled.Clear();
         foreach (var (id, enabled) in newEnabled)
             Enabled[id] = enabled;
 
-        Words.Clear();
-        foreach (var (id, vk) in newWords)
-            Words[id] = vk;
-
-        ExtraWords.Clear();
-        foreach (var (id, extras) in newExtraWords)
-            ExtraWords[id] = extras;
-
-        Behaviors.Clear();
-        foreach (var (id, behavior) in newBehaviors)
-            Behaviors[id] = behavior;
+        _store.SwitchProfile(profileName);
     }
 }

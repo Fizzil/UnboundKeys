@@ -1,37 +1,69 @@
-namespace VoicePress;
+namespace UnboundKeys;
 
-// The right-click dashboard. This window is a fixed size from the moment
-// it's created and never resizes or repositions itself — Press, Mouse, and
-// Profile sit at permanent coordinates within it, and opening one of them
-// just reveals a pre-allocated area that was already part of the window the
-// whole time (previously invisible/unclickable via the window's Region),
-// rather than growing the window into existence. That's what keeps the
-// three buttons from ever "jumping": there's no resize-and-reposition dance
-// left to get wrong.
+// The right-click dashboard. This window is a fixed WIDTH from the moment
+// it's created and never resizes horizontally — only its height grows to
+// fit whatever's currently revealed. Keyboard, Voice Keys, Mouse Keys, and
+// Profile sit at permanent coordinates within a given left/right side (see
+// Mirrored), and opening one of them just reveals a pre-allocated area that
+// was already part of the window the whole time (previously invisible/
+// unclickable via the window's Region), rather than growing the window
+// into existence. That's what keeps the buttons from ever "jumping" apart
+// from a side flip: there's no resize-and-reposition dance left to get
+// wrong.
 //
-// Layout, left to right, all fixed:
-//   x:[0, DrawerWidth)                     — Voice's ten tabs, Physical's ten, or Mouse's six
-//   x:[DrawerWidth, DrawerWidth+FixedGroupWidth) — Press / Mouse / Profile buttons
-//   x:[DrawerWidth+FixedGroupWidth, MaxWidth)    — Profile's dropdown's extra reach
-// Only one of {Voice, Physical, Mouse}'s drawer, Press's own Voice/Physical
-// selector (all left zone), or Profile's dropdown (right zone, which also
-// includes the space under the three buttons) is ever revealed at a time —
-// see RecomputeRegion. Press itself has no drawer of its own: tapping it
-// opens the selector, and picking Voice or Physical there is really just
-// opening a different prime tab (see TogglePrimeTab) — Press's button
-// stays highlighted for all three states, since visually there's still
-// only one button representing them.
+// Layout, left to right (unmirrored — see Mirrored for the flipped order),
+// at RevealedContentX/RevealedContentWidth (FixedGroupX/FixedGroupWidth
+// restated once something's revealed below):
+//   x:[0, DrawerWidth)                    — nothing, ever, at any height —
+//                                            an invisible buffer only OverlayForm's
+//                                            flip math (VisibleLeftInset) still cares about
+//   x:[DrawerWidth, DrawerWidth+FixedGroupWidth) — the only zone anything ever
+//                                            shows in: row 0 is always Keyboard /
+//                                            Mouse Keys / Voice Keys / Profile; below that,
+//                                            whichever of the three is open reveals here —
+//                                            Voice/Mouse an extra tab-strip row first
+//                                            (their own numbered/button tabs, since they
+//                                            no longer sit beside the fixed group — see
+//                                            Fizzil's "drop down like Profile" ask, driven
+//                                            by the floating keyboard window often needing
+//                                            that space instead), then the selected card;
+//                                            Profile's list reveals directly, no extra row
+//   x:[DrawerWidth+FixedGroupWidth, MaxWidth) — nothing, ever (the listener icon sits here)
+// Only one of the three is ever revealed at a time — see RecomputeRegion,
+// which is now a single state-independent cut (the two side zones, full
+// height) rather than a per-row/per-state decision. Voice Keys opens its
+// own drawer directly, the same one-step pattern Mouse Keys already uses —
+// it used to sit behind an extra Voice/Physical picker step (Physical
+// Press was removed once the virtual on-screen keyboard made physically
+// remapping the number row redundant), but there's nothing left to pick
+// between now. Keyboard doesn't use any of this drawer/prime-tab machinery
+// at all — it just toggles a separate floating window (see the
+// constructor's toggleKeyboard/isKeyboardOpen parameters).
 public sealed class DashboardForm : Form
 {
     private const int TabStripHeight = 60;
-    private const int ProfileTabWidth = 70;
-    private const int MouseTabWidth = 70;
-    private const int PressTabWidth = 100;
-    private const int FixedGroupWidth = PressTabWidth + MouseTabWidth + ProfileTabWidth;
+    // One locked width shared by Keyboard/Mouse Keys/Voice Keys/Profile —
+    // sized to fit the longest labels ("Mouse Keys"/"Voice Keys") without
+    // clipping at the shared 9pt font, so the other two end up a bit
+    // roomier than they strictly need rather than reading as mismatched
+    // sizes.
+    private const int FixedButtonWidth = 120;
+    // Half that — Fade is just one short word and doesn't need the same
+    // room, and Fizzil asked for its own space to come out of the
+    // dashboard's total width rather than being redistributed to the other
+    // four (the dashboard "feels a bit too long").
+    private const int FadeButtonWidth = FixedButtonWidth / 2;
+    // Internal, not private: OverlayForm anchors VirtualKeyboardForm's
+    // top-right corner to the Keyboard button's top-left — the leftmost
+    // pixel of this fixed group — purely from the icon's own position and
+    // this width, without needing a live DashboardForm instance to read a
+    // button's actual location from (the keyboard can be open while the
+    // dashboard itself is closed). See OverlayForm.RepositionVirtualKeyboard.
+    internal const int FixedGroupWidth = FixedButtonWidth * 4 + FadeButtonWidth;
 
-    // The left zone: Voice's ten tabs, Physical's ten, and Mouse's six all
-    // render within this same fixed width, so opening any one of them
-    // always reveals exactly the same amount of space.
+    // The left zone: Voice's ten tabs and Mouse's six both render within
+    // this same fixed width, so opening either always reveals exactly the
+    // same amount of space.
     private const int DrawerWidth = 370;
 
     // The right zone, past the fixed group: exactly as wide as the listener
@@ -52,12 +84,6 @@ public sealed class DashboardForm : Form
     private const int ItemHeight = BaseCardHeight / 4;
     private const int AccordionHeight = 56;
 
-    // Two stacked list-style rows (Voice Press / Physical Press) — the
-    // selector's content never varies, so unlike every other card here it
-    // doesn't need the ReportHeight/_cardHeight machinery, just this fixed
-    // value (see CurrentCardHeight).
-    private const int PressSelectorHeight = ItemHeight * 2;
-
     // The dashboard has no outer padding — its visible content starts
     // exactly at its own window edges — so there's no offset for
     // OverlayForm to account for when lining the two windows up vertically.
@@ -65,29 +91,83 @@ public sealed class DashboardForm : Form
 
     private Button _profileButton;
     private Button _mouseToggleButton;
-    private Button _pressToggleButton;
-    private Button _voicePressButton;
-    private Button _physicalPressButton;
+    private Button _voicePressToggleButton;
+    private Button _keyboardToggleButton;
+    private Button _fadeButton;
+    private TableLayoutPanel _fixedGroup;
 
-    private Panel _pressDrawer;
-    private Panel _physicalDrawer;
-    private Panel _mouseDrawer;
     private Panel _profileDropdown;
-    private Panel _pressSelectorPanel;
 
     private ActionBar _actionBar;
     private Panel _actionBarContent;
-    private ActionBar _physicalActionBar;
-    private Panel _physicalActionBarContent;
     private TableLayoutPanel _mouseStrip;
     private Panel _mouseStripContent;
     private Panel _profileContent;
 
-    // Which of "profile"/"mouse"/"voice"/"physical"/"pressSelector" (if
-    // any) currently has its area revealed — independent of _selectedWord
-    // below, which is whichever specific sub-tab inside Voice's, Physical's,
-    // or Mouse's drawer is showing a card.
+    // Which of "profile"/"mouse"/"voice" (if any) currently has its area
+    // revealed — independent of _selectedWord below, which is whichever
+    // specific sub-tab inside Voice's or Mouse's drawer is showing a card.
     private string? _activePrimeTab;
+
+    // Whether the fixed group / drawer / profile-extra zones are laid out
+    // in mirrored order (Profile nearest the icon, Drawer farthest) —
+    // driven by OverlayForm.RepositionDashboard, true exactly when this
+    // window is currently flipped to the icon's right side. Left mode
+    // keeps the original order (Drawer, Keyboard, Mouse Keys, Voice Keys,
+    // Profile, icon) — Profile already ends up right against the icon
+    // there. Mirrored reverses the fixed group's own button order too, so
+    // Profile still ends up against the icon, and Keyboard — where the
+    // floating keyboard window itself attaches — still ends up at the
+    // outer edge, on whichever side that now is.
+    private bool _mirrored;
+    internal bool Mirrored
+    {
+        get => _mirrored;
+        set
+        {
+            if (_mirrored == value)
+                return;
+            _mirrored = value;
+            ApplyMirroring();
+        }
+    }
+
+    // Each zone's own left edge, swapping ends when Mirrored — width never
+    // changes (see the class comment), only which end each zone sits at.
+    private int DrawerX => Mirrored ? FixedGroupWidth + ProfileExtraWidth : 0;
+    private int FixedGroupX => Mirrored ? ProfileExtraWidth : DrawerWidth;
+    private int ProfileExtraX => Mirrored ? 0 : DrawerWidth + FixedGroupWidth;
+
+    // The single width/position every revealed drop-down uses — Voice's
+    // word cards, Mouse's button cards, and Profile's list all share this
+    // same area now (Fizzil: "that drop down should be the same width as
+    // the dashboard"). "The dashboard" means the *visible* button row —
+    // the only part that shows at all while collapsed — not this window's
+    // own full (partly hidden) footprint: the drawer zone past FixedGroupX
+    // only ever shows when Voice/Mouse's own tab strip is open, so lining
+    // revealed content up with the window's true edge there made it jut
+    // out well past where the collapsed dashboard visibly starts. So this
+    // is just FixedGroupX/FixedGroupWidth restated under its own name —
+    // exactly flush with the button row, on whichever side Mirrored has it
+    // — which also directly satisfies "shouldn't cross under the listener
+    // icon": it stops exactly where the icon-adjacent profile-extra sliver
+    // begins, same as the button row above it always has.
+    private const int RevealedContentWidth = FixedGroupWidth;
+    private int RevealedContentX => FixedGroupX;
+
+    // How far in from this window's own left/right edges the currently-
+    // VISIBLE content actually starts/ends — read by OverlayForm when this
+    // window is flipped to the icon's right side (see RepositionDashboard),
+    // so whichever content is actually showing ends up flush against the
+    // icon instead of the window's own edge, which sits behind an
+    // invisible (Region-cut) zone. Now a fixed relationship rather than a
+    // state-dependent one: the drawer zone and the profile-extra sliver
+    // are never visible in any state (see RecomputeRegion) since Voice's
+    // and Mouse's own tab strips dropped down into the reveal area
+    // instead of sitting in the drawer zone — only which physical side
+    // (left/right) each inset applies to still swaps under Mirrored.
+    internal int VisibleLeftInset => Mirrored ? ProfileExtraWidth : DrawerWidth;
+    internal int VisibleRightInset => Mirrored ? DrawerWidth : ProfileExtraWidth;
 
     private readonly Dictionary<string, Control> _cards = new();
     private readonly Dictionary<string, Button> _tabButtons = new();
@@ -184,8 +264,28 @@ public sealed class DashboardForm : Form
         }
     }
 
-    public DashboardForm()
+    // Unlike Voice Keys/Mouse Keys/Profile, Keyboard doesn't reveal an internal
+    // drawer — it toggles a separate floating window (VirtualKeyboardForm)
+    // that OverlayForm owns, deliberately independent of this dashboard's
+    // own lifetime (see OverlayForm.ToggleVirtualKeyboard). toggleKeyboard
+    // is called on click; isKeyboardOpen seeds the button's own highlight
+    // at construction time, since a fresh DashboardForm is built every time
+    // the dashboard reopens (see OverlayForm.ToggleDashboard) and needs to
+    // reflect whatever the keyboard's actual state already is.
+    public DashboardForm(Action toggleKeyboard, Func<bool> isKeyboardOpen)
     {
+        // A Form built entirely in code (no Designer-generated
+        // InitializeComponent, same situation NonActivatingForm's own
+        // constructor documents) still defaults to AutoScaleMode.Font —
+        // without a real design-time font baseline to compare against,
+        // that can silently scale every explicit pixel Size/Location
+        // this class sets for reasons that have nothing to do with the
+        // monitor's actual DPI, which is what was leaving OverlayForm's
+        // own (correctly unscaled — it inherits NonActivatingForm) icon-
+        // relative math for this window's position visibly off by a
+        // noticeable margin.
+        AutoScaleMode = AutoScaleMode.None;
+
         // No caption bar or close button — this is a lightweight popup you
         // dismiss by right-clicking the overlay icon again, not a normal window.
         FormBorderStyle = FormBorderStyle.None;
@@ -201,28 +301,39 @@ public sealed class DashboardForm : Form
         // otherwise only moves when the icon itself is dragged.
         ClientSize = new Size(MaxWidth, TabStripHeight);
 
-        // --- The fixed group: Press, Mouse, Profile, left to right,
-        // always at x:[DrawerWidth, DrawerWidth+FixedGroupWidth). ---
-        var fixedGroup = new TableLayoutPanel
+        // --- The fixed group: Keyboard, Voice Keys, Mouse Keys, Profile, Fade
+        // (or the reverse — see LayoutFixedGroupButtons/Mirrored), always
+        // FixedGroupWidth wide, positioned at FixedGroupX. Column widths
+        // are set in LayoutFixedGroupButtons instead of here, since Fade's
+        // own (narrower) column moves between index 0 and index 4
+        // depending on Mirrored. ---
+        _fixedGroup = new TableLayoutPanel
         {
-            Location = new Point(DrawerWidth, 0),
+            Location = new Point(FixedGroupX, 0),
             Size = new Size(FixedGroupWidth, TabStripHeight),
             Margin = new Padding(0),
-            ColumnCount = 3,
             RowCount = 1,
             BackColor = Theme.Current.Background,
         };
-        fixedGroup.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, PressTabWidth));
-        fixedGroup.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, MouseTabWidth));
-        fixedGroup.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ProfileTabWidth));
 
-        _pressToggleButton = Theme.MakeTinyButton("Press");
-        _pressToggleButton.Margin = new Padding(0);
-        _pressToggleButton.Font = new Font("Segoe UI", 9f);
-        Theme.EnableTabUnderline(_pressToggleButton);
-        _pressToggleButton.Click += (_, _) => TogglePrimeTab("pressSelector");
+        _keyboardToggleButton = Theme.MakeTinyButton("Keyboard");
+        _keyboardToggleButton.Margin = new Padding(0);
+        _keyboardToggleButton.Font = new Font("Segoe UI", 9f);
+        Theme.EnableTabUnderline(_keyboardToggleButton);
+        Theme.SetTabSelected(_keyboardToggleButton, isKeyboardOpen());
+        _keyboardToggleButton.Click += (_, _) =>
+        {
+            toggleKeyboard();
+            Theme.SetTabSelected(_keyboardToggleButton, isKeyboardOpen());
+        };
 
-        _mouseToggleButton = Theme.MakeTinyButton("Mouse");
+        _voicePressToggleButton = Theme.MakeTinyButton("Voice Keys");
+        _voicePressToggleButton.Margin = new Padding(0);
+        _voicePressToggleButton.Font = new Font("Segoe UI", 9f);
+        Theme.EnableTabUnderline(_voicePressToggleButton);
+        _voicePressToggleButton.Click += (_, _) => TogglePrimeTab("voice");
+
+        _mouseToggleButton = Theme.MakeTinyButton("Mouse Keys");
         _mouseToggleButton.Margin = new Padding(0);
         _mouseToggleButton.Font = new Font("Segoe UI", 9f);
         Theme.EnableTabUnderline(_mouseToggleButton);
@@ -234,21 +345,45 @@ public sealed class DashboardForm : Form
         Theme.EnableTabUnderline(_profileButton);
         _profileButton.Click += (_, _) => TogglePrimeTab("profile");
 
-        fixedGroup.Controls.Add(_pressToggleButton, 0, 0);
-        fixedGroup.Controls.Add(_mouseToggleButton, 1, 0);
-        fixedGroup.Controls.Add(_profileButton, 2, 0);
+        // Fades the dashboard, the virtual keyboard, and the listener icon
+        // down to mostly see-through and back (see FadeMode) — a permanent
+        // fixture here now rather than living on the virtual keyboard,
+        // since it needs to be reachable whether or not that's even open.
+        // Not a prime tab (doesn't reveal a dropdown) — an instant toggle,
+        // same as Keyboard's own button.
+        _fadeButton = Theme.MakeTinyButton("Fade");
+        _fadeButton.Margin = new Padding(0);
+        _fadeButton.Font = new Font("Segoe UI", 9f);
+        Theme.EnableTabUnderline(_fadeButton);
+        Theme.SetTabSelected(_fadeButton, FadeMode.IsOn);
+        _fadeButton.Click += (_, _) => FadeMode.Toggle();
+        FadeMode.Changed += RefreshFadeHighlight;
 
-        // --- Voice's drawer: the ten numbered word tabs, plus whichever of
-        // their cards is currently selected. Fixed at x:[0, DrawerWidth). ---
-        _actionBar = new ActionBar(DrawerWidth / KeyMap.RemappableWords.Length);
-        _actionBarContent = new Panel { Dock = DockStyle.Fill, Margin = new Padding(0), BackColor = Theme.Current.Background };
+        LayoutFixedGroupButtons();
 
-        // Press sits at the LEFT of the fixed group, immediately next to
-        // this drawer's right edge — so "one" needs to end up rightmost
-        // (closest to Press) and "ten" leftmost. Inserted in forward order
-        // (1 through 10) since ActionBar.Add always inserts at the left
-        // end — each insert-at-0 pushes the previous ones further right,
-        // leaving "one" as the last (rightmost) one in.
+        // --- Voice's drawer: no longer a row beside the fixed group (that
+        // strip used to sit exactly where the floating keyboard window
+        // often needs to attach — see RepositionVirtualKeyboard — so
+        // Fizzil asked for it to drop down instead, the same way Profile
+        // already does). It's now the dropdown's own first row instead:
+        // the ten numbered word tabs (RevealedContentWidth wide, at
+        // RevealedContentX, y:TabStripHeight), then whichever of their
+        // cards is currently selected right below that (same width/x,
+        // y:TabStripHeight*2). ---
+        _actionBar = new ActionBar(RevealedContentWidth / KeyMap.RemappableWords.Length);
+        _actionBar.Control.Dock = DockStyle.None;
+        _actionBar.Control.Location = new Point(RevealedContentX, TabStripHeight);
+        _actionBar.Control.Size = new Size(RevealedContentWidth, TabStripHeight);
+        _actionBarContent = new Panel { Dock = DockStyle.None, Margin = new Padding(0), BackColor = Theme.Current.Background };
+        _actionBarContent.Location = new Point(RevealedContentX, TabStripHeight * 2);
+        _actionBarContent.Size = new Size(RevealedContentWidth, 0);
+
+        // Voice Keys sits at the LEFT of the fixed group, immediately next
+        // to this drawer's right edge — so "one" needs to end up rightmost
+        // (closest to Voice Keys) and "ten" leftmost. Inserted in forward
+        // order (1 through 10) since ActionBar.Add always inserts at the
+        // left end — each insert-at-0 pushes the previous ones further
+        // right, leaving "one" as the last (rightmost) one in.
         var words = KeyMap.RemappableWords;
         for (int i = 0; i < words.Length; i++)
         {
@@ -257,47 +392,31 @@ public sealed class DashboardForm : Form
             _actionBar.Add(wordTab.Id, tabButton);
         }
 
-        _pressDrawer = BuildDrawerShell(_actionBar.Control, _actionBarContent);
-        _pressDrawer.Location = new Point(0, 0);
-        _pressDrawer.Size = new Size(DrawerWidth, TabStripHeight);
-
-        // --- Physical's drawer: the ten physical number-row keys, same
-        // shape and ordering convention as Voice's drawer above (so
-        // switching between the two doesn't also flip which end "1" sits
-        // at). Also x:[0, DrawerWidth). ---
-        _physicalActionBar = new ActionBar(DrawerWidth / PhysicalKeyCatalog.Keys.Length);
-        _physicalActionBarContent = new Panel { Dock = DockStyle.Fill, Margin = new Padding(0), BackColor = Theme.Current.Background };
-
-        var physicalKeys = PhysicalKeyCatalog.Keys;
-        for (int i = 0; i < physicalKeys.Length; i++)
-        {
-            var physTab = new RemapCardTab(PhysicalKeyMapSource.Instance, physicalKeys[i].Id, physicalKeys[i].ShortLabel);
-            var tabButton = MakeSubTabButton(physTab.Id, physTab.Label, physTab.BuildContent(MakeTabContext(physTab.Id)), _physicalActionBarContent);
-            _physicalActionBar.Add(physTab.Id, tabButton);
-        }
-
-        _physicalDrawer = BuildDrawerShell(_physicalActionBar.Control, _physicalActionBarContent);
-        _physicalDrawer.Location = new Point(0, 0);
-        _physicalDrawer.Size = new Size(DrawerWidth, TabStripHeight);
-
-        // --- Mouse's drawer: the six remappable-button tabs, plus whichever
-        // of their cards is currently selected. Also x:[0, DrawerWidth). ---
+        // --- Mouse's drawer: same restructuring as Voice's above — the six
+        // remappable-button tabs are now the dropdown's own first row
+        // (RevealedContentWidth wide, at RevealedContentX, y:TabStripHeight),
+        // then whichever of their cards is selected right below that
+        // (same width/x, y:TabStripHeight*2). ---
         _mouseStrip = new TableLayoutPanel
         {
-            Dock = DockStyle.Fill,
+            Dock = DockStyle.None,
+            Location = new Point(RevealedContentX, TabStripHeight),
+            Size = new Size(RevealedContentWidth, TabStripHeight),
             Margin = new Padding(0),
             ColumnCount = MouseCatalog.Buttons.Length,
             RowCount = 1,
             BackColor = Theme.Current.Background,
         };
-        _mouseStripContent = new Panel { Dock = DockStyle.Fill, Margin = new Padding(0), BackColor = Theme.Current.Background };
+        _mouseStripContent = new Panel { Dock = DockStyle.None, Margin = new Padding(0), BackColor = Theme.Current.Background };
+        _mouseStripContent.Location = new Point(RevealedContentX, TabStripHeight * 2);
+        _mouseStripContent.Size = new Size(RevealedContentWidth, 0);
 
         for (int i = 0; i < MouseCatalog.Buttons.Length; i++)
         {
             var buttonInfo = MouseCatalog.Buttons[i];
             // Percent, not Absolute, so the six buttons stretch to fill
-            // DrawerWidth evenly rather than leaving a leftover sliver
-            // (360 doesn't divide DrawerWidth's 370 cleanly).
+            // RevealedContentWidth evenly rather than leaving a leftover
+            // sliver.
             _mouseStrip.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f / MouseCatalog.Buttons.Length));
 
             var mouseTab = new RemapCardTab(MouseMapSource.Instance, buttonInfo.Id, buttonInfo.ShortLabel);
@@ -307,14 +426,10 @@ public sealed class DashboardForm : Form
             _mouseStrip.Controls.Add(tabButton, i, 0);
         }
 
-        _mouseDrawer = BuildDrawerShell(_mouseStrip, _mouseStripContent);
-        _mouseDrawer.Location = new Point(0, 0);
-        _mouseDrawer.Size = new Size(DrawerWidth, TabStripHeight);
-
         // --- Profile's dropdown: just its list, no sub-tabs of its own.
-        // Fixed at x:[DrawerWidth, MaxWidth) — under the fixed group AND the
-        // extra reach past it — starting at y:TabStripHeight since the
-        // fixed group's own buttons already occupy that row at this x-range. ---
+        // Same RevealedContentWidth/RevealedContentX as the other two —
+        // starting at y:TabStripHeight since the fixed group's own buttons
+        // already occupy that row above it. ---
         var profilesTab = new ProfilesTab();
         _profileContent = new Panel { Dock = DockStyle.Fill, Margin = new Padding(0), BackColor = Theme.Current.Background };
         var profileCard = profilesTab.BuildContent(MakeTabContext(profilesTab.Id));
@@ -324,73 +439,28 @@ public sealed class DashboardForm : Form
 
         _profileDropdown = new Panel
         {
-            Location = new Point(DrawerWidth, TabStripHeight),
-            Size = new Size(FixedGroupWidth + ProfileExtraWidth, 0),
+            Location = new Point(RevealedContentX, TabStripHeight),
+            Size = new Size(RevealedContentWidth, 0),
             Visible = false,
             BackColor = Theme.Current.Background,
         };
         _profileDropdown.Controls.Add(_profileContent);
 
-        // --- Press's own selector: just two buttons, no sub-tabs of its
-        // own (same situation as Profile above) — picking one opens the
-        // Voice or Physical drawer instead (see TogglePrimeTab), and also
-        // switches which one is the active Press source (see PressMode).
-        // Drops down directly below Press itself, same positioning as
-        // Profile's own dropdown below Profile — x:[DrawerWidth, MaxWidth),
-        // the same right zone Profile's dropdown uses (safe to share since
-        // the two are never shown at the same time). ---
-        _voicePressButton = Theme.MakeListButton("Voice Press");
-        Theme.EnableTabUnderline(_voicePressButton);
-        _voicePressButton.Click += (_, _) =>
-        {
-            PressMode.SwitchTo("voice");
-            RefreshPressModeHighlight();
-            TogglePrimeTab("voice");
-        };
-        _physicalPressButton = Theme.MakeListButton("Physical Press");
-        Theme.EnableTabUnderline(_physicalPressButton);
-        _physicalPressButton.Click += (_, _) =>
-        {
-            PressMode.SwitchTo("physical");
-            RefreshPressModeHighlight();
-            TogglePrimeTab("physical");
-        };
-
-        var pressSelectorList = new TableLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            Margin = new Padding(0),
-            ColumnCount = 1,
-            RowCount = 2,
-            BackColor = Theme.Current.Background,
-        };
-        pressSelectorList.RowStyles.Add(new RowStyle(SizeType.Absolute, ItemHeight));
-        pressSelectorList.RowStyles.Add(new RowStyle(SizeType.Absolute, ItemHeight));
-        pressSelectorList.Controls.Add(_voicePressButton, 0, 0);
-        pressSelectorList.Controls.Add(_physicalPressButton, 0, 1);
-
-        _pressSelectorPanel = new Panel
-        {
-            Location = new Point(DrawerWidth, TabStripHeight),
-            Size = new Size(FixedGroupWidth + ProfileExtraWidth, 0),
-            Visible = false,
-            BackColor = Theme.Current.Background,
-        };
-        _pressSelectorPanel.Controls.Add(pressSelectorList);
-
         // --- Assemble. Z-order doesn't matter here for click purposes —
-        // none of these x-ranges ever overlap — but the fixed group is
-        // added last/frontmost purely so its buttons are never visually
-        // clipped by anything. ---
-        _pressDrawer.Visible = false;
-        _physicalDrawer.Visible = false;
-        _mouseDrawer.Visible = false;
-        Controls.Add(_pressDrawer);
-        Controls.Add(_physicalDrawer);
-        Controls.Add(_mouseDrawer);
+        // none of these x-ranges ever overlap (or, for the two tab strips/
+        // three content panels, only one of each ever shows at a time) —
+        // but the fixed group is added last/frontmost purely so its
+        // buttons are never visually clipped by anything. ---
+        _actionBar.Control.Visible = false;
+        _actionBarContent.Visible = false;
+        _mouseStrip.Visible = false;
+        _mouseStripContent.Visible = false;
+        Controls.Add(_actionBar.Control);
+        Controls.Add(_actionBarContent);
+        Controls.Add(_mouseStrip);
+        Controls.Add(_mouseStripContent);
         Controls.Add(_profileDropdown);
-        Controls.Add(_pressSelectorPanel);
-        Controls.Add(fixedGroup);
+        Controls.Add(_fixedGroup);
 
         RecomputeRegion();
 
@@ -408,32 +478,72 @@ public sealed class DashboardForm : Form
         // window itself moves (e.g. while the listener icon is being
         // dragged, which drags the dashboard along with it).
         LocationChanged += (_, _) => RepositionCategoryPopup();
+
+        // A fresh DashboardForm is built every time the dashboard reopens
+        // (see OverlayForm.ToggleDashboard) — without this, each reopen
+        // would stack another subscription onto FadeMode.Changed, from an
+        // old window that's already gone.
+        FormClosed += (_, _) => FadeMode.Changed -= RefreshFadeHighlight;
     }
 
-    // A drawer is always the same shape: a fixed-height sub-tab-strip row on
-    // top, and whatever's currently selected within it below.
-    private static Panel BuildDrawerShell(Control tabStrip, Control content)
+    private void RefreshFadeHighlight() => Theme.SetTabSelected(_fadeButton, FadeMode.IsOn);
+
+    // Re-lays-out the fixed group / drawers / profile dropdown at their
+    // mirrored-or-not positions and reverses the fixed group's own button
+    // order to match — see the Mirrored property. Wrapped in a screen-
+    // update freeze for the same multi-step-change flicker reason
+    // TogglePrimeTab is.
+    private void ApplyMirroring()
     {
-        var shell = new TableLayoutPanel
+        BeginScreenUpdate();
+        SuspendLayout();
+        try
         {
-            Margin = new Padding(0),
-            ColumnCount = 1,
-            RowCount = 2,
-            BackColor = Theme.Current.Background,
-        };
-        shell.RowStyles.Add(new RowStyle(SizeType.Absolute, TabStripHeight));
-        shell.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        shell.Controls.Add(tabStrip, 0, 0);
-        shell.Controls.Add(content, 0, 1);
-        return shell;
+            _fixedGroup.Location = new Point(FixedGroupX, 0);
+            LayoutFixedGroupButtons();
+            _actionBar.Control.Location = new Point(RevealedContentX, TabStripHeight);
+            _mouseStrip.Location = new Point(RevealedContentX, TabStripHeight);
+            _actionBarContent.Location = new Point(RevealedContentX, TabStripHeight * 2);
+            _mouseStripContent.Location = new Point(RevealedContentX, TabStripHeight * 2);
+            _profileDropdown.Location = new Point(RevealedContentX, TabStripHeight);
+            RecomputeRegion();
+        }
+        finally
+        {
+            ResumeLayout(true);
+            EndScreenUpdate();
+        }
     }
 
-    // Builds one sub-tab's button (a numbered word, a physical key, or a
-    // mouse button) and wires up its click behavior: toggle its own card
-    // open/closed if it's already the active one, otherwise switch to it.
-    // Shared by all three drawers that have sub-tabs at all — Profile and
-    // Press's own selector don't, since neither has anything further to
-    // pick once its own area is open.
+    // Keyboard, Mouse Keys, Voice Keys, Profile, Fade, left to right — reversed
+    // when Mirrored so Fade ends up nearest the icon either way (Fizzil:
+    // "on the right hand side of profile", "so even if it's faded, it is
+    // easy to find" — always right by the icon, the one fixed landmark
+    // regardless of which side the dashboard is on), and Keyboard ends up
+    // at the outer edge either way, right where the floating keyboard
+    // window itself attaches (see OverlayForm.RepositionVirtualKeyboard).
+    private void LayoutFixedGroupButtons()
+    {
+        var order = Mirrored
+            ? new[] { _fadeButton, _profileButton, _voicePressToggleButton, _mouseToggleButton, _keyboardToggleButton }
+            : new[] { _keyboardToggleButton, _mouseToggleButton, _voicePressToggleButton, _profileButton, _fadeButton };
+
+        _fixedGroup.Controls.Clear();
+        _fixedGroup.ColumnStyles.Clear();
+        _fixedGroup.ColumnCount = order.Length;
+        for (int i = 0; i < order.Length; i++)
+        {
+            int width = order[i] == _fadeButton ? FadeButtonWidth : FixedButtonWidth;
+            _fixedGroup.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, width));
+            _fixedGroup.Controls.Add(order[i], i, 0);
+        }
+    }
+
+    // Builds one sub-tab's button (a numbered word or a mouse button) and
+    // wires up its click behavior: toggle its own card open/closed if it's
+    // already the active one, otherwise switch to it. Shared by both
+    // drawers that have sub-tabs at all — Profile doesn't, since it has
+    // nothing further to pick once its own area is open.
     private Button MakeSubTabButton(string id, string label, Control content, Panel targetContent)
     {
         var tabButton = Theme.MakeTinyButton(label);
@@ -466,30 +576,25 @@ public sealed class DashboardForm : Form
         return tabButton;
     }
 
-    private Panel GetDrawer(string primeTab) => primeTab switch
+    private Control GetDrawerTabStrip(string primeTab) => primeTab switch
     {
-        "mouse" => _mouseDrawer,
-        "voice" => _pressDrawer,
-        "physical" => _physicalDrawer,
+        "mouse" => _mouseStrip,
+        "voice" => _actionBar.Control,
         _ => throw new ArgumentOutOfRangeException(nameof(primeTab)),
     };
 
-    // Highlights whichever of Voice Press/Physical Press is currently the
-    // active Press source (see PressMode) — called whenever the selector
-    // is about to show, and right after either button switches the mode,
-    // so the just-picked one lights up immediately rather than waiting for
-    // the selector to be reopened.
-    private void RefreshPressModeHighlight()
+    private Panel GetDrawerContent(string primeTab) => primeTab switch
     {
-        Theme.SetTabSelected(_voicePressButton, PressMode.Active == "voice");
-        Theme.SetTabSelected(_physicalPressButton, PressMode.Active == "physical");
-    }
+        "mouse" => _mouseStripContent,
+        "voice" => _actionBarContent,
+        _ => throw new ArgumentOutOfRangeException(nameof(primeTab)),
+    };
 
     private Button GetPrimeButton(string primeTab) => primeTab switch
     {
         "profile" => _profileButton,
         "mouse" => _mouseToggleButton,
-        "voice" or "physical" or "pressSelector" => _pressToggleButton,
+        "voice" => _voicePressToggleButton,
         _ => throw new ArgumentOutOfRangeException(nameof(primeTab)),
     };
 
@@ -500,19 +605,6 @@ public sealed class DashboardForm : Form
     // Width — only which pre-positioned area is Visible, and the Region
     // that makes the rest of it non-existent rather than just an empty
     // black rectangle. See the class comment for why.
-    //
-    // "voice"/"physical"/"pressSelector" are three separate prime-tab keys
-    // even though there's only one physical button (Press) behind all of
-    // them — that's deliberate, not extra machinery. Press's own click
-    // handler always calls TogglePrimeTab("pressSelector"); the selector's
-    // two buttons call TogglePrimeTab("voice")/("physical"). Since those
-    // are three different keys, switching between any two of them is
-    // always an ordinary "close old, open new" — including going from
-    // Voice or Physical's drawer back to the selector on a second Press
-    // tap. A third Press tap, from the selector, finally matches itself
-    // and falls into the existing close branch below. No separate state
-    // machine needed for the extra toggle level Press has that Mouse and
-    // Profile don't.
     private void TogglePrimeTab(string primeTab)
     {
         bool wasOpen = _activePrimeTab == primeTab;
@@ -535,10 +627,11 @@ public sealed class DashboardForm : Form
 
                 if (_activePrimeTab == "profile")
                     _profileDropdown.Visible = false;
-                else if (_activePrimeTab == "pressSelector")
-                    _pressSelectorPanel.Visible = false;
                 else
-                    GetDrawer(_activePrimeTab).Visible = false;
+                {
+                    GetDrawerTabStrip(_activePrimeTab).Visible = false;
+                    GetDrawerContent(_activePrimeTab).Visible = false;
+                }
             }
 
             _activePrimeTab = wasOpen ? null : primeTab;
@@ -551,20 +644,10 @@ public sealed class DashboardForm : Form
                 // shows immediately. SelectTab also calls AdjustHeight.
                 SelectTab(ProfilesTab.TabId);
             }
-            else if (_activePrimeTab == "pressSelector")
-            {
-                // Same situation as Profile above — a small fixed list
-                // with nothing further to pick — except its height never
-                // varies, so it skips SelectTab/_cardHeight entirely (see
-                // CurrentCardHeight).
-                Theme.SetTabSelected(_pressToggleButton, true);
-                RefreshPressModeHighlight();
-                _pressSelectorPanel.Visible = true;
-                AdjustHeight();
-            }
             else if (_activePrimeTab != null)
             {
-                GetDrawer(_activePrimeTab).Visible = true;
+                GetDrawerTabStrip(_activePrimeTab).Visible = true;
+                GetDrawerContent(_activePrimeTab).Visible = true;
                 Theme.SetTabSelected(GetPrimeButton(_activePrimeTab), true);
                 AdjustHeight();
             }
@@ -599,15 +682,14 @@ public sealed class DashboardForm : Form
     }
 
     // Loads a different profile's key map/behaviors and rebuilds all ten
-    // word cards, all ten physical-key cards, and all six mouse-button
-    // cards, from scratch against it — a full new set to adjust freely.
-    // The old cards are disposed (not just hidden) so their tap-counter
-    // timers actually stop. Stays on the Profiles dropdown afterward
-    // rather than jumping to a numbered tab.
+    // word cards and all six mouse-button cards, from scratch against it —
+    // a full new set to adjust freely. The old cards are disposed (not
+    // just hidden) so their tap-counter timers actually stop. Stays on the
+    // Profiles dropdown afterward rather than jumping to a numbered tab.
     private void SwitchToProfile(string profileName)
     {
-        // Twenty-six cards get torn down and rebuilt below — without
-        // freezing the screen for the duration, that was flashing visibly.
+        // Sixteen cards get torn down and rebuilt below — without freezing
+        // the screen for the duration, that was flashing visibly.
         BeginScreenUpdate();
         try
         {
@@ -616,9 +698,7 @@ public sealed class DashboardForm : Form
 
             KeyMap.SwitchProfile(profileName);
             MouseMap.SwitchProfile(profileName);
-            PhysicalKeyMap.SwitchProfile(profileName);
-            PressMode.SwitchProfile(profileName);
-            RefreshPressModeHighlight();
+            VirtualKeyMap.SwitchProfile(profileName);
             // If this profile's saved color differs, ThemeMode.Changed
             // fires here and OverlayForm closes this very dashboard out
             // from under the rest of this method (deferred, so the card
@@ -638,18 +718,6 @@ public sealed class DashboardForm : Form
                 newCard.Visible = false;
                 _actionBarContent.Controls.Add(newCard);
                 _cards[word] = newCard;
-            }
-
-            foreach (var key in PhysicalKeyCatalog.Keys)
-            {
-                var oldCard = _cards[key.Id];
-                _physicalActionBarContent.Controls.Remove(oldCard);
-                oldCard.Dispose();
-
-                var newCard = new RemapCardTab(PhysicalKeyMapSource.Instance, key.Id, key.ShortLabel).BuildContent(MakeTabContext(key.Id));
-                newCard.Visible = false;
-                _physicalActionBarContent.Controls.Add(newCard);
-                _cards[key.Id] = newCard;
             }
 
             foreach (var button in MouseCatalog.Buttons)
@@ -716,12 +784,6 @@ public sealed class DashboardForm : Form
     // for window height.
     private int CurrentCardHeight()
     {
-        // The selector's height never varies (just its two fixed rows), so
-        // unlike every other prime tab it doesn't go through
-        // _selectedWord/_cardHeight/ReportHeight at all.
-        if (_activePrimeTab == "pressSelector")
-            return PressSelectorHeight;
-
         if (!_selectedTabExpanded || _selectedWord == null)
             return 0;
 
@@ -730,26 +792,29 @@ public sealed class DashboardForm : Form
 
     // Grows/shrinks the window (height only — width is fixed for good, see
     // the class comment) to fit however tall the selected sub-tab's card
-    // currently is, and keeps whichever of _pressDrawer/_physicalDrawer/
-    // _mouseDrawer/_profileDropdown/_pressSelectorPanel is actually active
-    // in sync with that same height — the others don't matter since
-    // RecomputeRegion hides them anyway, but leaving their height stale
-    // would show through if the active one ever changed without a height
-    // change accompanying it.
+    // currently is, and keeps whichever of _actionBarContent/
+    // _mouseStripContent/_profileDropdown is actually active in sync with
+    // that same height — the others don't matter since RecomputeRegion
+    // hides them anyway, but leaving their height stale would show through
+    // if the active one ever changed without a height change accompanying it.
     private void AdjustHeight()
     {
         BeginScreenUpdate();
         try
         {
             int cardHeight = CurrentCardHeight();
-            int fullHeight = TabStripHeight + cardHeight;
+            // Voice/Mouse have an extra TabStripHeight-tall row now (their
+            // own numbered/button tab strip, dropped down into the reveal
+            // area itself instead of sitting beside the fixed group) —
+            // Profile doesn't, since it has no sub-tabs of its own to pick.
+            int fullHeight = _activePrimeTab is "voice" or "mouse"
+                ? TabStripHeight + TabStripHeight + cardHeight
+                : TabStripHeight + cardHeight;
 
             if (_activePrimeTab == "profile")
                 _profileDropdown.Height = cardHeight;
-            else if (_activePrimeTab == "pressSelector")
-                _pressSelectorPanel.Height = cardHeight;
             else if (_activePrimeTab != null)
-                GetDrawer(_activePrimeTab).Height = fullHeight;
+                GetDrawerContent(_activePrimeTab).Height = cardHeight;
 
             var newSize = new Size(ClientSize.Width, fullHeight);
             if (ClientSize != newSize)
@@ -771,60 +836,25 @@ public sealed class DashboardForm : Form
         }
     }
 
-    // Cuts away whichever of the three zones (see the class comment) isn't
-    // currently relevant, so it's genuinely not there — not just painted
-    // black — matching how the window behaved before it grew a fixed
-    // maximum size: nothing to click, nothing extra to see.
+    // Cuts away whichever parts of the fixed MaxWidth×(current height)
+    // rectangle aren't currently relevant, so they're genuinely not there
+    // — not just painted black — matching how the window behaved before it
+    // grew a fixed maximum size: nothing to click, nothing extra to see.
+    //
+    // Visible content now lives exclusively within FixedGroupX/
+    // FixedGroupWidth (restated as RevealedContentX/Width once something's
+    // revealed below) at every height and in every state: Voice's and
+    // Mouse's own tab strips used to sit beside the fixed group (the
+    // drawer zone), but they've dropped down into the reveal area itself
+    // instead — the same spot Profile's dropdown already used — so the
+    // drawer zone and the profile-extra sliver (where the icon sits) are
+    // simply never shown, full stop, rather than needing a per-state,
+    // per-row decision the way they used to.
     private void RecomputeRegion()
     {
         var shape = new Region(new Rectangle(Point.Empty, ClientSize));
-
-        // The tab-strip row (y: 0 to TabStripHeight) and the card-content
-        // row beneath it (y: TabStripHeight onward) need different
-        // treatment — the fixed group's buttons live in the first and
-        // should always show there, but nothing of theirs lives in the
-        // second, so leaving it un-excluded was showing as a plain black
-        // slab under the buttons whenever a card below the drawer was
-        // taller than the tab strip alone.
-        int contentRowHeight = ClientSize.Height - TabStripHeight;
-
-        if (_activePrimeTab is "voice" or "physical" or "mouse")
-        {
-            // Row 0: the drawer's own sub-tab-strip plus the fixed group
-            // both stay; only the profile-extra zone (where the listener
-            // icon sits) is cut.
-            shape.Exclude(new Rectangle(DrawerWidth + FixedGroupWidth, 0, ProfileExtraWidth, TabStripHeight));
-
-            // Row 1: only the drawer's own width is ever used here — the
-            // fixed group and profile-extra zone have nothing under them
-            // in this state, so both get cut for the card row's full height.
-            if (contentRowHeight > 0)
-                shape.Exclude(new Rectangle(DrawerWidth, TabStripHeight, ClientSize.Width - DrawerWidth, contentRowHeight));
-        }
-        else if (_activePrimeTab is "profile" or "pressSelector")
-        {
-            // Row 0: fixed group stays, the drawer's own zone doesn't; the
-            // small square where the listener icon sits gets cut too, or
-            // the window's plain background paints over the icon instead
-            // of letting it show through.
-            shape.Exclude(new Rectangle(0, 0, DrawerWidth, TabStripHeight));
-            shape.Exclude(new Rectangle(DrawerWidth + FixedGroupWidth, 0, ProfileExtraWidth, TabStripHeight));
-
-            // Row 1: Profile's dropdown (or Press's own selector — same
-            // geometry, same reasoning) spans the fixed group's width plus
-            // the extra reach past it; the drawer's own zone still isn't
-            // used here either.
-            if (contentRowHeight > 0)
-                shape.Exclude(new Rectangle(0, TabStripHeight, DrawerWidth, contentRowHeight));
-        }
-        else
-        {
-            // Nothing open — only the fixed group itself stays (there's no
-            // row 1 at all in this state; ClientSize.Height == TabStripHeight).
-            shape.Exclude(new Rectangle(0, 0, DrawerWidth, ClientSize.Height));
-            shape.Exclude(new Rectangle(DrawerWidth + FixedGroupWidth, 0, ProfileExtraWidth, ClientSize.Height));
-        }
-
+        shape.Exclude(new Rectangle(DrawerX, 0, DrawerWidth, ClientSize.Height));
+        shape.Exclude(new Rectangle(ProfileExtraX, 0, ProfileExtraWidth, ClientSize.Height));
         Region = shape;
     }
 

@@ -1,10 +1,12 @@
 using System.Runtime.InteropServices;
 
-namespace VoicePress;
+namespace UnboundKeys;
 
 // Watches every physical mouse button/wheel event system-wide via a
-// low-level mouse hook, and — for whichever of the six remappable buttons
-// (see MouseCatalog) currently has a key assigned in MouseMap — swallows the
+// low-level mouse hook (see LowLevelHook — the P/Invoke/lifecycle
+// machinery lives there; this class owns only the actual mouse-specific
+// logic), and — for whichever of the six remappable buttons (see
+// MouseCatalog) currently has a key assigned in MouseMap — swallows the
 // real click and fires ButtonPressed instead, so Program.cs can run it
 // through KeyExecutor exactly like a recognized voice word.
 //
@@ -30,8 +32,6 @@ public sealed class MouseInputWatcher : IDisposable
     private const int XBUTTON1 = 0x0001;
     private const int XBUTTON2 = 0x0002;
 
-    private delegate IntPtr LowLevelMouseProc(int nCode, IntPtr wParam, IntPtr lParam);
-
     [StructLayout(LayoutKind.Sequential)]
     private struct POINT
     {
@@ -49,114 +49,72 @@ public sealed class MouseInputWatcher : IDisposable
         public IntPtr dwExtraInfo;
     }
 
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelMouseProc lpfn, IntPtr hMod, uint dwThreadId);
+    private readonly LowLevelHook _hook = new();
 
-    [DllImport("user32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool UnhookWindowsHookEx(IntPtr hhk);
+    public void Start() => _hook.Start(WH_MOUSE_LL, HookCallback);
+    public void Pause() => _hook.Pause();
+    public void Resume() => _hook.Resume();
 
-    [DllImport("user32.dll")]
-    private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
-
-    [DllImport("kernel32.dll", CharSet = CharSet.Auto)]
-    private static extern IntPtr GetModuleHandle(string? lpModuleName);
-
-    // Kept as a field so the delegate object stays alive for as long as the
-    // hook is installed — otherwise the GC could collect it while native
-    // code still holds a function pointer into it, crashing the process.
-    private readonly LowLevelMouseProc _proc;
-    private IntPtr _hookHandle = IntPtr.Zero;
-
-    // While true, every event passes straight through unexamined — matches
-    // VoiceEngine's Pause/Resume, so pausing VoicePress (or "press stop")
-    // stops mouse remapping too, exactly like it stops voice commands.
-    private volatile bool _paused;
-
-    public MouseInputWatcher()
-    {
-        _proc = HookCallback;
-    }
-
-    public void Start()
-    {
-        if (_hookHandle != IntPtr.Zero)
-            return;
-
-        _hookHandle = SetWindowsHookEx(WH_MOUSE_LL, _proc, GetModuleHandle(null), 0);
-    }
-
-    public void Pause() => _paused = true;
-    public void Resume() => _paused = false;
-
+    // Only ever invoked once LowLevelHook has already confirmed nCode >= 0
+    // and the watcher isn't paused — no need to check either here.
     private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
     {
-        if (nCode >= 0 && !_paused)
+        var data = Marshal.PtrToStructure<MSLLHOOKSTRUCT>(lParam);
+
+        // Ignore only UnboundKeys's own synthetic clicks (see
+        // NativeInput.InjectedByUnboundKeys), not every software-
+        // injected event in general — this hook is system-wide, so
+        // without this it would catch its own mouse-click output (a
+        // word/button mapped to click another *enabled* button could
+        // otherwise re-trigger itself, at worst in an infinite loop).
+        // Checking dwExtraInfo specifically, rather than the generic
+        // LLMHF_INJECTED flag, matters because many gaming mice relay
+        // real physical input through vendor driver software that
+        // itself injects via this same path — a blanket "ignore
+        // anything injected" check would swallow that real input too,
+        // not just UnboundKeys's own.
+        if (data.dwExtraInfo == NativeInput.InjectedByUnboundKeys)
+            return _hook.CallNext(nCode, wParam, lParam);
+
+        int msg = wParam.ToInt32();
+        short highWord = (short)(data.mouseData >> 16);
+
+        string? downId = msg switch
         {
-            var data = Marshal.PtrToStructure<MSLLHOOKSTRUCT>(lParam);
+            WM_RBUTTONDOWN => "right",
+            WM_MBUTTONDOWN => "middle",
+            WM_XBUTTONDOWN when highWord == XBUTTON1 => "x1",
+            WM_XBUTTONDOWN when highWord == XBUTTON2 => "x2",
+            WM_MOUSEWHEEL when highWord > 0 => "wheelup",
+            WM_MOUSEWHEEL when highWord < 0 => "wheeldown",
+            _ => null,
+        };
 
-            // Ignore only VoicePress's own synthetic clicks (see
-            // NativeInput.InjectedByVoicePress), not every software-
-            // injected event in general — this hook is system-wide, so
-            // without this it would catch its own mouse-click output (a
-            // word/button mapped to click another *enabled* button could
-            // otherwise re-trigger itself, at worst in an infinite loop).
-            // Checking dwExtraInfo specifically, rather than the generic
-            // LLMHF_INJECTED flag, matters because many gaming mice relay
-            // real physical input through vendor driver software that
-            // itself injects via this same path — a blanket "ignore
-            // anything injected" check would swallow that real input too,
-            // not just VoicePress's own.
-            if (data.dwExtraInfo == NativeInput.InjectedByVoicePress)
-                return CallNextHookEx(_hookHandle, nCode, wParam, lParam);
-
-            int msg = wParam.ToInt32();
-            short highWord = (short)(data.mouseData >> 16);
-
-            string? downId = msg switch
-            {
-                WM_RBUTTONDOWN => "right",
-                WM_MBUTTONDOWN => "middle",
-                WM_XBUTTONDOWN when highWord == XBUTTON1 => "x1",
-                WM_XBUTTONDOWN when highWord == XBUTTON2 => "x2",
-                WM_MOUSEWHEEL when highWord > 0 => "wheelup",
-                WM_MOUSEWHEEL when highWord < 0 => "wheeldown",
-                _ => null,
-            };
-
-            if (downId != null && MouseMap.Enabled.TryGetValue(downId, out var downEnabled) && downEnabled)
-            {
-                ButtonPressed?.Invoke(downId);
-                return (IntPtr)1;
-            }
-
-            // A suppressed button-down also means its matching button-up
-            // needs suppressing — otherwise Windows (and whatever app has
-            // focus) sees a button-up with no down before it, which some
-            // apps read as a spurious click of their own. Wheel events have
-            // no separate up message, so there's nothing to match here for
-            // wheelup/wheeldown.
-            string? upId = msg switch
-            {
-                WM_RBUTTONUP => "right",
-                WM_MBUTTONUP => "middle",
-                WM_XBUTTONUP when highWord == XBUTTON1 => "x1",
-                WM_XBUTTONUP when highWord == XBUTTON2 => "x2",
-                _ => null,
-            };
-            if (upId != null && MouseMap.Enabled.TryGetValue(upId, out var upEnabled) && upEnabled)
-                return (IntPtr)1;
+        if (downId != null && MouseMap.Enabled.TryGetValue(downId, out var downEnabled) && downEnabled)
+        {
+            ButtonPressed?.Invoke(downId);
+            return (IntPtr)1;
         }
 
-        return CallNextHookEx(_hookHandle, nCode, wParam, lParam);
+        // A suppressed button-down also means its matching button-up
+        // needs suppressing — otherwise Windows (and whatever app has
+        // focus) sees a button-up with no down before it, which some
+        // apps read as a spurious click of their own. Wheel events have
+        // no separate up message, so there's nothing to match here for
+        // wheelup/wheeldown.
+        string? upId = msg switch
+        {
+            WM_RBUTTONUP => "right",
+            WM_MBUTTONUP => "middle",
+            WM_XBUTTONUP when highWord == XBUTTON1 => "x1",
+            WM_XBUTTONUP when highWord == XBUTTON2 => "x2",
+            _ => null,
+        };
+        if (upId != null && MouseMap.Enabled.TryGetValue(upId, out var upEnabled) && upEnabled)
+            return (IntPtr)1;
+
+        return _hook.CallNext(nCode, wParam, lParam);
     }
 
-    public void Dispose()
-    {
-        if (_hookHandle != IntPtr.Zero)
-        {
-            UnhookWindowsHookEx(_hookHandle);
-            _hookHandle = IntPtr.Zero;
-        }
-    }
+    public void Dispose() => _hook.Dispose();
 }

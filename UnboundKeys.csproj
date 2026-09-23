@@ -7,16 +7,16 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationIcon>Assets\skull.ico</ApplicationIcon>
-    <StartupObject>VoicePress.Program</StartupObject>
+    <StartupObject>UnboundKeys.Program</StartupObject>
     <Company>Built by Fizzil^.^</Company>
-    <Version>2.3.0</Version>
-    <!-- The exe's own filename carries the version (VoicePress-v1.0.0.exe),
+    <Version>3.0.0</Version>
+    <!-- The exe's own filename carries the version (UnboundKeys-v1.0.0.exe),
          staying in sync automatically on every future bump. RootNamespace
          is pinned separately so embedded resource lookups (Assets\skull.*)
          keep working regardless of what AssemblyName becomes — otherwise
          it would default to matching AssemblyName and break them. -->
-    <AssemblyName>VoicePress-v$(Version)</AssemblyName>
-    <RootNamespace>VoicePress</RootNamespace>
+    <AssemblyName>UnboundKeys-v$(Version)</AssemblyName>
+    <RootNamespace>UnboundKeys</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

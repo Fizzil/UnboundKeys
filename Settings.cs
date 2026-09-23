@@ -1,10 +1,10 @@
 using System.Text.Json;
 
-namespace VoicePress;
+namespace UnboundKeys;
 
 // Saves/loads the user's profiles (each its own key map + behaviors) so they
 // survive closing the app. Stored outside the install folder (in AppData) so
-// it works even if VoicePress is ever placed somewhere the user can't write
+// it works even if UnboundKeys is ever placed somewhere the user can't write
 // to, like Program Files.
 internal static class Settings
 {
@@ -12,7 +12,39 @@ internal static class Settings
 
     private static readonly string FilePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "VoicePress", "settings.json");
+        "UnboundKeys", "settings.json");
+
+    // One-time migration for anyone upgrading from the app's old name
+    // (VoicePress, renamed before this release — see the class comment):
+    // AppData\VoicePress\settings.json exists but AppData\UnboundKeys\
+    // doesn't yet, so every profile/keymap would otherwise look wiped out
+    // the first time someone runs the renamed build. Copies rather than
+    // moves — the old file is left in place, untouched, rather than
+    // deleted, in case anything here goes wrong. A no-op forever after the
+    // first successful run (the new file exists by then), so this is safe
+    // to leave in indefinitely rather than needing to be pulled out later.
+    private static void MigrateFromOldNameIfNeeded()
+    {
+        if (File.Exists(FilePath))
+            return;
+
+        var oldPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "VoicePress", "settings.json");
+        if (!File.Exists(oldPath))
+            return;
+
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
+            File.Copy(oldPath, FilePath);
+        }
+        catch
+        {
+            // If this fails, Read() just falls back to defaults, same as
+            // any other unreadable-settings-file case.
+        }
+    }
 
     public sealed class ProfileData
     {
@@ -37,26 +69,21 @@ internal static class Settings
         public Dictionary<string, List<ushort>> MouseExtraKeys { get; set; } = new();
         public Dictionary<string, KeyBehavior> MouseBehaviors { get; set; } = new();
 
-        // Physical-keyboard mappings (the number-row keys Physical Press
-        // remaps) — same shape as the mouse fields above, just keyed by
-        // PhysicalKeyCatalog id (e.g. "phys1") instead. Absent from
-        // settings files saved before this existed, same reasoning as
-        // MouseEnabled above — no migration needed.
-        public Dictionary<string, bool> PhysicalEnabled { get; set; } = new();
-        public Dictionary<string, ushort> PhysicalKeyMap { get; set; } = new();
-        public Dictionary<string, List<ushort>> PhysicalExtraKeys { get; set; } = new();
-        public Dictionary<string, KeyBehavior> PhysicalBehaviors { get; set; } = new();
-
-        // Which of "voice"/"physical" is this profile's active Press
-        // source (see PressMode) — empty/absent for a profile saved
-        // before this feature existed, in which case the caller's own
-        // default ("voice") applies instead.
-        public string ActivePressMode { get; set; } = "";
-
         // Which named color palette ("Red"/"Green"/"Blue", see ThemeMode)
-        // this profile uses — same empty-means-use-the-caller's-default
-        // reasoning as ActivePressMode above.
+        // this profile uses — empty/absent for a profile saved before this
+        // feature existed, in which case the caller's own default ("Red")
+        // applies instead.
         public string ThemeColor { get; set; } = "";
+
+        // Virtual-keyboard mappings (the 34 remappable on-screen keys — see
+        // VirtualKeyCatalog) — same shape as KeyMap above, not Mouse's
+        // Enabled-gated shape, since every virtual key always sends
+        // something (its own key, unless remapped). Absent from settings
+        // files saved before this existed — no migration needed, every key
+        // just starts at its own natural default.
+        public Dictionary<string, ushort> VirtualKeyMap { get; set; } = new();
+        public Dictionary<string, List<ushort>> VirtualExtraKeys { get; set; } = new();
+        public Dictionary<string, KeyBehavior> VirtualBehaviors { get; set; } = new();
     }
 
     private sealed class SavedData
@@ -71,6 +98,8 @@ internal static class Settings
 
     private static SavedData Read()
     {
+        MigrateFromOldNameIfNeeded();
+
         try
         {
             if (File.Exists(FilePath))
@@ -144,132 +173,50 @@ internal static class Settings
         Write(saved);
     }
 
-    public static Dictionary<string, ushort> LoadKeyMap(string profile, Dictionary<string, ushort> defaults)
+    // Shared body for every Load* method below: only the ProfileData field
+    // being read differs between them (word map vs. mouse map vs. virtual
+    // map, and so on) — the "start from defaults, overlay whatever's saved
+    // for keys defaults already knows about" logic itself was identical
+    // nine times over. selector picks out that one field.
+    private static Dictionary<string, T> LoadField<T>(string profile, Dictionary<string, T> defaults, Func<ProfileData, Dictionary<string, T>> selector)
     {
         if (Read().Profiles.TryGetValue(profile, out var data))
-            foreach (var (word, vk) in data.KeyMap)
-                if (defaults.ContainsKey(word))
-                    defaults[word] = vk;
-
-        return defaults;
-    }
-
-    public static Dictionary<string, List<ushort>> LoadExtraKeys(string profile, Dictionary<string, List<ushort>> defaults)
-    {
-        if (Read().Profiles.TryGetValue(profile, out var data))
-            foreach (var (word, extras) in data.ExtraKeys)
-                if (defaults.ContainsKey(word))
-                    defaults[word] = extras;
-
-        return defaults;
-    }
-
-    public static Dictionary<string, KeyBehavior> LoadBehaviors(string profile, Dictionary<string, KeyBehavior> defaults)
-    {
-        if (Read().Profiles.TryGetValue(profile, out var data))
-            foreach (var (word, behavior) in data.Behaviors)
-                if (defaults.ContainsKey(word))
-                    defaults[word] = behavior;
-
-        return defaults;
-    }
-
-    public static Dictionary<string, bool> LoadMouseEnabled(string profile, Dictionary<string, bool> defaults)
-    {
-        if (Read().Profiles.TryGetValue(profile, out var data))
-            foreach (var (id, enabled) in data.MouseEnabled)
+            foreach (var (id, value) in selector(data))
                 if (defaults.ContainsKey(id))
-                    defaults[id] = enabled;
+                    defaults[id] = value;
 
         return defaults;
     }
 
-    public static Dictionary<string, ushort> LoadMouseKeyMap(string profile, Dictionary<string, ushort> defaults)
-    {
-        if (Read().Profiles.TryGetValue(profile, out var data))
-            foreach (var (id, vk) in data.MouseKeyMap)
-                if (defaults.ContainsKey(id))
-                    defaults[id] = vk;
+    public static Dictionary<string, ushort> LoadKeyMap(string profile, Dictionary<string, ushort> defaults) =>
+        LoadField(profile, defaults, d => d.KeyMap);
 
-        return defaults;
-    }
+    public static Dictionary<string, List<ushort>> LoadExtraKeys(string profile, Dictionary<string, List<ushort>> defaults) =>
+        LoadField(profile, defaults, d => d.ExtraKeys);
 
-    public static Dictionary<string, List<ushort>> LoadMouseExtraKeys(string profile, Dictionary<string, List<ushort>> defaults)
-    {
-        if (Read().Profiles.TryGetValue(profile, out var data))
-            foreach (var (id, extras) in data.MouseExtraKeys)
-                if (defaults.ContainsKey(id))
-                    defaults[id] = extras;
+    public static Dictionary<string, KeyBehavior> LoadBehaviors(string profile, Dictionary<string, KeyBehavior> defaults) =>
+        LoadField(profile, defaults, d => d.Behaviors);
 
-        return defaults;
-    }
+    public static Dictionary<string, bool> LoadMouseEnabled(string profile, Dictionary<string, bool> defaults) =>
+        LoadField(profile, defaults, d => d.MouseEnabled);
 
-    public static Dictionary<string, KeyBehavior> LoadMouseBehaviors(string profile, Dictionary<string, KeyBehavior> defaults)
-    {
-        if (Read().Profiles.TryGetValue(profile, out var data))
-            foreach (var (id, behavior) in data.MouseBehaviors)
-                if (defaults.ContainsKey(id))
-                    defaults[id] = behavior;
+    public static Dictionary<string, ushort> LoadMouseKeyMap(string profile, Dictionary<string, ushort> defaults) =>
+        LoadField(profile, defaults, d => d.MouseKeyMap);
 
-        return defaults;
-    }
+    public static Dictionary<string, List<ushort>> LoadMouseExtraKeys(string profile, Dictionary<string, List<ushort>> defaults) =>
+        LoadField(profile, defaults, d => d.MouseExtraKeys);
 
-    public static Dictionary<string, bool> LoadPhysicalEnabled(string profile, Dictionary<string, bool> defaults)
-    {
-        if (Read().Profiles.TryGetValue(profile, out var data))
-            foreach (var (id, enabled) in data.PhysicalEnabled)
-                if (defaults.ContainsKey(id))
-                    defaults[id] = enabled;
+    public static Dictionary<string, KeyBehavior> LoadMouseBehaviors(string profile, Dictionary<string, KeyBehavior> defaults) =>
+        LoadField(profile, defaults, d => d.MouseBehaviors);
 
-        return defaults;
-    }
+    public static Dictionary<string, ushort> LoadVirtualKeyMap(string profile, Dictionary<string, ushort> defaults) =>
+        LoadField(profile, defaults, d => d.VirtualKeyMap);
 
-    public static Dictionary<string, ushort> LoadPhysicalKeyMap(string profile, Dictionary<string, ushort> defaults)
-    {
-        if (Read().Profiles.TryGetValue(profile, out var data))
-            foreach (var (id, vk) in data.PhysicalKeyMap)
-                if (defaults.ContainsKey(id))
-                    defaults[id] = vk;
+    public static Dictionary<string, List<ushort>> LoadVirtualExtraKeys(string profile, Dictionary<string, List<ushort>> defaults) =>
+        LoadField(profile, defaults, d => d.VirtualExtraKeys);
 
-        return defaults;
-    }
-
-    public static Dictionary<string, List<ushort>> LoadPhysicalExtraKeys(string profile, Dictionary<string, List<ushort>> defaults)
-    {
-        if (Read().Profiles.TryGetValue(profile, out var data))
-            foreach (var (id, extras) in data.PhysicalExtraKeys)
-                if (defaults.ContainsKey(id))
-                    defaults[id] = extras;
-
-        return defaults;
-    }
-
-    public static Dictionary<string, KeyBehavior> LoadPhysicalBehaviors(string profile, Dictionary<string, KeyBehavior> defaults)
-    {
-        if (Read().Profiles.TryGetValue(profile, out var data))
-            foreach (var (id, behavior) in data.PhysicalBehaviors)
-                if (defaults.ContainsKey(id))
-                    defaults[id] = behavior;
-
-        return defaults;
-    }
-
-    public static string LoadActivePressMode(string profile, string defaultMode)
-    {
-        if (Read().Profiles.TryGetValue(profile, out var data) && !string.IsNullOrEmpty(data.ActivePressMode))
-            return data.ActivePressMode;
-
-        return defaultMode;
-    }
-
-    public static void SaveActivePressMode(string profile, string mode)
-    {
-        var saved = Read();
-        var data = saved.Profiles.TryGetValue(profile, out var existing) ? existing : new ProfileData();
-        data.ActivePressMode = mode;
-        saved.Profiles[profile] = data;
-        Write(saved);
-    }
+    public static Dictionary<string, KeyBehavior> LoadVirtualBehaviors(string profile, Dictionary<string, KeyBehavior> defaults) =>
+        LoadField(profile, defaults, d => d.VirtualBehaviors);
 
     public static string LoadThemeColor(string profile, string defaultColor)
     {
@@ -279,61 +226,40 @@ internal static class Settings
         return defaultColor;
     }
 
-    public static void SaveThemeColor(string profile, string color)
+    public static void SaveThemeColor(string profile, string color) =>
+        SaveFields(profile, d => d.ThemeColor = color);
+
+    // Shared body for every Save* method below (CreateProfileIfMissing is
+    // its own shape — a fresh ProfileData built once, only when the
+    // profile doesn't exist yet — so it stays separate): read the
+    // profile's current saved data, apply a patch that touches only the
+    // fields that one caller owns, write the whole thing back — so saving
+    // a voice-word change never clobbers whatever mouse-button mappings
+    // are already on disk for that profile (and vice versa).
+    private static void SaveFields(string profile, Action<ProfileData> patch)
     {
         var saved = Read();
         var data = saved.Profiles.TryGetValue(profile, out var existing) ? existing : new ProfileData();
-        data.ThemeColor = color;
+        patch(data);
         saved.Profiles[profile] = data;
         Write(saved);
     }
 
-    // Each Save*/Create* method below reads the profile's current saved data,
-    // patches only the fields it owns, and writes the whole thing back — so
-    // saving a voice-word change never clobbers whatever mouse-button
-    // mappings are already on disk for that profile (and vice versa).
-    public static void SaveProfile(string profile, Dictionary<string, ushort> keyMap, Dictionary<string, List<ushort>> extraKeys, Dictionary<string, KeyBehavior> behaviors)
-    {
-        var saved = Read();
-        var data = saved.Profiles.TryGetValue(profile, out var existing) ? existing : new ProfileData();
-        data.KeyMap = keyMap;
-        data.ExtraKeys = extraKeys;
-        data.Behaviors = behaviors;
-        saved.Profiles[profile] = data;
-        Write(saved);
-    }
+    public static void SaveProfile(string profile, Dictionary<string, ushort> keyMap, Dictionary<string, List<ushort>> extraKeys, Dictionary<string, KeyBehavior> behaviors) =>
+        SaveFields(profile, d => { d.KeyMap = keyMap; d.ExtraKeys = extraKeys; d.Behaviors = behaviors; });
 
-    public static void SaveMouseProfile(string profile, Dictionary<string, bool> enabled, Dictionary<string, ushort> keyMap, Dictionary<string, List<ushort>> extraKeys, Dictionary<string, KeyBehavior> behaviors)
-    {
-        var saved = Read();
-        var data = saved.Profiles.TryGetValue(profile, out var existing) ? existing : new ProfileData();
-        data.MouseEnabled = enabled;
-        data.MouseKeyMap = keyMap;
-        data.MouseExtraKeys = extraKeys;
-        data.MouseBehaviors = behaviors;
-        saved.Profiles[profile] = data;
-        Write(saved);
-    }
+    public static void SaveMouseProfile(string profile, Dictionary<string, bool> enabled, Dictionary<string, ushort> keyMap, Dictionary<string, List<ushort>> extraKeys, Dictionary<string, KeyBehavior> behaviors) =>
+        SaveFields(profile, d => { d.MouseEnabled = enabled; d.MouseKeyMap = keyMap; d.MouseExtraKeys = extraKeys; d.MouseBehaviors = behaviors; });
 
-    public static void SavePhysicalProfile(string profile, Dictionary<string, bool> enabled, Dictionary<string, ushort> keyMap, Dictionary<string, List<ushort>> extraKeys, Dictionary<string, KeyBehavior> behaviors)
-    {
-        var saved = Read();
-        var data = saved.Profiles.TryGetValue(profile, out var existing) ? existing : new ProfileData();
-        data.PhysicalEnabled = enabled;
-        data.PhysicalKeyMap = keyMap;
-        data.PhysicalExtraKeys = extraKeys;
-        data.PhysicalBehaviors = behaviors;
-        saved.Profiles[profile] = data;
-        Write(saved);
-    }
+    public static void SaveVirtualProfile(string profile, Dictionary<string, ushort> keyMap, Dictionary<string, List<ushort>> extraKeys, Dictionary<string, KeyBehavior> behaviors) =>
+        SaveFields(profile, d => { d.VirtualKeyMap = keyMap; d.VirtualExtraKeys = extraKeys; d.VirtualBehaviors = behaviors; });
 
     // Creates a profile with the given defaults if it doesn't already exist —
     // a no-op if it does, so this is safe to call speculatively.
     public static void CreateProfileIfMissing(
         string profile,
         Dictionary<string, ushort> keyMap, Dictionary<string, List<ushort>> extraKeys, Dictionary<string, KeyBehavior> behaviors,
-        Dictionary<string, bool> mouseEnabled, Dictionary<string, ushort> mouseKeyMap, Dictionary<string, List<ushort>> mouseExtraKeys, Dictionary<string, KeyBehavior> mouseBehaviors,
-        Dictionary<string, bool> physicalEnabled, Dictionary<string, ushort> physicalKeyMap, Dictionary<string, List<ushort>> physicalExtraKeys, Dictionary<string, KeyBehavior> physicalBehaviors)
+        Dictionary<string, bool> mouseEnabled, Dictionary<string, ushort> mouseKeyMap, Dictionary<string, List<ushort>> mouseExtraKeys, Dictionary<string, KeyBehavior> mouseBehaviors)
     {
         var saved = Read();
         if (saved.Profiles.ContainsKey(profile))
@@ -348,10 +274,6 @@ internal static class Settings
             MouseKeyMap = mouseKeyMap,
             MouseExtraKeys = mouseExtraKeys,
             MouseBehaviors = mouseBehaviors,
-            PhysicalEnabled = physicalEnabled,
-            PhysicalKeyMap = physicalKeyMap,
-            PhysicalExtraKeys = physicalExtraKeys,
-            PhysicalBehaviors = physicalBehaviors,
         };
         Write(saved);
     }

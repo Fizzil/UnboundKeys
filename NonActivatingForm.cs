@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace VoicePress;
+namespace UnboundKeys;
 
 // A window that never takes window activation, so it can't steal focus
 // away from whatever it's anchored to (the dashboard, the overlay icon

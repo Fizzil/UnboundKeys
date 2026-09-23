@@ -1,11 +1,11 @@
-namespace VoicePress;
+namespace UnboundKeys;
 
-// The physical mouse buttons VoicePress can remap. Left Button is
+// The physical mouse buttons UnboundKeys can remap. Left Button is
 // deliberately excluded — it's the one gesture that always opens the
 // dashboard (see OverlayForm), specifically so there's never a mapping
 // that can lock you out of reaching it, with no way to undo that short of
 // unplugging the mouse. The other six (Right Button included) are safe to
-// remap: none of them are needed to operate VoicePress itself anymore.
+// remap: none of them are needed to operate UnboundKeys itself anymore.
 public static class MouseCatalog
 {
     // ShortLabel is what actually fits on the sub-tab button itself (the

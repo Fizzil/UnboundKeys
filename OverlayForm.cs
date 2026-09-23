@@ -1,7 +1,7 @@
 using System.Drawing.Imaging;
 using System.Reflection;
 
-namespace VoicePress;
+namespace UnboundKeys;
 
 // The overlay is just the skull image, sitting in the corner. Left-click
 // opens the dashboard; right-click toggles listening on/off (dimmed =
@@ -39,6 +39,13 @@ public sealed class OverlayForm : NonActivatingForm
     private Image _pausedImage;
     private bool _paused;
     private DashboardForm? _dashboard;
+    private VirtualKeyboardForm? _virtualKeyboard;
+    // Which side RepositionDashboard/RepositionVirtualKeyboard chose last
+    // call — see the hysteresis comments there. Each reset whenever its
+    // own window is (re)opened, so a fresh open always starts from the
+    // plain "does it fit normally" check rather than stale state.
+    private bool _dashboardFlipped;
+    private bool _keyboardFlipped;
     private Point _dragMouseStart;
     private bool _dragging;
 
@@ -62,16 +69,16 @@ public sealed class OverlayForm : NonActivatingForm
 
         // Pulled from the project file's <Version> at build time rather
         // than hardcoded here, so it never falls out of sync — bump it in
-        // VoicePress.csproj and this picks it up automatically.
+        // UnboundKeys.csproj and this picks it up automatically.
         var version = Assembly.GetExecutingAssembly().GetName().Version;
         string versionText = version == null ? "" : $"{version.Major}.{version.Minor}.{version.Build}";
 
-        Text = $"VoicePress v{versionText}";
+        Text = $"UnboundKeys v{versionText}";
         FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.Manual;
         TopMost = true;
         ShowInTaskbar = true;
-        Icon = LoadEmbeddedIcon("VoicePress.Assets.skull.ico");
+        Icon = LoadEmbeddedIcon("UnboundKeys.Assets.skull.ico");
         BackColor = Color.Black;
         DoubleBuffered = true; // cuts down on repaint artifacts while being dragged
 
@@ -102,7 +109,7 @@ public sealed class OverlayForm : NonActivatingForm
         RebuildIconImages();
         ThemeMode.Changed += OnThemeChanged;
 
-        new ToolTip().SetToolTip(_icon, $"VoicePress v{versionText}");
+        new ToolTip().SetToolTip(_icon, $"UnboundKeys v{versionText}");
         // Left-button drag moves the whole icon; a left/right press that
         // never moves past DragThreshold still counts as a plain click
         // (dashboard toggle / pause toggle) same as before.
@@ -112,6 +119,17 @@ public sealed class OverlayForm : NonActivatingForm
             {
                 _dragMouseStart = e.Location;
                 _dragging = false;
+                // The icon is a tiny 60x60 control — a normal-speed real
+                // mouse drag easily moves the cursor faster than 60px
+                // between ticks, letting it slip outside the control's
+                // own bounds mid-drag. Without capture, WinForms simply
+                // stops delivering MouseMove (and even MouseUp) once the
+                // cursor's left the control, freezing the drag wherever
+                // it happened to be at that instant instead of tracking
+                // the rest of the gesture. Capture keeps every mouse
+                // event routed here regardless of where the cursor
+                // actually is, for as long as the button stays down.
+                _icon.Capture = true;
             }
         };
         _icon.MouseMove += (_, e) =>
@@ -126,36 +144,9 @@ public sealed class OverlayForm : NonActivatingForm
 
             if (_dragging)
             {
-                var screen = Screen.PrimaryScreen!.WorkingArea;
-                bool dashboardOpen = _dashboard != null && !_dashboard.IsDisposed;
-                int newX = Location.X + dx;
-                int newY = Location.Y + dy;
-
-                // Left: the dashboard (when open) can't be dragged past the
-                // screen's left edge — RepositionDashboard clamps it there.
-                // Without a matching clamp here, the icon would keep going
-                // past that point on its own, ending up dragged behind the
-                // now-stuck dashboard instead of staying glued to its edge.
-                int minX = screen.Left + (dashboardOpen ? DashboardForm.LeftEdgeOffsetFromIcon : 0);
-                newX = Math.Max(newX, minX);
-
-                // Right: the icon's own right edge is the rightmost point of
-                // the combined shape — the dashboard only ever extends to
-                // its left, never past it.
-                newX = Math.Min(newX, screen.Right - Width);
-
-                // Top: the dashboard's top always matches the icon's own
-                // top exactly, so one clamp covers both.
-                newY = Math.Max(newY, screen.Top);
-
-                // Bottom: whichever of the icon or the dashboard (which can
-                // be much taller than the icon while a card is open) reaches
-                // further down sets the limit.
-                int bottomHeight = dashboardOpen ? Math.Max(Height, _dashboard!.Height) : Height;
-                newY = Math.Min(newY, screen.Bottom - bottomHeight);
-
-                Location = new Point(newX, newY);
+                Location = ClampIconLocation(Location.X + dx, Location.Y + dy);
                 RepositionDashboard();
+                RepositionVirtualKeyboard();
                 // Moving via Location alone can leave a stale sliver of
                 // whatever was behind the icon's old position un-cleared —
                 // forcing a full repaint after every move avoids that.
@@ -165,6 +156,11 @@ public sealed class OverlayForm : NonActivatingForm
         };
         _icon.MouseUp += (_, e) =>
         {
+            // Matches the Capture = true set on MouseDown — releases it
+            // back once the gesture (drag or plain click) is actually
+            // done, regardless of which branch below handles it.
+            _icon.Capture = false;
+
             if (_dragging)
             {
                 _dragging = false;
@@ -200,7 +196,25 @@ public sealed class OverlayForm : NonActivatingForm
         // old position instead of following along.
         LocationChanged += (_, _) => RepositionColorPopup();
 
+        // The dashboard's own Fade button (see FadeMode) fades itself, the
+        // virtual keyboard, and the listener icon together — this is the
+        // one place that actually owns all three, so it's where the effect
+        // gets applied, to whichever of the two windows happen to be open
+        // right now (the icon is always "open" — it just fades this form
+        // itself, which is nothing but the icon — see the constructor).
+        FadeMode.Changed += ApplyFadeToOpenWindows;
+
         FormClosed += (_, _) => Application.Exit();
+    }
+
+    private void ApplyFadeToOpenWindows()
+    {
+        double opacity = FadeMode.IsOn ? FadeMode.FadedOpacity : 1.0;
+        Opacity = opacity;
+        if (_dashboard != null && !_dashboard.IsDisposed)
+            _dashboard.Opacity = opacity;
+        if (_virtualKeyboard != null && !_virtualKeyboard.IsDisposed)
+            _virtualKeyboard.Opacity = opacity;
     }
 
     private static Image LoadEmbeddedImage(string resourceName)
@@ -261,31 +275,267 @@ public sealed class OverlayForm : NonActivatingForm
         return bitmap;
     }
 
+    // No left/right restriction at all anymore — Fizzil wants the icon
+    // (and with it, the dashboard/keyboard, which flip to whichever side
+    // actually fits — see RepositionDashboard/RepositionVirtualKeyboard)
+    // freely draggable however close to, or past, either screen edge.
+    // Bottom still reserves room for whichever of the dashboard/keyboard
+    // is taller, since neither flips vertically — this is about the
+    // *icon's* own vertical position, not a left/right restriction, so it
+    // stays. Called with the icon's own current position to just clamp
+    // it in place, or with a dragged-to position mid-drag.
+    private Point ClampIconLocation(int desiredX, int desiredY)
+    {
+        var screen = Screen.PrimaryScreen!.WorkingArea;
+        bool dashboardOpen = _dashboard != null && !_dashboard.IsDisposed;
+        bool keyboardOpen = _virtualKeyboard != null && !_virtualKeyboard.IsDisposed;
+
+        int x = desiredX;
+
+        // Top: the dashboard's and keyboard's own tops always match the
+        // icon's own top exactly, so one clamp covers all three.
+        int y = Math.Max(desiredY, screen.Top);
+        // Bottom: whichever of the icon, the dashboard (which can be much
+        // taller than the icon while a card is open), or the keyboard
+        // (taller still, full-size especially) reaches further down sets
+        // the limit.
+        int bottomHeight = Height;
+        if (dashboardOpen)
+            bottomHeight = Math.Max(bottomHeight, _dashboard!.Height);
+        if (keyboardOpen)
+            bottomHeight = Math.Max(bottomHeight, _virtualKeyboard!.Height);
+        y = Math.Min(y, screen.Bottom - bottomHeight);
+
+        return new Point(x, y);
+    }
+
     private void ToggleDashboard()
     {
         if (_dashboard != null && !_dashboard.IsDisposed)
         {
             _dashboard.Close();
+            // The minimized keyboard strip hugs the icon directly once
+            // there's no dashboard left for it to sit next to — see
+            // RepositionVirtualKeyboard.
+            RepositionVirtualKeyboard();
             return;
         }
 
-        _dashboard = new DashboardForm();
+        _dashboard = new DashboardForm(ToggleVirtualKeyboard, IsVirtualKeyboardOpen);
+        // Fresh open: start from the plain "does it fit normally" check
+        // rather than remembering whichever side was chosen last time it
+        // was open (see the hysteresis comment in RepositionDashboard).
+        _dashboardFlipped = false;
+        // The dashboard may be taller than whatever was open a moment ago
+        // (if anything) — re-clamp the icon's own Y first, in case it's
+        // now sitting too low for the dashboard to fit above the screen's
+        // bottom edge. (Left/right need no such nudge — RepositionDashboard
+        // itself flips sides instead if there's no room, see below.)
+        Location = ClampIconLocation(Location.X, Location.Y);
         RepositionDashboard();
+        // Picks up whatever Fade is already set to, rather than always
+        // opening fully opaque until the next toggle.
+        _dashboard.Opacity = FadeMode.IsOn ? FadeMode.FadedOpacity : 1.0;
         _dashboard.Show(this);
+        // Pushes the minimized keyboard strip back out to its usual spot
+        // next to the Keyboard button, now that the dashboard is back.
+        RepositionVirtualKeyboard();
+    }
+
+    private bool IsVirtualKeyboardOpen() => _virtualKeyboard != null && !_virtualKeyboard.IsDisposed;
+
+    // Deliberately independent of the dashboard's own lifetime: closing the
+    // dashboard popup (left-clicking the icon again) leaves an already-open
+    // keyboard floating on screen, since the whole point is a typing tool
+    // that outlives the small config popup. A fresh one is built each time
+    // it's reopened (same pattern as ToggleDashboard above), anchored to
+    // the Keyboard button's position exactly like Mouse's own drawer is
+    // anchored to the dashboard — see RepositionVirtualKeyboard.
+    private void ToggleVirtualKeyboard()
+    {
+        if (_virtualKeyboard != null && !_virtualKeyboard.IsDisposed)
+        {
+            _virtualKeyboard.Close();
+            return;
+        }
+
+        OpenVirtualKeyboard(startMini: false);
+    }
+
+    // Split out of ToggleVirtualKeyboard so OnThemeChanged can reopen the
+    // keyboard in whichever of Mini/Maxi it was already in while comparing
+    // colors, instead of always starting fresh at full size — see
+    // OnThemeChanged's own comment for why that reopen happens at all.
+    private void OpenVirtualKeyboard(bool startMini)
+    {
+        _virtualKeyboard = new VirtualKeyboardForm(startMini);
+        // Fresh open: start from the plain "does it fit normally" check
+        // rather than remembering whichever side was chosen last time it
+        // was open (see the hysteresis comment in RepositionVirtualKeyboard).
+        _keyboardFlipped = false;
+        // Toggling Mini/Maxi resizes the keyboard itself (see
+        // VirtualKeyboardForm.ToggleMiniMode) — full-size is much taller
+        // than mini, so re-clamping the icon's own Y here too (not just
+        // on open) keeps it from ending up too low for the taller
+        // full-size keyboard to fit.
+        _virtualKeyboard.SizeChanged += (_, _) =>
+        {
+            Location = ClampIconLocation(Location.X, Location.Y);
+            RepositionDashboard();
+            RepositionVirtualKeyboard();
+        };
+        // Same Y-only nudge as ToggleDashboard's own call to this — the
+        // keyboard may be taller than whatever was open a moment ago.
+        Location = ClampIconLocation(Location.X, Location.Y);
+        RepositionVirtualKeyboard();
+        // Picks up whatever Fade is currently set to (it was last toggled
+        // from this same window, so this only matters on the very next
+        // reopen), rather than always starting fully opaque.
+        _virtualKeyboard.Opacity = FadeMode.IsOn ? FadeMode.FadedOpacity : 1.0;
+        _virtualKeyboard.Show(this);
+    }
+
+    // The keyboard's own top-right corner normally lines up with the
+    // Keyboard button's top-left while the dashboard is open — computed
+    // purely from the icon's own position and DashboardForm's fixed
+    // layout constants (Keyboard is the leftmost pixel of the fixed
+    // group, whose right edge always sits flush against the icon's own
+    // left edge — see DashboardForm's class comment), not from a live
+    // DashboardForm instance, since the keyboard can be open while the
+    // dashboard itself is closed. In this arrangement the keyboard
+    // actually sits a bit further from the icon than the dashboard's own
+    // edge does (its own left edge reaches past where the invisible,
+    // collapsed drawer zone would be) — it's "attached" to the Keyboard
+    // button's position, not the dashboard's outer edge.
+    //
+    // While the dashboard is actually closed, the keyboard (mini or full
+    // — both the same width, see FormWidth/MiniHeight) instead anchors
+    // flush against the icon directly, since there's no dashboard left
+    // for it to sit next to. Same story when the dashboard is open but on
+    // the *opposite* side from where the keyboard ends up — attaching
+    // beyond the dashboard's edge only makes sense when they're on the
+    // same side; otherwise the keyboard bypasses the dashboard and
+    // attaches straight to the icon.
+    //
+    // Left and right are each judged independently by whether *that*
+    // position is still fully on screen (mirrored, with its own
+    // hysteresis — see RepositionDashboard for why a single shared
+    // threshold flip-flops), rather than one flip decision borrowed from
+    // the dashboard's own — that was the bug that let the keyboard run
+    // straight off the right edge while just following a flipped
+    // dashboard's edge with no check of its own.
+    //
+    // Called when the keyboard first opens, continuously while the icon
+    // is being dragged (see the icon's MouseMove handler), on every
+    // Mini/Maxi toggle (see VirtualKeyboardForm's own SizeChanged
+    // wiring), and on every dashboard open/close (see ToggleDashboard) —
+    // any of those can change which side ends up applying.
+    private void RepositionVirtualKeyboard()
+    {
+        if (_virtualKeyboard == null || _virtualKeyboard.IsDisposed)
+            return;
+
+        bool dashboardOpen = _dashboard != null && !_dashboard.IsDisposed;
+        var screen = Screen.PrimaryScreen!.WorkingArea;
+
+        // When the keyboard lands on the same side as the dashboard, it
+        // attaches beyond the dashboard's own edge rather than overlapping
+        // it; when it lands on the *opposite* side, there's no dashboard
+        // edge over there to line up with, so it attaches directly to the
+        // icon instead. _dashboardFlipped is set by RepositionDashboard
+        // (always called first at every call site) — a direct read of
+        // which side the dashboard actually chose, rather than re-deriving
+        // it from position math a second time.
+        int leftCandidate = dashboardOpen && !_dashboardFlipped
+            ? Left - DashboardForm.FixedGroupWidth - _virtualKeyboard.Width
+            : Left - _virtualKeyboard.Width;
+        // Same idea as the dashboard's own VisibleRightInset use: its right
+        // edge can be sitting behind an invisible zone (ProfileExtraWidth,
+        // unless Profile's own dropdown is open).
+        int rightCandidate = dashboardOpen && _dashboardFlipped
+            ? _dashboard!.Left + _dashboard.Width - _dashboard.VisibleRightInset
+            : Left + Width;
+
+        // Same mirrored, hysteresis-based left/right choice as
+        // RepositionDashboard — each side judged by whether *it* still
+        // fits, not by whether the other side has also become valid (that
+        // was the bug: the keyboard used to always follow a flipped
+        // dashboard's edge with no check that doing so stayed on screen,
+        // so it could run straight off the right edge). _keyboardFlipped
+        // remembers which side was chosen last call.
+        bool useFlipped = _keyboardFlipped
+            ? rightCandidate + _virtualKeyboard.Width <= screen.Right
+            : leftCandidate < screen.Left;
+        _keyboardFlipped = useFlipped;
+
+        int x = useFlipped ? rightCandidate : leftCandidate;
+        _virtualKeyboard.Location = new Point(x, Top - DashboardForm.TopInset);
     }
 
     // Flush against the icon, not floating near it: the dashboard's right
     // edge touches the icon's left edge exactly (no gap), and their tops
     // line up exactly (TopInset is 0 now that the dashboard has no outer
-    // padding of its own to offset for). Called both when the dashboard
-    // first opens and continuously while the icon is being dragged, so it
-    // always stays glued to the icon's current position.
+    // padding of its own to offset for) — unless that would put the
+    // dashboard's own left edge off the screen, in which case it flips to
+    // attach to the icon's *right* edge instead. When flipped, it's not
+    // the window's own left edge that needs to touch the icon — it's
+    // whichever content is actually VISIBLE there right now. Collapsed
+    // (or Profile's dropdown open), that's the fixed group, DrawerWidth
+    // in from the window's own edge, since the drawer zone itself is
+    // invisible (Region-cut) in both those states; with Voice/Mouse's own
+    // drawer open, the drawer *is* the visible content, flush with the
+    // window's edge already. DashboardForm.VisibleLeftInset tracks which
+    // applies. Called both when the dashboard first opens and continuously
+    // while the icon is being dragged, so it always stays glued to the
+    // icon's current position, on whichever side currently fits.
     private void RepositionDashboard()
     {
         if (_dashboard == null || _dashboard.IsDisposed)
             return;
 
-        int x = Math.Max(Screen.PrimaryScreen!.WorkingArea.Left, Left - DashboardForm.LeftEdgeOffsetFromIcon);
+        var screen = Screen.PrimaryScreen!.WorkingArea;
+        int leftSideX = Left - DashboardForm.LeftEdgeOffsetFromIcon;
+        // Only the *visible* left edge needs to stay on screen — the drawer
+        // zone folded in behind it (VisibleLeftInset) is Region-cut and
+        // invisible whenever collapsed, so there's nothing wrong with it
+        // poking off-screen. Checking the raw window edge instead (as
+        // before) flipped a full drawer-width earlier than necessary,
+        // which is why the flipped dashboard used to land a whole
+        // dashboard's width away from the edge it had just left.
+        int visibleLeftEdge = leftSideX + _dashboard.VisibleLeftInset;
+
+        // Mirrored check for the flipped side: how far flipped mode's own
+        // *visible* content reaches to the right of the icon, so leaving
+        // flipped mode can be judged by whether flipped mode itself is
+        // still fully on screen — not by whether normal mode has also
+        // become valid again. Those two conditions cross at very
+        // different icon positions (normal mode only needs ~480px of
+        // room; flipped mode's visible slice is far narrower), so basing
+        // the un-flip on "does normal mode fit" was leaving flipped mode
+        // a couple of dashboard-widths before the icon ever got near the
+        // right edge.
+        int visibleWidth = _dashboard.Width - _dashboard.VisibleLeftInset - _dashboard.VisibleRightInset;
+        int flippedVisibleRightEdge = Left + Width + visibleWidth;
+
+        // Hysteresis: each side is judged by whether *it* still fits, not
+        // by whether the other side has also become valid — otherwise a
+        // wide overlapping range where both fit would flip back the
+        // instant the icon crossed the (arbitrary) threshold used to
+        // enter the mode in the first place, even by a pixel.
+        // _dashboardFlipped (not a position comparison — see
+        // RepositionVirtualKeyboard) is the memory of which side was
+        // chosen last call.
+        bool useFlipped = _dashboardFlipped
+            ? flippedVisibleRightEdge <= screen.Right
+            : visibleLeftEdge < screen.Left;
+        _dashboardFlipped = useFlipped;
+        // Mirrors the dashboard's own internal layout (Profile nearest the
+        // icon, Keyboard at the outer edge, either way — see DashboardForm's
+        // Mirrored property) — set before reading VisibleLeftInset below,
+        // since which side is invisible flips along with it.
+        _dashboard.Mirrored = useFlipped;
+
+        int x = useFlipped ? Left + Width - _dashboard.VisibleLeftInset : leftSideX;
         _dashboard.Location = new Point(x, Top - DashboardForm.TopInset);
     }
 
@@ -333,7 +583,7 @@ public sealed class OverlayForm : NonActivatingForm
     // art (not just a color name) for every color, active or not.
     internal static Image BuildSkullImage(string colorName)
     {
-        var resourceName = $"VoicePress.Assets.skull-{colorName.ToLowerInvariant()}.png";
+        var resourceName = $"UnboundKeys.Assets.skull-{colorName.ToLowerInvariant()}.png";
         var source = LoadEmbeddedImage(resourceName);
         return RecolorBackground(source, Theme.Current.Button);
     }
@@ -341,16 +591,29 @@ public sealed class OverlayForm : NonActivatingForm
     // Reacts to a color change from anywhere — the popup below, or a
     // profile switch happening inside an already-open dashboard (see
     // DashboardForm.SwitchToProfile). Rebuilding the icon images is always
-    // safe to do immediately, but closing _dashboard is deferred via
-    // BeginInvoke: ThemeMode.Changed can fire from partway through
-    // SwitchToProfile's own call stack, and disposing a Form while it's
-    // still mid-method on its own stack is a real hazard, not just untidy.
-    // A fresh, correctly-colored dashboard gets built the next time it's
-    // opened — a fully seamless in-place re-theme of an already-open one
-    // is a bigger change than this feature calls for.
+    // safe to do immediately, but closing _dashboard/_virtualKeyboard is
+    // deferred via BeginInvoke: ThemeMode.Changed can fire from partway
+    // through SwitchToProfile's own call stack, and disposing a Form while
+    // it's still mid-method on its own stack is a real hazard, not just
+    // untidy. A fresh, correctly-colored window gets built the next time
+    // each is opened — a fully seamless in-place re-theme of an already-
+    // open one is a bigger change than this feature calls for, for either
+    // window.
+    //
+    // The one exception: while the color popup is still open (mid-
+    // comparison — ThemeColorPopup never closes itself on a click, only
+    // rebuilds its own rows), the dashboard AND the keyboard (whichever of
+    // Mini/Maxi it was already in) immediately reopen fresh right after
+    // closing, so clicking through colors reads as the whole app re-
+    // coloring on the fly rather than repeatedly vanishing. Whatever
+    // drawer/card was open on the dashboard collapses on each reopen —
+    // preserving that too would mean tracking and replaying UI state, a
+    // bigger change than this comparison feature calls for.
     private void OnThemeChanged()
     {
         RebuildIconImages();
+
+        bool comparingColors = _colorPopup != null && !_colorPopup.IsDisposed;
 
         if (_dashboard != null && !_dashboard.IsDisposed)
         {
@@ -359,6 +622,21 @@ public sealed class OverlayForm : NonActivatingForm
             {
                 if (!dashboard.IsDisposed)
                     dashboard.Close();
+                if (comparingColors)
+                    ToggleDashboard();
+            });
+        }
+
+        if (_virtualKeyboard != null && !_virtualKeyboard.IsDisposed)
+        {
+            var keyboard = _virtualKeyboard;
+            bool wasMini = keyboard.IsMini;
+            BeginInvoke(() =>
+            {
+                if (!keyboard.IsDisposed)
+                    keyboard.Close();
+                if (comparingColors)
+                    OpenVirtualKeyboard(wasMini);
             });
         }
     }

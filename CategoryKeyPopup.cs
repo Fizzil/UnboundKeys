@@ -1,4 +1,4 @@
-namespace VoicePress;
+namespace UnboundKeys;
 
 // The floating list of one key category's individual keys (e.g. every
 // letter, under "Letters") — opened by hovering a category button in a

@@ -1,9 +1,40 @@
-# VoicePress backlog
+# UnboundKeys backlog
 
 Notes for a future session — not urgent. Written after a full-codebase
 review at v2.0.0. **Do this only after in-game testing of 2.0.0 confirms
 mouse remapping + the dashboard rewrite hold up in practice** — no sense
 refactoring code that might still need behavior changes from real testing.
+
+## Feature ideas
+
+- **Predictive text for the virtual keyboard.** Fizzil uses this regularly
+  on the Windows on-screen keyboard and wants it here too — a
+  semi-transparent suggestion strip above the keyboard, click a suggestion
+  (or press the shown letter) to type the rest of the word. Explicitly
+  descoped for now (2026-09-23) — see the conversation for the full
+  reasoning, summarized:
+  - True Windows-OSK-style prediction reads the actual focused field's
+    text buffer via Text Services Framework/IME-level integration. Not
+    feasible here without a much bigger architecture change:
+    `VirtualKeyboardForm` is a `NonActivatingForm` that deliberately never
+    takes focus and just blindly `SendInput`s keystrokes to whatever
+    window currently has it — it has no visibility into what actually
+    lands there, by design (that's what makes it safe to click through
+    mid-game).
+  - A scoped-down version IS realistic: track only the letters *we*
+    send (we're the one calling `NativeInput.TapKey`), keep a local
+    "current word" guess built from that, and suggest completions from a
+    dictionary. Fizzil is fine with the caveat that this can silently
+    drift out of sync whenever focus/cursor moves outside our control
+    (clicking elsewhere, physical typing, the target app's own
+    autocomplete) — confirmed the real Windows OSK has the exact same
+    "loses sync on focus change" limitation, so this isn't a new problem
+    being introduced.
+  - The actual speed win Fizzil described: type a letter (e.g. "T"), a
+    predicted word appears, pressing one more key (e.g. "A" for the next
+    letter of a *different* predicted word, or some dedicated accept key)
+    commits it — worth designing the interaction around that specific
+    flow rather than assuming "click a suggestion button" is the only UI.
 
 ## Worth doing
 
@@ -15,23 +46,14 @@ refactoring code that might still need behavior changes from real testing.
   duplication item — the specific place a real drift bug (Repeat Interval
   visibility) already almost happened.
 
-- **Collapse the `KeyMap.cs`/`MouseMap.cs`/`PhysicalKeyMap.cs` duplication**
-  (deliberately deferred twice now, not done alongside either the card
-  merge or Physical Press). These are ~85% identical (~570 lines total
-  across three files) but much shorter and simpler than the card files
-  were — mostly mechanical CRUD, less prone to silent drift. The real cost
-  of doing it: all three are referenced directly from `VoiceEngine.cs`
-  (grammar building), `MouseInputWatcher.cs`/`PhysicalKeyWatcher.cs`
-  (suppression checks), `ProfilesTab.cs` (profile creation),
-  `KeyExecutor.cs`, and `Program.cs` — a wider blast radius than the card
-  merge for a smaller LOC payoff. There's also a real semantic split to
-  reconcile: `MouseMap` and `PhysicalKeyMap` both have an `Enabled`/
-  unmapped state that `KeyMap` doesn't — meaning those two could likely
-  share one generic implementation immediately, with `KeyMap` staying the
-  odd one out. `Settings.cs`'s three parallel `Load*`/`Save*` groups
-  should fold into this same pass if it happens, since they exist for the
-  same reason. **Now backed by a concrete third duplicate instead of a
-  hypothetical one — worth prioritizing sooner than "eventually."**
+- ~~Collapse the `KeyMap.cs`/`MouseMap.cs`/`PhysicalKeyMap.cs`
+  duplication~~ — **moot.** Physical Press was removed entirely once the
+  virtual on-screen keyboard made physically remapping the number row
+  redundant, taking `PhysicalKeyMap.cs`/`PhysicalKeyCatalog.cs` with it.
+  `KeyMap`/`MouseMap`/`VirtualKeyMap` remain (a fourth similar file, not a
+  third), but that trio was never flagged as needing a merge — revisit
+  only if a real drift bug shows up between them, same bar as everything
+  else on this list.
 
 ## Minor cleanup, low priority
 

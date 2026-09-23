@@ -1,4 +1,4 @@
-namespace VoicePress;
+namespace UnboundKeys;
 
 // The color picker opened by four rapid right-clicks on the overlay icon
 // (see OverlayForm). Only ever shows the colors that AREN'T currently
@@ -9,13 +9,22 @@ namespace VoicePress;
 // like the overlay icon itself and stacked flush beneath it, so opening
 // the picker reads as "the active skull on top, the alternatives stacked
 // directly under it" rather than a separate, disconnected menu.
+//
+// Clicking a swatch previews that color on the fly — including live on
+// the dashboard if one's open, see OverlayForm.OnThemeChanged — without
+// closing the picker, so you can click back and forth to compare. The
+// row list rebuilds itself right after (the just-picked color drops out,
+// whichever was active before takes its place), so the two rows always
+// show "whatever's not active right now." There's no swatch for the
+// active color itself to click closed — the picker dismisses the same
+// way every other one does, by clicking the overlay icon again (see
+// OverlayForm's own MouseUp handler).
 internal static class ThemeColorPopup
 {
     private static readonly string[] AllNames = { "Red", "Green", "Blue" };
 
     public static Form Show(Form owner, Control anchor, Action<string> onColorSelected)
     {
-        var names = InactiveNamesInOrder();
         int size = OverlayForm.TargetWidth;
 
         var popup = new NonActivatingForm
@@ -25,7 +34,10 @@ internal static class ThemeColorPopup
             TopMost = true,
             ShowInTaskbar = false,
             BackColor = Theme.Current.Background,
-            ClientSize = new Size(size, names.Count * size),
+            // Always exactly two rows — always two inactive colors,
+            // whichever they currently are — so the picker's own size
+            // never needs to change, just which names fill its two rows.
+            ClientSize = new Size(size, 2 * size),
         };
 
         var list = new TableLayoutPanel
@@ -33,7 +45,7 @@ internal static class ThemeColorPopup
             Dock = DockStyle.Fill,
             Margin = new Padding(0),
             ColumnCount = 1,
-            RowCount = names.Count,
+            RowCount = 2,
             BackColor = Theme.Current.Background,
         };
         // Explicit, not left to whatever a single unstyled column defaults
@@ -42,39 +54,45 @@ internal static class ThemeColorPopup
         // than `size` would stretch every swatch exactly like the ones
         // being reported as distorted.
         list.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, size));
-        for (int i = 0; i < names.Count; i++)
-        {
-            list.RowStyles.Add(new RowStyle(SizeType.Absolute, size));
-
-            var name = names[i];
-            var swatch = new PictureBox
-            {
-                Image = OverlayForm.BuildSkullImage(name),
-                SizeMode = PictureBoxSizeMode.StretchImage,
-                Dock = DockStyle.Fill,
-                Margin = new Padding(0),
-                Cursor = Cursors.Hand,
-            };
-            swatch.Click += (_, _) =>
-            {
-                onColorSelected(name);
-                popup.Close();
-            };
-            list.Controls.Add(swatch, 0, i);
-        }
-
+        list.RowStyles.Add(new RowStyle(SizeType.Absolute, size));
+        list.RowStyles.Add(new RowStyle(SizeType.Absolute, size));
         popup.Controls.Add(list);
+
+        void RebuildRows()
+        {
+            list.Controls.Clear();
+            var names = InactiveNamesInOrder();
+            for (int i = 0; i < names.Count; i++)
+            {
+                var name = names[i];
+                var swatch = new PictureBox
+                {
+                    Image = OverlayForm.BuildSkullImage(name),
+                    SizeMode = PictureBoxSizeMode.StretchImage,
+                    Dock = DockStyle.Fill,
+                    Margin = new Padding(0),
+                    Cursor = Cursors.Hand,
+                };
+                swatch.Click += (_, _) =>
+                {
+                    onColorSelected(name);
+                    RebuildRows();
+                };
+                list.Controls.Add(swatch, 0, i);
+            }
+        }
+        RebuildRows();
 
         Reposition(popup, anchor);
         popup.Show(owner);
-        popup.ActiveControl = null;
+        popup.ActiveControl = null; // otherwise the first key shows a focus outline immediately
         return popup;
     }
 
     // Directly below the anchor (the overlay icon), flush against its left
     // edge — matching widths exactly is what makes this read as a stack
     // rather than a floating menu. Called both for initial placement and
-    // to keep the popup glued to the icon while it's being dragged — see
+    // to keep it glued to the icon while it's being dragged — see
     // OverlayForm's own RepositionColorPopup.
     public static void Reposition(Form popup, Control anchor)
     {

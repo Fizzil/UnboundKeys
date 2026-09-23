@@ -1,4 +1,4 @@
-namespace VoicePress;
+namespace UnboundKeys;
 
 // The horizontal strip of tab buttons across the top of the dashboard.
 // Each tab gets its own fixed (never-changing-once-set) pixel width; new

@@ -1,4 +1,4 @@
-namespace VoicePress;
+namespace UnboundKeys;
 
 // The full list of keys offered in the dashboard's "choose a key" menu, grouped
 // the way an on-screen keyboard would group them.

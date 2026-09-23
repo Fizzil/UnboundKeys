@@ -1,6 +1,7 @@
+using System.Diagnostics;
 using System.Threading;
 
-namespace VoicePress;
+namespace UnboundKeys;
 
 // Carries out a recognized command (a spoken word, or a mapped mouse
 // button) according to its behavior: a single tap, holding the key down for
@@ -50,9 +51,31 @@ internal static class KeyExecutor
     // know to stop it instead of starting another one. Shared across all
     // three sources — a spoken word, a mouse button id, and a physical key
     // id never collide, so one dictionary is fine — but which SLOT (see
-    // InfiniteState below) a given key occupies does depend on its source.
+    // InfiniteState below) a given key occupies does depend on its source
+    // (see StateFor), which in turn depends on that same never-collide
+    // assumption. Nothing in the type system enforces it — only the static
+    // constructor's assert below does, at least catching a future
+    // collision loudly instead of silently misrouting.
     private static readonly Dictionary<string, bool> _engaged = new();
     private static readonly object _lock = new();
+
+    // A collision here would mean two of KeyMap.RemappableWords/
+    // MouseMap.ButtonIds/VirtualKeyMap.KeyIds share an id — StateFor and
+    // _engaged above would then silently route the wrong source's press to
+    // the wrong InfiniteState slot, with no exception and no obvious
+    // symptom beyond "that one word/button/key behaves strangely." None of
+    // the three catalogs are expected to ever change often enough for this
+    // to be a real risk, but it costs nothing to turn a mistake into an
+    // immediate, loud failure during development instead.
+    static KeyExecutor()
+    {
+        Debug.Assert(!KeyMap.RemappableWords.Intersect(MouseMap.ButtonIds, StringComparer.OrdinalIgnoreCase).Any(),
+            "A word and a mouse button id collide — KeyExecutor's shared _engaged dictionary can't tell them apart.");
+        Debug.Assert(!KeyMap.RemappableWords.Intersect(VirtualKeyMap.KeyIds, StringComparer.OrdinalIgnoreCase).Any(),
+            "A word and a virtual key id collide — KeyExecutor's shared _engaged dictionary can't tell them apart.");
+        Debug.Assert(!MouseMap.ButtonIds.Intersect(VirtualKeyMap.KeyIds, StringComparer.OrdinalIgnoreCase).Any(),
+            "A mouse button id and a virtual key id collide — KeyExecutor's shared _engaged dictionary can't tell them apart.");
+    }
 
     // Only one word may be doing an infinite hold at a time, and separately
     // only one may be doing an infinite repeat — engaging a new one bumps
@@ -76,17 +99,19 @@ internal static class KeyExecutor
 
     private static readonly InfiniteState _voiceState = new();
     private static readonly InfiniteState _mouseState = new();
-    private static readonly InfiniteState _physicalState = new();
+    private static readonly InfiniteState _virtualState = new();
 
     private static bool IsMouseSource(string word) => Array.IndexOf(MouseMap.ButtonIds, word) >= 0;
-    private static bool IsPhysicalSource(string word) => Array.IndexOf(PhysicalKeyMap.KeyIds, word) >= 0;
+    private static bool IsVirtualSource(string word) => Array.IndexOf(VirtualKeyMap.KeyIds, word) >= 0;
 
     private static InfiniteState StateFor(string word) =>
-        IsMouseSource(word) ? _mouseState : IsPhysicalSource(word) ? _physicalState : _voiceState;
+        IsMouseSource(word) ? _mouseState :
+        IsVirtualSource(word) ? _virtualState :
+        _voiceState;
 
     private static List<(ushort Vk, bool Extended)> GetAllKeysForWord(string word) =>
         IsMouseSource(word) ? MouseMap.GetAllKeys(word) :
-        IsPhysicalSource(word) ? PhysicalKeyMap.GetAllKeys(word) :
+        IsVirtualSource(word) ? VirtualKeyMap.GetAllKeys(word) :
         KeyMap.GetAllKeys(word);
 
     // The window (and its title, at the time) that was focused when each
@@ -263,53 +288,17 @@ internal static class KeyExecutor
             _engaged.Clear();
             ClearState(_voiceState);
             ClearState(_mouseState);
-            ClearState(_physicalState);
+            ClearState(_virtualState);
         }
 
         foreach (var word in engagedWords)
             ReleaseAllUp(GetAllKeysForWord(word));
-    }
 
-    // Called by PressMode when its active source switches (voice <->
-    // physical, see PressMode.SwitchTo) — that source can no longer hear a
-    // second press/word to toggle off whatever it left running, so
-    // switching away from it needs to clean up after itself, the same way
-    // ReleaseAll does for everything at once when the app pauses. Only
-    // this source's own engaged infinite state and in-flight timed runs
-    // are touched — deliberately doesn't cancel the shared _stopSignal
-    // (unlike ReleaseAll), since that would also interrupt whatever the
-    // source being switched *to* might already be running.
-    public static void ReleaseVoiceWords() => ReleaseSource(word => !IsMouseSource(word) && !IsPhysicalSource(word), _voiceState);
-    public static void ReleasePhysicalKeys() => ReleaseSource(IsPhysicalSource, _physicalState);
-
-    private static void ReleaseSource(Func<string, bool> isInSource, InfiniteState state)
-    {
-        List<string> engagedWords = new();
-        List<CancellationTokenSource> timedToCancel = new();
-
-        lock (_lock)
-        {
-            foreach (var (word, engaged) in _engaged)
-                if (engaged && isInSource(word))
-                    engagedWords.Add(word);
-            foreach (var word in engagedWords)
-                _engaged[word] = false;
-
-            foreach (var (word, cts) in _activeTimedRuns)
-                if (isInSource(word))
-                    timedToCancel.Add(cts);
-
-            ClearState(state);
-        }
-
-        // Same single-owner-disposes rule as ExecuteTimed's own toggle-cancel
-        // path — only ever Cancel here, the in-flight Execute call disposes
-        // its own token once it's done reacting.
-        foreach (var cts in timedToCancel)
-            cts.Cancel();
-
-        foreach (var word in engagedWords)
-            ReleaseAllUp(GetAllKeysForWord(word));
+        // A sticky Shift/Ctrl/Alt/Win held down from the virtual keyboard
+        // isn't tracked in _engaged at all (see StickyModifiers) — this is
+        // the one shared place every panic path (press stop, triple Caps
+        // Lock, app exit) already funnels through, so it lets go here too.
+        StickyModifiers.ReleaseAll();
     }
 
     private static void ClearState(InfiniteState s)
@@ -498,7 +487,7 @@ internal static class KeyExecutor
 
         lock (_lock)
         {
-            foreach (var s in new[] { _voiceState, _mouseState, _physicalState })
+            foreach (var s in new[] { _voiceState, _mouseState, _virtualState })
             {
                 if (s.HoldWord != null && s.HoldWindow.HasValue)
                 {

@@ -1,4 +1,4 @@
-namespace VoicePress;
+namespace UnboundKeys;
 
 // The dashboard's black/red visual style. Colors live in one swappable
 // object (Theme.Current) rather than as scattered constants — swapping

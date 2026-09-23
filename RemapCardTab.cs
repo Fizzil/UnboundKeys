@@ -1,4 +1,4 @@
-namespace VoicePress;
+namespace UnboundKeys;
 
 // The seam that lets RemapCardTab drive either KeyMap or MouseMap without
 // knowing which — every place the two used to differ (a word always has a
@@ -71,26 +71,25 @@ internal sealed class MouseMapSource : IRemapSource
     public ushort AddKeySeed(string id) => MouseMap.Enabled[id] ? MouseMap.Words[id] : (ushort)0x41;
 }
 
-internal sealed class PhysicalKeyMapSource : IRemapSource
+internal sealed class VirtualKeyMapSource : IRemapSource
 {
-    public static readonly PhysicalKeyMapSource Instance = new();
-    private PhysicalKeyMapSource() { }
+    public static readonly VirtualKeyMapSource Instance = new();
+    private VirtualKeyMapSource() { }
 
-    public Dictionary<string, ushort> Words => PhysicalKeyMap.Words;
-    public Dictionary<string, List<ushort>> ExtraWords => PhysicalKeyMap.ExtraWords;
-    public Dictionary<string, KeyBehavior> Behaviors => PhysicalKeyMap.Behaviors;
+    public Dictionary<string, ushort> Words => VirtualKeyMap.Words;
+    public Dictionary<string, List<ushort>> ExtraWords => VirtualKeyMap.ExtraWords;
+    public Dictionary<string, KeyBehavior> Behaviors => VirtualKeyMap.Behaviors;
 
-    public void Rebind(string id, ushort vkCode) => PhysicalKeyMap.Rebind(id, vkCode);
-    public void AddExtraKey(string id, ushort vkCode) => PhysicalKeyMap.AddExtraKey(id, vkCode);
-    public void SetExtraKey(string id, int index, ushort vkCode) => PhysicalKeyMap.SetExtraKey(id, index, vkCode);
-    public void RemoveExtraKey(string id, int index) => PhysicalKeyMap.RemoveExtraKey(id, index);
+    public void Rebind(string id, ushort vkCode) => VirtualKeyMap.Rebind(id, vkCode);
+    public void AddExtraKey(string id, ushort vkCode) => VirtualKeyMap.AddExtraKey(id, vkCode);
+    public void SetExtraKey(string id, int index, ushort vkCode) => VirtualKeyMap.SetExtraKey(id, index, vkCode);
+    public void RemoveExtraKey(string id, int index) => VirtualKeyMap.RemoveExtraKey(id, index);
     public void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool useCustomRepeatIntervals, List<double> repeatKeyIntervalsSeconds) =>
-        PhysicalKeyMap.SetBehavior(id, repeat, hold, durationSeconds, infinite, useCustomRepeatIntervals, repeatKeyIntervalsSeconds);
-    public void ResetToDefault(string id) => PhysicalKeyMap.ResetToDefault(id);
+        VirtualKeyMap.SetBehavior(id, repeat, hold, durationSeconds, infinite, useCustomRepeatIntervals, repeatKeyIntervalsSeconds);
+    public void ResetToDefault(string id) => VirtualKeyMap.ResetToDefault(id);
 
-    public string KeyLabelFor(string id) =>
-        PhysicalKeyMap.Enabled[id] ? $"Key 1: {KeyCatalog.DisplayNameFor(PhysicalKeyMap.Words[id])}" : "Key 1: Not Mapped";
-    public ushort AddKeySeed(string id) => PhysicalKeyMap.Enabled[id] ? PhysicalKeyMap.Words[id] : (ushort)0x41;
+    public string KeyLabelFor(string id) => $"Key 1: {KeyCatalog.DisplayNameFor(VirtualKeyMap.Words[id])}";
+    public ushort AddKeySeed(string id) => VirtualKeyMap.Words[id];
 }
 
 // One word's or mouse button's card — Key (click to expand a list of key

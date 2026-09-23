@@ -2,7 +2,7 @@ using System.Text.Json;
 using NAudio.Wave;
 using Vosk;
 
-namespace VoicePress;
+namespace UnboundKeys;
 
 // Offline, small-vocabulary speech recognition via Vosk — replaces the
 // built-in Windows System.Speech (SAPI) engine, which couldn't reliably
@@ -46,7 +46,7 @@ public sealed class VoiceEngine : IDisposable
         {
             throw new InvalidOperationException(
                 $"Couldn't find the speech recognition model at:\n{modelPath}\n\n" +
-                "The VoskModel folder needs to sit next to VoicePress's exe.");
+                "The VoskModel folder needs to sit next to UnboundKeys's exe.");
         }
 
         _model = new Model(modelPath);
