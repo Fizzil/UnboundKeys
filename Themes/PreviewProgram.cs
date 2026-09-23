@@ -18,6 +18,6 @@ internal static class PreviewProgram
     private static void Main()
     {
         var app = new System.Windows.Application();
-        app.Run(new UnboundKeys.Wpf.CategoryKeyPopupPreview());
+        app.Run(new UnboundKeys.Wpf.ThemeColorPopupPreview());
     }
 }
