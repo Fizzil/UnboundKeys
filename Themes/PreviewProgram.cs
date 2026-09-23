@@ -18,6 +18,16 @@ internal static class PreviewProgram
     private static void Main()
     {
         var app = new System.Windows.Application();
-        app.Run(new StyleGallery());
+        // A UserControl's own StaticResource lookups only see its own
+        // file's resources plus Application.Resources — not whatever
+        // window ends up hosting it later (that's how DynamicResource
+        // differs: it also follows the live visual tree). Merging the
+        // theme dictionaries here, once, at the Application level is what
+        // makes a hosted control like RemapCard resolve its styles at
+        // all — the real app's eventual App.xaml (Phase 9) will do the
+        // same for the active color theme.
+        app.Resources.MergedDictionaries.Add(new System.Windows.ResourceDictionary { Source = new Uri("Themes/Theme.Red.xaml", UriKind.Relative) });
+        app.Resources.MergedDictionaries.Add(new System.Windows.ResourceDictionary { Source = new Uri("Themes/Theme.Controls.xaml", UriKind.Relative) });
+        app.Run(new UnboundKeys.Wpf.RemapCardPreview());
     }
 }

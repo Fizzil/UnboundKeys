@@ -1,0 +1,54 @@
+<UserControl x:Class="UnboundKeys.Wpf.RemapCard"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Width="370">
+    <Border BorderBrush="{DynamicResource MutedBrush}" BorderThickness="1" CornerRadius="8"
+            Effect="{StaticResource CardShadow}">
+        <StackPanel Margin="1">
+
+            <!-- Key row: label ("Key 1") flush left, value flush right —
+                 only the value side is clickable (opens the category
+                 list below). Matches RemapCardTab's own BuildKeyLabelRow
+                 (WinForms). -->
+            <Grid Height="40">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="KeyLabelText" Grid.Column="0" Style="{StaticResource LabelDisplayStyle}"/>
+                <Button x:Name="KeyValueButton" Grid.Column="1" HorizontalContentAlignment="Right"
+                        Click="KeyValueButton_Click" Style="{StaticResource ValueButtonStyle}"/>
+            </Grid>
+
+            <!-- The category accordion — animated open/closed in code
+                 (see ToggleCategoryList) rather than a plain Visibility
+                 snap, since a smooth grow/shrink was one of the fancy
+                 upgrades Fizzil asked for. ClipToBounds so the animation
+                 visibly grows/shrinks instead of the content just
+                 overflowing past a shorter Height. -->
+            <StackPanel x:Name="CategoryList" Visibility="Collapsed" ClipToBounds="True"/>
+
+            <!-- Blank gap between the Key group and the action row —
+                 same idea as RemapCardTab's own keyRepeatGap (WinForms):
+                 a plain spacer, not another row, so the card reads as
+                 two distinct sections instead of one continuous grid. -->
+            <Border Height="8" Background="Transparent"/>
+
+            <!-- Repeat / Hold / Reset share one row — see RemapCardTab's
+                 own comment on why (matches the reference layout Fizzil
+                 pointed at: short actions grouped, not stacked as three
+                 full-width bars). -->
+            <Grid Height="40">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Button x:Name="RepeatButton" Grid.Column="0" Content="Repeat" Click="RepeatButton_Click" Style="{StaticResource ListButtonStyle}"/>
+                <Button x:Name="HoldButton" Grid.Column="1" Content="Hold" Click="HoldButton_Click" Style="{StaticResource ListButtonStyle}"/>
+                <Button x:Name="ResetButton" Grid.Column="2" Content="Reset" Click="ResetButton_Click" Style="{StaticResource ListButtonStyle}"/>
+            </Grid>
+
+        </StackPanel>
+    </Border>
+</UserControl>
