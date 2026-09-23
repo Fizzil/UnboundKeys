@@ -6,27 +6,13 @@
             Effect="{StaticResource CardShadow}">
         <StackPanel Margin="1">
 
-            <!-- Key row: label ("Key 1") flush left, value flush right —
-                 only the value side is clickable (opens the category
-                 list below). Matches RemapCardTab's own BuildKeyLabelRow
-                 (WinForms). -->
-            <Grid Height="40">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock x:Name="KeyLabelText" Grid.Column="0" Style="{StaticResource LabelDisplayStyle}"/>
-                <Button x:Name="KeyValueButton" Grid.Column="1" HorizontalContentAlignment="Right"
-                        Click="KeyValueButton_Click" Style="{StaticResource ValueButtonStyle}"/>
-            </Grid>
-
-            <!-- The category accordion — animated open/closed in code
-                 (see ToggleCategoryList) rather than a plain Visibility
-                 snap, since a smooth grow/shrink was one of the fancy
-                 upgrades Fizzil asked for. ClipToBounds so the animation
-                 visibly grows/shrinks instead of the content just
-                 overflowing past a shorter Height. -->
-            <StackPanel x:Name="CategoryList" Visibility="Collapsed" ClipToBounds="True"/>
+            <!-- Key 1, plus "Add Key" and up to two extra keys — all built
+                 dynamically in code (see RebuildKeyGroup) since the count
+                 varies. Each key gets its own label/value row (only the
+                 value side clickable, matching RemapCardTab's own
+                 BuildKeyLabelRow) and its own animated category list
+                 directly beneath it. -->
+            <StackPanel x:Name="KeyGroup"/>
 
             <!-- Blank gap between the Key group and the action row —
                  same idea as RemapCardTab's own keyRepeatGap (WinForms):
