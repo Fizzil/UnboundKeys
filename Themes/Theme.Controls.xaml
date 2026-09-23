@@ -1,0 +1,128 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Flat, borderless base every button style below builds on. WPF's
+         stock Button chrome (3D bevel, dotted focus rectangle) doesn't
+         match this app's flat aesthetic, so this replaces the whole
+         ControlTemplate instead of just overriding Background/Foreground
+         the way a WinForms FlatStyle.Flat button could get away with.
+         Colors are DynamicResource, not StaticResource, so swapping the
+         merged color dictionary (Theme.Red/Green/Blue.xaml) re-themes
+         every button live — see those files' own comment.
+
+         Two behaviors are wired into this ONE shared template rather than
+         duplicated per style:
+         - Hover/press feedback (every button gets this).
+         - An optional bottom underline, shown when Tag="True" — this is
+           the WPF equivalent of Theme.cs's EnableTabUnderline/
+           SetTabSelected pair (WinForms: Tag held the selected bool and a
+           Paint handler drew the bar; here a Trigger on the same Tag
+           property reveals a Border already sitting in the template).
+           Harmless for buttons that never set Tag — it just never
+           triggers. -->
+    <Style x:Key="FlatButtonBase" TargetType="Button">
+        <Setter Property="Background" Value="{DynamicResource ButtonBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="FontFamily" Value="Segoe UI"/>
+        <Setter Property="FontSize" Value="16"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid Background="{TemplateBinding Background}">
+                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                        <Border x:Name="Underline"
+                                Height="2"
+                                VerticalAlignment="Bottom"
+                                Background="Transparent"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource HoverBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                        </Trigger>
+                        <Trigger Property="Tag" Value="True">
+                            <Setter TargetName="Underline" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Full-width list row — Repeat/Hold/Reset, a category button, "Add
+         Key". MakeListButton's equivalent. -->
+    <Style x:Key="ListButtonStyle" TargetType="Button" BasedOn="{StaticResource FlatButtonBase}">
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+    </Style>
+
+    <!-- Compact square-ish button — +1, .1, the reset glyph, Infinite.
+         MakeTinyButton's equivalent. -->
+    <Style x:Key="TinyButtonStyle" TargetType="Button" BasedOn="{StaticResource FlatButtonBase}">
+        <Setter Property="Margin" Value="1"/>
+    </Style>
+
+    <!-- A row/cell that shows current STATE rather than acting as a
+         command — muted, so it reads as secondary next to full-accent
+         action rows. Left-aligned by default; the value half of a split
+         row overrides HorizontalContentAlignment to Right per instance
+         (a plain settable property here, unlike WinForms where
+         MakeValueButton needed an alignRight parameter to pick between
+         two hand-built Padding/TextAlign combinations). MakeValueButton's
+         equivalent. -->
+    <Style x:Key="ValueButtonStyle" TargetType="Button" BasedOn="{StaticResource FlatButtonBase}">
+        <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <Setter Property="Padding" Value="12,0,12,0"/>
+    </Style>
+
+    <!-- The non-interactive label half of a label/value row ("Key 1" next
+         to its value) — full accent, left-aligned, no hover/press
+         feedback since only the value side is clickable. A TextBlock, not
+         a Button — there's nothing to click. MakeLabelDisplay's
+         equivalent. -->
+    <Style x:Key="LabelDisplayStyle" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource ButtonBrush}"/>
+        <Setter Property="FontFamily" Value="Segoe UI"/>
+        <Setter Property="FontSize" Value="16"/>
+        <Setter Property="Padding" Value="12,0,0,0"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="TextAlignment" Value="Left"/>
+    </Style>
+
+    <!-- A row shown nested under the one it belongs to — a key category
+         under Key's own accordion, Reset All under Reset — full accent
+         and still a real command, just indented so it reads as part of
+         the row above it. MakeNestedButton's equivalent. -->
+    <Style x:Key="NestedButtonStyle" TargetType="Button" BasedOn="{StaticResource ListButtonStyle}">
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <Setter Property="Padding" Value="28,0,0,0"/>
+    </Style>
+
+    <!-- A toggle that shows on/off by fully inverting its colors instead
+         of an underline — the confirm-delete "✕"'s armed state, the Reset
+         button's tap-flash. Its own template rather than reusing
+         FlatButtonBase's Tag trigger, since that one means "show an
+         underline" — this Tag means something visually different (a full
+         color swap), so it gets a second small template rather than
+         overloading one Tag with two meanings. SetToggleAppearance's
+         equivalent. -->
+    <Style x:Key="ToggleFillButtonStyle" TargetType="Button" BasedOn="{StaticResource FlatButtonBase}">
+        <Style.Triggers>
+            <Trigger Property="Tag" Value="True">
+                <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource BackgroundBrush}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+</ResourceDictionary>

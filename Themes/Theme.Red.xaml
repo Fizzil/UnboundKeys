@@ -1,0 +1,17 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Same RGB values as Theme.cs's Red preset (WinForms) — kept exact so
+         the app's identity doesn't shift just because the framework did.
+         Swapping the active color theme at runtime means merging a
+         different one of these three files into Application.Resources in
+         place of this one; every control using DynamicResource re-themes
+         itself immediately, with no need to walk the control tree and
+         re-apply colors by hand the way WinForms' Theme.Current required. -->
+    <SolidColorBrush x:Key="BackgroundBrush" Color="#FF000000"/>
+    <SolidColorBrush x:Key="ButtonBrush" Color="#FF121212"/>
+    <SolidColorBrush x:Key="AccentBrush" Color="#FFE6461E"/>
+    <SolidColorBrush x:Key="HoverBrush" Color="#FF3C140C"/>
+    <SolidColorBrush x:Key="MutedBrush" Color="#FF962E14"/>
+
+</ResourceDictionary>

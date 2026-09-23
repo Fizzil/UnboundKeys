@@ -1,0 +1,13 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Same RGB values as Theme.cs's Green preset (WinForms) — see
+         Theme.Red.xaml for why these three files stay in lockstep on key
+         names. -->
+    <SolidColorBrush x:Key="BackgroundBrush" Color="#FF000000"/>
+    <SolidColorBrush x:Key="ButtonBrush" Color="#FF121212"/>
+    <SolidColorBrush x:Key="AccentBrush" Color="#FF3CC85A"/>
+    <SolidColorBrush x:Key="HoverBrush" Color="#FF0F3719"/>
+    <SolidColorBrush x:Key="MutedBrush" Color="#FF27823B"/>
+
+</ResourceDictionary>
