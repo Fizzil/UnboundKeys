@@ -41,6 +41,8 @@ public partial class VirtualKeyboardWindow
     private readonly List<(TextBlock Label, string Lower)> _letterLabels = new();
     private readonly List<(TextBlock Label, string Base, string Shifted)> _shiftableLabels = new();
     private readonly List<Button> _capsLockButtons = new();
+    // One in each layout — both lit while Fade is on, like Caps' LED.
+    private readonly List<Button> _fadeButtons = new();
 
     // Tracked locally rather than re-read from Windows after every click —
     // our own injected Caps Lock keystroke lands in whichever window has
@@ -72,6 +74,7 @@ public partial class VirtualKeyboardWindow
 
         foreach (var row in FullRows())
             FullLayout.Children.Add(BuildRow(row));
+        FadeKeyHost.Content = BuildKey(FadeKey);
         MiniKeyHost.Content = BuildKey(MiniKey);
         MiniLayout.Children.Add(BuildRow(MiniRow()));
         ApplyMiniMode();
@@ -161,6 +164,8 @@ public partial class VirtualKeyboardWindow
             _shiftableLabels.Add((label, spec.Label, spec.ShiftLabel));
         if (spec.Kind == KeyKind.Plain && spec.Vk == VkCapital)
             _capsLockButtons.Add(button);
+        if (spec.Kind == KeyKind.FadeToggle)
+            _fadeButtons.Add(button);
 
         return button;
     }
@@ -242,6 +247,11 @@ public partial class VirtualKeyboardWindow
                 case KeyKind.MiniToggle:
                     button.Tag = false;
                     ToggleMiniMode();
+                    break;
+                case KeyKind.FadeToggle:
+                    // Its highlight follows Fade's real state via
+                    // FadeMode.Changed (see ApplyFade), not this press.
+                    FadeMode.Toggle();
                     break;
             }
         }
@@ -402,7 +412,12 @@ public partial class VirtualKeyboardWindow
             wash.Visibility = VirtualKeyMap.IsCustomized(id) ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    private void ApplyFade() => Opacity = FadeMode.IsOn ? FadeMode.FadedOpacity : 1.0;
+    private void ApplyFade()
+    {
+        Opacity = FadeMode.IsOn ? FadeMode.FadedOpacity : 1.0;
+        foreach (var button in _fadeButtons)
+            button.Tag = FadeMode.IsOn;
+    }
 
     // The whole keyboard drawn at a fraction of its designed size — a
     // LayoutTransform, so the window (SizeToContent) shrinks with it and

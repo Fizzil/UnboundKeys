@@ -8,7 +8,7 @@ namespace UnboundKeys;
 // are VirtualKeyboardForm.cs's (WinForms): Fizzil tuned them by eye.
 public static class KeyboardLayout
 {
-    public enum KeyKind { Plain, Remappable, StickyFixed, MiniToggle }
+    public enum KeyKind { Plain, Remappable, StickyFixed, MiniToggle, FadeToggle }
 
     // ShiftLabel is the symbol shown while Shift is sticky-active (1 → !),
     // cosmetic only; LargeLabel bumps the font for punctuation glyphs that
@@ -27,13 +27,21 @@ public static class KeyboardLayout
     private static KeySpec Toggle(string label, double width) =>
         new(label, KeyKind.MiniToggle, null, 0, false, width, null);
 
+    private static KeySpec Fade(double width) =>
+        new("Fade", KeyKind.FadeToggle, null, 0, false, width, null);
+
     public static KeySpec[][] FullRows() => new[] { Row1(), Row2(), Row3(), Row4(), Row5() };
 
-    // "Mini" isn't on any row: it sits in the top-right corner of the
-    // word-suggestion strip above Row1, one fifteenth of the width — the
-    // exact cell "Maxi" (MiniRow's last key) occupies in the collapsed
-    // strip, so toggling between the two never moves the button out from
-    // under the mouse (Fizzil's ask). Backspace took over its old slot.
+    // "Fade" and "Mini" aren't on any row: they sit in the top-right corner
+    // of the word-suggestion strip above Row1, one sixteenth of the width
+    // each — the exact cells "Fade" and "Maxi" (MiniRow's last two keys)
+    // occupy in the collapsed strip, so toggling between the two layouts
+    // never moves either button out from under the mouse (Fizzil's ask).
+    // Fade lives on the keyboard as well as the dashboard because the
+    // keyboard is what's on screen mid-game: with the dashboard hidden
+    // and no microphone, it's the one mouse-only way out of a dimmed
+    // screen. Backspace took over Mini's old slot on Row1.
+    public static KeySpec FadeKey => Fade(1);
     public static KeySpec MiniKey => Toggle("Mini", 1);
 
     // Esc, backtick, the number row (remappable), -, =, Backspace (wide —
@@ -131,7 +139,7 @@ public static class KeyboardLayout
 
     // The collapsed strip — none of these are remappable, which is the
     // point of collapsing the letters and digits away. Order is Fizzil's;
-    // Maxi (last) expands back.
+    // Fade and Maxi (the last two) match the full layout's own corner.
     public static KeySpec[] MiniRow() => new[]
     {
         Plain("Esc", 0x1B, false, 1),
@@ -148,6 +156,7 @@ public static class KeyboardLayout
         Plain("Enter", 0x0D, false, 1),
         Plain("Del", 0x2E, true, 1),
         Plain("⌫", 0x08, false, 1),
+        Fade(1),
         Toggle("Maxi", 1),
     };
 }
