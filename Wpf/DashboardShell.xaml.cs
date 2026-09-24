@@ -56,6 +56,7 @@ public partial class DashboardShell
         settingsPage.ResetAllRequested += ResetAllMappings;
         settingsPage.QuitRequested += () => QuitRequested?.Invoke();
         _pages[DashboardSection.Settings] = settingsPage;
+        _pages[DashboardSection.Help] = new HelpPage();
 
         Rail.SectionSelected += ShowSection;
         Rail.ProfileChipClicked += ToggleProfileFlyout;

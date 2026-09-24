@@ -28,6 +28,7 @@ public partial class NavRail
             [VoiceButton] = DashboardSection.Voice,
             [KeyboardButton] = DashboardSection.Keyboard,
             [SettingsButton] = DashboardSection.Settings,
+            [HelpButton] = DashboardSection.Help,
         };
 
         var version = typeof(NavRail).Assembly.GetName().Version;
