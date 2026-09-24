@@ -21,6 +21,8 @@ public class NoActivateWindow : Window
     private const int GWL_EXSTYLE = -20;
     private const int WS_EX_NOACTIVATE = 0x08000000;
     private const int WM_GETMINMAXINFO = 0x0024;
+    private const int GCL_STYLE = -26;
+    private const int CS_DROPSHADOW = 0x00020000;
 
     [StructLayout(LayoutKind.Sequential)]
     private struct POINT
@@ -45,6 +47,12 @@ public class NoActivateWindow : Window
     [DllImport("user32.dll")]
     private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
 
+    [DllImport("user32.dll")]
+    private static extern int GetClassLong(IntPtr hWnd, int nIndex);
+
+    [DllImport("user32.dll")]
+    private static extern int SetClassLong(IntPtr hWnd, int nIndex, int dwNewLong);
+
     public NoActivateWindow()
     {
         // Covers the "first time this window is shown" case; WS_EX_NOACTIVATE
@@ -61,6 +69,18 @@ public class NoActivateWindow : Window
         var hwnd = new WindowInteropHelper(this).Handle;
         int exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
         SetWindowLong(hwnd, GWL_EXSTYLE, exStyle | WS_EX_NOACTIVATE);
+
+        // CS_DROPSHADOW — the same native soft-edge shadow Windows already
+        // draws around a ToolTip or context menu, applied here so a
+        // popup (the mouse-button remap card, in particular) visibly
+        // floats above whatever's behind it, Discord-popout style,
+        // without needing a per-pixel-alpha AllowsTransparency window
+        // (a heavier, more complex route WPF would otherwise require for
+        // a custom-drawn shadow). Square shadow around RemapCard's own
+        // rounded corners is a known, accepted trade-off of this
+        // approach — it's how Windows' own native tooltips look too.
+        int classStyle = GetClassLong(hwnd, GCL_STYLE);
+        SetClassLong(hwnd, GCL_STYLE, classStyle | CS_DROPSHADOW);
 
         HwndSource.FromHwnd(hwnd)?.AddHook(WndProc);
     }

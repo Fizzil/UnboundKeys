@@ -1,18 +1,29 @@
 <UserControl x:Class="UnboundKeys.Wpf.DashboardShell"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             Width="390"
              Background="{DynamicResource BackgroundBrush}">
+    <!-- No fixed Width here anymore — stretches to whatever the host
+         window actually gives it, so the tab strip and the mouse rows
+         (which have no fixed width of their own) fill the real window
+         instead of sitting in a narrow fixed column with dead space on
+         both sides (Fizzil's own feedback). RemapCard/ProfilesTab keep
+         their own fixed width for now — not part of this fix, and their
+         own look was already separately approved. -->
     <StackPanel>
 
-        <!-- Top-level tab strip: Keyboard / Mouse Keys / Voice Keys /
+        <!-- Top-level tab strip: Mouse Keys / Keyboard / Voice Keys /
              Profile / Fade — matches DashboardForm's own prime-tab row
              (WinForms), minus the collapsing-drawer-anchored-to-the-icon
              mechanics (that's OverlayForm's job, Phase 8 — this shell
              just holds a fixed-size window's worth of content for now,
              closer to a conventional tabbed window, which is also the
              direction of the Windows folder-properties reference Fizzil
-             pointed at). -->
+             pointed at). Mouse Keys leads (Fizzil's own priority) and
+             opens by default — see the constructor. Individually
+             bordered with a small gap between each (TabStripButtonStyle),
+             matching the Settings/Save Profile/Load Profile button row
+             Fizzil pointed at, instead of the flush/flat look every
+             other row here uses. -->
         <Grid Height="40">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
@@ -21,12 +32,25 @@
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
-            <Button x:Name="KeyboardTabButton" Grid.Column="0" Content="Keyboard" Click="PrimeTab_Click" Style="{StaticResource ListButtonStyle}"/>
-            <Button x:Name="MouseTabButton" Grid.Column="1" Content="Mouse Keys" Click="PrimeTab_Click" Style="{StaticResource ListButtonStyle}"/>
-            <Button x:Name="VoiceTabButton" Grid.Column="2" Content="Voice Keys" Click="PrimeTab_Click" Style="{StaticResource ListButtonStyle}"/>
-            <Button x:Name="ProfileTabButton" Grid.Column="3" Content="Profile" Click="PrimeTab_Click" Style="{StaticResource ListButtonStyle}"/>
-            <Button x:Name="FadeTabButton" Grid.Column="4" Content="Fade" Click="PrimeTab_Click" Style="{StaticResource ListButtonStyle}"/>
+            <Button x:Name="MouseTabButton" Grid.Column="0" Content="Mouse Keys" Click="PrimeTab_Click" Style="{StaticResource TabStripButtonStyle}"/>
+            <Button x:Name="KeyboardTabButton" Grid.Column="1" Content="Keyboard" Click="PrimeTab_Click" Style="{StaticResource TabStripButtonStyle}"/>
+            <Button x:Name="VoiceTabButton" Grid.Column="2" Content="Voice Keys" Click="PrimeTab_Click" Style="{StaticResource TabStripButtonStyle}"/>
+            <Button x:Name="ProfileTabButton" Grid.Column="3" Content="Profile" Click="PrimeTab_Click" Style="{StaticResource TabStripButtonStyle}"/>
+            <Button x:Name="FadeTabButton" Grid.Column="4" Content="Fade" Click="PrimeTab_Click" Style="{StaticResource TabStripButtonStyle}"/>
         </Grid>
+
+        <!-- Fixed-height content area — the window stays one constant
+             size no matter which tab is open or how tall that tab's own
+             content happens to get (a RemapCard growing several extra
+             keys plus its timing row, say); a tab that doesn't fit
+             scrolls instead of resizing the whole window around it.
+             Replaces the WinForms dashboard's own resize-the-window
+             drawer approach, per Fizzil's own direction (not the X-Mouse
+             Button Control reference's fixed-sidebar layout — just a
+             fixed-size window with swapping content, no permanent
+             sidebar). -->
+        <ScrollViewer Height="480" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel>
 
         <!-- Voice Keys: a sub-tab row (10..1, matching the order Fizzil's
              already seen in the WinForms app) selecting which word's
@@ -36,6 +60,14 @@
              (an expanded category list, say) survives switching away and
              back. -->
         <StackPanel x:Name="VoicePanel" Visibility="Collapsed">
+            <!-- Page heading — same SectionHeaderStyle/SectionRuleStyle
+                 pattern ProfilesTab already uses for its own "Profiles"
+                 heading, added to every tab now so each one reads as its
+                 own distinct page (Discord's settings screens always open
+                 with a title) instead of jumping straight into rows with
+                 nothing naming what's on screen. -->
+            <TextBlock Text="Voice Keys" Margin="12,10,12,2" Style="{StaticResource SectionHeaderStyle}"/>
+            <Border Margin="12,0,12,4" Style="{StaticResource SectionRuleStyle}"/>
             <UniformGrid x:Name="VoiceSubTabRow" Rows="1" Height="40" Margin="0,1,0,0"/>
             <!-- All ten cards live in this one Grid cell (a Grid with no
                  row/column definitions overlaps its children rather than
@@ -46,11 +78,25 @@
             <Grid x:Name="VoiceCardHost" Margin="0,8,0,8" HorizontalAlignment="Center"/>
         </StackPanel>
 
-        <!-- Mouse Keys: same shape as Voice Keys, one sub-tab per
-             physical button. Not built yet — placeholder for now. -->
+        <!-- Mouse Keys: all six buttons' cards stacked vertically, no
+             sub-tab switching — matches the X-Mouse Button Control
+             reference Fizzil pointed at (a vertical list of rows, one per
+             button) rather than Voice Keys' one-at-a-time sub-tab
+             approach. The fixed-height ScrollViewer around this whole
+             content area (see above) is what makes stacking all six at
+             once workable — scroll instead of needing a switcher. -->
         <StackPanel x:Name="MousePanel" Visibility="Collapsed">
-            <TextBlock Text="Mouse Keys — coming in a later pass." Foreground="{DynamicResource MutedBrush}"
-                       Margin="12,12,12,12" TextWrapping="Wrap"/>
+            <TextBlock Text="Mouse Keys" Margin="12,10,12,2" Style="{StaticResource SectionHeaderStyle}"/>
+            <Border Margin="12,0,12,4" Style="{StaticResource SectionRuleStyle}"/>
+            <!-- No HorizontalAlignment="Center" here (unlike VoiceCardHost/
+                 ProfilePanel below, which hold fixed-width cards and want
+                 centering) — these rows have no fixed width of their own
+                 and should stretch to fill the real window, which a
+                 StackPanel only does for a child left at its default
+                 (Stretch) alignment. BuildMouseTab (code-behind) inserts
+                 its own small "BUTTONS"/"SCROLL WHEEL" group labels
+                 directly into this host, ahead of each group's rows. -->
+            <StackPanel x:Name="MouseCardHost" Margin="12,8,12,8"/>
         </StackPanel>
 
         <!-- Profile: hosts the real ProfilesTab (Phase 6, already done). -->
@@ -59,13 +105,20 @@
         <!-- Keyboard/Fade need VirtualKeyboardForm/FadeMode, later phases
              — placeholders for now. -->
         <StackPanel x:Name="KeyboardPanel" Visibility="Collapsed">
-            <TextBlock Text="Keyboard — comes with Phase 7 (the on-screen keyboard)." Foreground="{DynamicResource MutedBrush}"
-                       Margin="12,12,12,12" TextWrapping="Wrap"/>
+            <TextBlock Text="Keyboard" Margin="12,10,12,2" Style="{StaticResource SectionHeaderStyle}"/>
+            <Border Margin="12,0,12,4" Style="{StaticResource SectionRuleStyle}"/>
+            <TextBlock Text="Comes with Phase 7 (the on-screen keyboard)." Foreground="{DynamicResource TextSecondaryBrush}"
+                       Margin="12,4,12,12" TextWrapping="Wrap"/>
         </StackPanel>
         <StackPanel x:Name="FadePanel" Visibility="Collapsed">
-            <TextBlock Text="Fade — comes with Phase 8 (the overlay icon)." Foreground="{DynamicResource MutedBrush}"
-                       Margin="12,12,12,12" TextWrapping="Wrap"/>
+            <TextBlock Text="Fade" Margin="12,10,12,2" Style="{StaticResource SectionHeaderStyle}"/>
+            <Border Margin="12,0,12,4" Style="{StaticResource SectionRuleStyle}"/>
+            <TextBlock Text="Comes with Phase 8 (the overlay icon)." Foreground="{DynamicResource TextSecondaryBrush}"
+                       Margin="12,4,12,12" TextWrapping="Wrap"/>
         </StackPanel>
+
+        </StackPanel>
+        </ScrollViewer>
 
     </StackPanel>
 </UserControl>

@@ -3,4 +3,5 @@ obj/
 publish/
 VoicePress-v*/
 UnboundKeys-v*/
+*.zip
 *.user

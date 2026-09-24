@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Animation;
@@ -33,7 +34,6 @@ public partial class RemapCard
     private int _selectedKIndex = -1;
     private int _resetTapCount;
     private readonly DispatcherTimer _resetTapTimer = new() { Interval = TimeSpan.FromMilliseconds(600) };
-    private Window? _openCategoryPopup;
 
     // internal, not public — the generated UserControl partial class
     // itself has to stay public for the XAML loader, but nothing outside
@@ -89,8 +89,6 @@ public partial class RemapCard
     // rather than trying to patch individual rows in place.
     private void RebuildKeyGroup()
     {
-        _openCategoryPopup?.Close();
-        _openCategoryPopup = null;
         KeyGroup.Children.Clear();
 
         var extras = _source.ExtraWords[_id];
@@ -166,32 +164,64 @@ public partial class RemapCard
         if (onDelete != null)
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(20, GridUnitType.Star) });
 
-        var labelText = new TextBlock { Text = label, Style = (System.Windows.Style)FindResource("LabelDisplayStyle") };
+        // A hairline under the row and Muted/plain-weight label text,
+        // matching Mouse Keys' own rows (Fizzil's own request to carry
+        // that look here) rather than LabelDisplayStyle's brighter 16pt
+        // default.
+        var divider = new Border
+        {
+            Height = 1,
+            VerticalAlignment = VerticalAlignment.Bottom,
+            Background = (System.Windows.Media.Brush)FindResource("MutedBrush"),
+            Opacity = 0.35,
+        };
+        Grid.SetColumnSpan(divider, grid.ColumnDefinitions.Count);
+        grid.Children.Add(divider);
+
+        var labelText = new TextBlock
+        {
+            Text = label,
+            Style = (System.Windows.Style)FindResource("LabelDisplayStyle"),
+            Background = System.Windows.Media.Brushes.Transparent,
+            Foreground = (System.Windows.Media.Brush)FindResource("TextSecondaryBrush"),
+            FontSize = 13,
+            FontWeight = System.Windows.FontWeights.Normal,
+        };
         Grid.SetColumn(labelText, 0);
         grid.Children.Add(labelText);
 
+        // OutlineButtonStyle, not ValueButtonStyle — same "small bordered
+        // chip, no big fill block" treatment as Mouse Keys' own rows,
+        // including the fixed Width so every key's value chip lines up
+        // the same size regardless of how long the key's name is.
         var valueButton = new Button
         {
             Content = value,
-            HorizontalContentAlignment = System.Windows.HorizontalAlignment.Right,
-            Style = (System.Windows.Style)FindResource("ValueButtonStyle"),
+            Width = 150,
+            Style = (System.Windows.Style)FindResource("OutlineButtonStyle"),
         };
         Grid.SetColumn(valueButton, 1);
         grid.Children.Add(valueButton);
 
-        var categoryList = new StackPanel { Visibility = Visibility.Collapsed, ClipToBounds = true };
+        // Split view: category nav on the left, that category's individual
+        // keys scrollable on the right, both inline in this same window —
+        // replaces the earlier separate floating CategoryKeyPopup (Fizzil's
+        // own feedback: hovering a category should fill the empty space
+        // next to it, not spawn another window). A fixed height (matching
+        // the nav column's own natural height — 8 categories × 40px) gives
+        // the key panel something bounded to scroll within, rather than
+        // growing to fit however many keys the longest category has.
+        const double categoryListHeight = 320;
+        var categoryList = new Grid { Visibility = Visibility.Collapsed, ClipToBounds = true, Height = 0 };
+        categoryList.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        categoryList.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
         bool expanded = false;
         valueButton.Click += (_, _) =>
         {
             expanded = !expanded;
             valueButton.Tag = expanded;
-            if (!expanded)
-            {
-                _openCategoryPopup?.Close();
-                _openCategoryPopup = null;
-            }
-            AnimateHeight(categoryList, expanded);
+            AnimateHeight(categoryList, expanded, expanded ? categoryListHeight : 0);
         };
 
         if (onDelete != null)
@@ -212,26 +242,108 @@ public partial class RemapCard
         PopulateCategoryList(categoryList, onSelect);
     }
 
-    // One button per KeyCatalog category (Letters, Numbers, ...) — hovering
-    // one opens CategoryKeyPopup (Phase 4) with that category's individual
-    // keys, exactly like RemapCardTab's own BuildCategoryButtons does.
-    private void PopulateCategoryList(StackPanel categoryList, Action<KeyCatalog.Entry> onSelect)
+    // Left column: one button per KeyCatalog category (Letters, Numbers,
+    // ...). Right column: a scrollable list of whichever category was
+    // last hovered — filled in by HoverCategory below rather than a
+    // separate floating CategoryKeyPopup window (Fizzil's own feedback:
+    // hovering a category should fill the empty space next to it, inline,
+    // not spawn another window).
+    private void PopulateCategoryList(Grid categoryList, Action<KeyCatalog.Entry> onSelect)
     {
+        var nav = new StackPanel();
+        Grid.SetColumn(nav, 0);
+        categoryList.Children.Add(nav);
+
+        var keyListPanel = new StackPanel();
+        var keyScroll = new ScrollViewer
+        {
+            Content = keyListPanel,
+            // Hidden, not Auto — the mouse wheel and the edge auto-scroll
+            // below still work either way; this just drops the native
+            // scrollbar track/thumb, which read as an out-of-place plain
+            // white/gray element against this theme (Fizzil's own
+            // feedback).
+            VerticalScrollBarVisibility = ScrollBarVisibility.Hidden,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+        };
+        Grid.SetColumn(keyScroll, 1);
+        categoryList.Children.Add(keyScroll);
+        AttachEdgeAutoScroll(keyScroll);
+
+        void HoverCategory(KeyCatalog.Entry[] keys)
+        {
+            keyListPanel.Children.Clear();
+            foreach (var entry in keys)
+            {
+                var keyButton = new Button
+                {
+                    Content = entry.DisplayName,
+                    Height = 34,
+                    Focusable = false, // no focus-rectangle blip on the first item
+                    Style = (System.Windows.Style)FindResource("QuietListButtonStyle"),
+                };
+                keyButton.Click += (_, _) => onSelect(entry);
+                keyListPanel.Children.Add(keyButton);
+            }
+        }
+
         foreach (var (category, keys) in KeyCatalog.Groups)
         {
             var categoryButton = new Button
             {
                 Content = category,
                 Height = 40,
-                Style = (System.Windows.Style)FindResource("NestedButtonStyle"),
+                Style = (System.Windows.Style)FindResource("CategoryNavButtonStyle"),
             };
-            categoryButton.MouseEnter += (_, _) =>
-            {
-                _openCategoryPopup?.Close();
-                _openCategoryPopup = CategoryKeyPopup.Show(categoryButton, Width, keys, onSelect);
-            };
-            categoryList.Children.Add(categoryButton);
+            categoryButton.MouseEnter += (_, _) => HoverCategory(keys);
+            nav.Children.Add(categoryButton);
         }
+
+        // Something shows on first expand rather than a blank right panel
+        // until the first hover.
+        HoverCategory(KeyCatalog.Groups[0].Keys);
+    }
+
+    // Hovering within a strip near the top/bottom edge auto-scrolls the
+    // key list, instead of requiring a mouse wheel or scrollbar drag —
+    // Fizzil's own request, for a list that can be several times taller
+    // than the fixed split-view area (Letters' 26 keys, say).
+    private static void AttachEdgeAutoScroll(ScrollViewer scroll)
+    {
+        const double edgeZone = 28;
+        const double scrollStep = 6;
+        int direction = 0; // -1 = scrolling up, 0 = not scrolling, 1 = scrolling down
+
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(30) };
+        timer.Tick += (_, _) =>
+        {
+            if (direction < 0)
+                scroll.ScrollToVerticalOffset(Math.Max(0, scroll.VerticalOffset - scrollStep));
+            else if (direction > 0)
+                scroll.ScrollToVerticalOffset(Math.Min(scroll.ScrollableHeight, scroll.VerticalOffset + scrollStep));
+        };
+
+        scroll.PreviewMouseMove += (_, e) =>
+        {
+            double y = e.GetPosition(scroll).Y;
+            double h = scroll.ActualHeight;
+
+            direction = h <= 0 ? 0
+                : y < edgeZone && scroll.VerticalOffset > 0 ? -1
+                : y > h - edgeZone && scroll.VerticalOffset < scroll.ScrollableHeight ? 1
+                : 0;
+
+            if (direction != 0)
+                timer.Start();
+            else
+                timer.Stop();
+        };
+
+        scroll.MouseLeave += (_, _) =>
+        {
+            direction = 0;
+            timer.Stop();
+        };
     }
 
     // The animated-expand/collapse upgrade Fizzil asked for: grows/shrinks
@@ -273,7 +385,36 @@ public partial class RemapCard
         }
     }
 
-    private void UpdateDurationText() => DurationText.Text = $"{_duration:0.0}s";
+    // Same animation, but to a caller-given height instead of measuring
+    // the element's own natural size — used for the category split view,
+    // which is a fixed height by design (see AddKeyRow's own comment),
+    // not something that should grow to fit however many keys the
+    // longest category has.
+    private void AnimateHeight(FrameworkElement element, bool expand, double explicitTargetHeight)
+    {
+        if (expand)
+        {
+            element.Visibility = Visibility.Visible;
+            element.Height = 0;
+            var anim = new DoubleAnimation(0, explicitTargetHeight, TimeSpan.FromMilliseconds(180))
+            {
+                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut },
+            };
+            element.BeginAnimation(HeightProperty, anim);
+        }
+        else
+        {
+            double currentHeight = element.ActualHeight;
+            var anim = new DoubleAnimation(currentHeight, 0, TimeSpan.FromMilliseconds(150))
+            {
+                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn },
+            };
+            anim.Completed += (_, _) => element.Visibility = Visibility.Collapsed;
+            element.BeginAnimation(HeightProperty, anim);
+        }
+    }
+
+    private void UpdateDurationText() => DurationText.Text = $"{_duration.ToString("0.0", CultureInfo.InvariantCulture)}s";
 
     private void SaveBehavior() =>
         _source.SetBehavior(_id, _repeatOn, _holdOn, _duration, _infiniteOn,
@@ -411,8 +552,8 @@ public partial class RemapCard
 
             var kLabel = new TextBlock
             {
-                Text = $"{_keyIntervalSeconds[kIndex]:0.0}s",
-                Foreground = (System.Windows.Media.Brush)FindResource("MutedBrush"),
+                Text = $"{_keyIntervalSeconds[kIndex].ToString("0.0", CultureInfo.InvariantCulture)}s",
+                Foreground = (System.Windows.Media.Brush)FindResource("TextSecondaryBrush"),
                 FontSize = 14,
                 HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
@@ -479,9 +620,6 @@ public partial class RemapCard
     // Matches RemapCardTab's own ResetCard local function (WinForms).
     private void ResetCard()
     {
-        _openCategoryPopup?.Close();
-        _openCategoryPopup = null;
-
         _source.ResetToDefault(_id); // also clears extra keys (and, for a mouse button, disables it)
         RebuildKeyGroup();
 

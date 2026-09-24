@@ -4,17 +4,38 @@
     <!-- Same RGB values as Theme.cs's Green preset (WinForms) — see
          Theme.Red.xaml for why these three files stay in lockstep on key
          names, and why each color is defined once then wrapped in a
-         same-keyed-plus-"Brush" SolidColorBrush. -->
-    <Color x:Key="BackgroundColor">#FF000000</Color>
+         same-keyed-plus-"Brush" SolidColorBrush, and why BackgroundColor
+         is a hair off pure black (dark-mode UI research: pure black
+         behind bright text causes eye strain, and a design built on one
+         true black+gray reads flatter than a few deliberately different
+         near-black tones), and why ElevatedColor is a third depth tone
+         (Discord/VS Code's own layered-surface approach) rather than
+         another border. TextPrimaryColor/TextSecondaryColor and the
+         neutral HoverColor are new this pass — see Theme.Red.xaml's own
+         comment for the full reasoning; the values here are identical to
+         Red/Blue on purpose, since neutral text/hover shouldn't shift
+         with the accent theme. MutedColor/CardBorderColor stay
+         accent-tinted, same as before. -->
+    <Color x:Key="BackgroundColor">#FF0A0A0A</Color>
     <Color x:Key="ButtonColor">#FF121212</Color>
+    <Color x:Key="ElevatedColor">#FF1C1C1C</Color>
     <Color x:Key="AccentColor">#FF3CC85A</Color>
-    <Color x:Key="HoverColor">#FF0F3719</Color>
+    <Color x:Key="HoverColor">#FF282828</Color>
     <Color x:Key="MutedColor">#FF27823B</Color>
+    <Color x:Key="TextPrimaryColor">#FFF2F3F5</Color>
+    <Color x:Key="TextSecondaryColor">#FF949BA4</Color>
+    <!-- See Theme.Red.xaml's own comment — barely lighter than
+         ElevatedColor, not a near-white/high-contrast line. -->
+    <Color x:Key="CardBorderColor">#FF303F35</Color>
 
     <SolidColorBrush x:Key="BackgroundBrush" Color="{StaticResource BackgroundColor}"/>
     <SolidColorBrush x:Key="ButtonBrush" Color="{StaticResource ButtonColor}"/>
+    <SolidColorBrush x:Key="ElevatedBrush" Color="{StaticResource ElevatedColor}"/>
     <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}"/>
     <SolidColorBrush x:Key="HoverBrush" Color="{StaticResource HoverColor}"/>
     <SolidColorBrush x:Key="MutedBrush" Color="{StaticResource MutedColor}"/>
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimaryColor}"/>
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondaryColor}"/>
+    <SolidColorBrush x:Key="CardBorderBrush" Color="{StaticResource CardBorderColor}"/>
 
 </ResourceDictionary>

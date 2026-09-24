@@ -47,7 +47,17 @@ internal static class CategoryKeyPopup
         };
         popup.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("Themes/Theme.Red.xaml", UriKind.Relative) });
         popup.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("Themes/Theme.Controls.xaml", UriKind.Relative) });
-        popup.Background = (Brush)popup.FindResource("ButtonBrush");
+        // The window's own background matches the dashboard's page
+        // background (not the card fill) — same trick RemapCard's rounded
+        // corners rely on: the four small corner triangles a rounded
+        // Border leaves outside its own curve read as part of the page
+        // rather than a visible square-corner artifact, as long as
+        // they're the same color as whatever's behind this popup. True
+        // window transparency (AllowsTransparency) would remove that
+        // approximation entirely, but risks interacting with the
+        // WS_EX_NOACTIVATE trick in ways not validated yet — this is the
+        // same trade every other card here already makes.
+        popup.Background = (Brush)popup.FindResource("BackgroundBrush");
 
         var list = new StackPanel();
         foreach (var entry in keys)
@@ -67,7 +77,22 @@ internal static class CategoryKeyPopup
             };
             list.Children.Add(item);
         }
-        popup.Content = list;
+
+        // No CardShadow here, unlike RemapCard/ProfilesTab — its glow
+        // needs room to bleed past the border's edge, which would mean
+        // sizing this window larger than its visible card and reworking
+        // Reposition's math to keep the card (not the padded window)
+        // flush against the anchor. Not worth the complexity for this
+        // popup; the border + rounding alone is most of the visual win.
+        var card = new Border
+        {
+            BorderBrush = (Brush)popup.FindResource("MutedBrush"),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8),
+            Background = (Brush)popup.FindResource("ButtonBrush"),
+            Child = list,
+        };
+        popup.Content = card;
 
         Reposition(popup, anchor);
         popup.Show();

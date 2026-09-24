@@ -46,7 +46,7 @@
            that never set Tag — it just never triggers. -->
     <Style x:Key="FlatButtonBase" TargetType="Button">
         <Setter Property="Background" Value="{DynamicResource ButtonBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="FontFamily" Value="Segoe UI"/>
         <Setter Property="FontSize" Value="16"/>
@@ -59,7 +59,9 @@
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
                     <Grid>
-                        <Border x:Name="Bg" CornerRadius="4">
+                        <Border x:Name="Bg" CornerRadius="4"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
                             <Border.Background>
                                 <SolidColorBrush x:Name="BgBrush" Color="{DynamicResource ButtonColor}"/>
                             </Border.Background>
@@ -89,6 +91,215 @@
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
     </Style>
 
+    <!-- The top-level tab strip's own buttons (Mouse Keys/Keyboard/Voice
+         Keys/Profile/Fade) — a small gap between each so they read as
+         discrete buttons, but no border anymore (Fizzil's new standing
+         rule: move away from red outlines everywhere, embrace shade-based
+         depth instead, closer to how Discord/VS Code mark an active tab —
+         FlatButtonBase's own underline-on-Tag plus its hover fill already
+         carry the "which one is selected" signal without a border doing
+         double duty).
+
+         Foreground is overridden here rather than left at FlatButtonBase's
+         own TextPrimaryBrush default — Discord dims every inactive
+         channel name to gray and only lights up the one that's actually
+         open (plus whatever's under the cursor); without this every tab
+         read equally bright all the time. Tag="True" means "this is the
+         open tab" (see DashboardShell.xaml.cs's OpenPrimeTab).
+
+         Own ControlTemplate rather than FlatButtonBase's shared one — a
+         Discord-style selected channel keeps a lighter PILL BEHIND IT
+         permanently, not just while hovered, and FlatButtonBase's own
+         Bg fill is owned by HoverFadeBehavior (which always fades back
+         to ButtonColor on MouseLeave, so a Tag-based persistent color
+         there would just get erased the moment the mouse left). A plain,
+         un-animated Setter trigger on Tag doesn't have that problem — so
+         this style skips HoverFadeBehavior entirely (harmless either way:
+         Wire() no-ops when it can't find a "BgBrush" part, but turning it
+         off here is more honest about what's actually driving this
+         template) and reacts to hover/selection with plain Setters,
+         same pattern as SecondaryButtonStyle. No underline anymore for
+         this one specifically — the persistent pill fill already carries
+         that signal, so keeping both would be redundant. -->
+    <Style x:Key="TabStripButtonStyle" TargetType="Button" BasedOn="{StaticResource ListButtonStyle}">
+        <Setter Property="Margin" Value="2"/>
+        <!-- Smaller than FlatButtonBase's default 16 — at full size these
+             read as too bright/loud for what's essentially page
+             navigation, not the main action being taken (Fizzil's own
+             feedback: "too bright and bolded"). -->
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+        <Setter Property="themes:HoverFadeBehavior.Enable" Value="False"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bg" Background="Transparent" CornerRadius="4">
+                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bg" Property="Background" Value="{DynamicResource ElevatedBrush}"/>
+                        </Trigger>
+                        <!-- The persistent pill — stays filled even after
+                             the mouse moves away, as long as this is the
+                             open tab. -->
+                        <Trigger Property="Tag" Value="True">
+                            <Setter TargetName="Bg" Property="Background" Value="{DynamicResource ElevatedBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            </Trigger>
+            <Trigger Property="Tag" Value="True">
+                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- The ONE bold action in a given context — Discord/VS Code's own
+         "primary button" pattern: solid Accent fill, dark text for
+         contrast, used sparingly rather than as the default for every
+         button (Fizzil's new standing rule — make this app feel like a
+         sibling to those two, not a wall of identically-loud buttons). -->
+    <Style x:Key="PrimaryButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource BackgroundBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="FontFamily" Value="Segoe UI"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Padding" Value="16,8,16,8"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bg" Background="{TemplateBinding Background}" CornerRadius="4">
+                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bg" Property="Opacity" Value="0.85"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Bg" Property="Opacity" Value="0.7"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Everything else — Discord/VS Code's own "ghost button" pattern:
+         no fill and no border at rest, quiet Muted text, and on hover a
+         soft Elevated-shade fill plus brighter text — depth and "what's
+         interactive" communicated by shade and motion, not an outline.
+         Replaces TabStripButtonStyle's border for in-card actions
+         (Repeat/Hold/Reset and similar) per Fizzil's own new standing
+         rule. Still supports the Tag="True" underline for a toggled-on
+         state (Repeat/Hold), same mechanism as FlatButtonBase's. A
+         genuinely separate template, not FlatButtonBase-based — that one
+         always fills with ButtonColor at rest, which is exactly the
+         "everything looks the same weight" problem this style exists to
+         fix. -->
+    <Style x:Key="SecondaryButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="FontFamily" Value="Segoe UI"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid>
+                        <Border x:Name="Bg" Background="Transparent" CornerRadius="4"/>
+                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                        <Border x:Name="Underline"
+                                Height="2"
+                                CornerRadius="1"
+                                VerticalAlignment="Bottom"
+                                Background="Transparent"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bg" Property="Background" Value="{DynamicResource ElevatedBrush}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+                        </Trigger>
+                        <!-- Toggled-on (Repeat/Hold's own "this is currently
+                             active") is the one place this style keeps
+                             AccentBrush — an active-state signal, not just a
+                             hover, so it's the exception to the neutral text
+                             everywhere else in this style. -->
+                        <Trigger Property="Tag" Value="True">
+                            <Setter TargetName="Underline" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- "Normal app buttons" — action rows inside a card (Repeat/Hold/
+         Reset) — a soft red-to-black gradient fill instead of
+         TabStripButtonStyle's bordered outline, so the dashboard's own
+         navigation and an in-card action read as two different kinds of
+         button instead of the same bordered look doing double duty for
+         both (Fizzil's own feedback). No border — the gradient itself
+         gives it shape. Hover just dims the fill slightly (a plain
+         Opacity trigger) rather than animating the gradient's own
+         stops — HoverFadeBehavior specifically targets a solid-color
+         brush's Color property, which a GradientBrush doesn't have. -->
+    <Style x:Key="FadeButtonStyle" TargetType="Button" BasedOn="{StaticResource FlatButtonBase}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid>
+                        <Border x:Name="Bg" CornerRadius="4">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Color="{DynamicResource AccentColor}" Offset="0"/>
+                                    <GradientStop Color="{DynamicResource ButtonColor}" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                        </Border>
+                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                        <Border x:Name="Underline"
+                                Height="2"
+                                CornerRadius="1"
+                                VerticalAlignment="Bottom"
+                                Background="Transparent"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bg" Property="Opacity" Value="0.75"/>
+                        </Trigger>
+                        <Trigger Property="Tag" Value="True">
+                            <Setter TargetName="Underline" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- Compact square-ish button — +1, .1, the reset glyph, Infinite.
          MakeTinyButton's equivalent. -->
     <Style x:Key="TinyButtonStyle" TargetType="Button" BasedOn="{StaticResource FlatButtonBase}">
@@ -104,7 +315,7 @@
          two hand-built Padding/TextAlign combinations). MakeValueButton's
          equivalent. -->
     <Style x:Key="ValueButtonStyle" TargetType="Button" BasedOn="{StaticResource FlatButtonBase}">
-        <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
         <Setter Property="HorizontalContentAlignment" Value="Left"/>
         <Setter Property="Padding" Value="12,0,12,0"/>
     </Style>
@@ -115,7 +326,7 @@
          a Button — there's nothing to click. MakeLabelDisplay's
          equivalent. -->
     <Style x:Key="LabelDisplayStyle" TargetType="TextBlock">
-        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         <Setter Property="Background" Value="{DynamicResource ButtonBrush}"/>
         <Setter Property="FontFamily" Value="Segoe UI"/>
         <Setter Property="FontSize" Value="16"/>
@@ -124,13 +335,98 @@
         <Setter Property="TextAlignment" Value="Left"/>
     </Style>
 
-    <!-- A row shown nested under the one it belongs to — a key category
-         under Key's own accordion, Reset All under Reset — full accent
-         and still a real command, just indented so it reads as part of
-         the row above it. MakeNestedButton's equivalent. -->
+    <!-- A row shown nested under the one it belongs to — Reset All under
+         Reset — full accent and still a real command, just indented so it
+         reads as part of the row above it. MakeNestedButton's equivalent. -->
     <Style x:Key="NestedButtonStyle" TargetType="Button" BasedOn="{StaticResource ListButtonStyle}">
         <Setter Property="HorizontalContentAlignment" Value="Left"/>
         <Setter Property="Padding" Value="28,0,0,0"/>
+    </Style>
+
+    <!-- A row in a plain scrolling list (the key picker's own individual
+         keys, "A"/"B"/"C"/...) — quiet Muted text at rest, brighter on
+         hover, same reasoning as CategoryNavButtonStyle below (which now
+         builds on this) — a long list of same-sized rows needs a hover
+         cue beyond just FlatButtonBase's background fade, or it's hard to
+         tell which row the mouse is actually over. The Foreground Trigger
+         is a plain Style trigger, not touching HoverFadeBehavior's
+         animated background fade at all — the two run independently, so
+         hovering gets both a highlighted background AND brighter text. -->
+    <Style x:Key="QuietListButtonStyle" TargetType="Button" BasedOn="{StaticResource ListButtonStyle}">
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontWeight" Value="Normal"/>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- The category nav list (Letters, Numbers, ...) next to a key's
+         split-view key picker — QuietListButtonStyle's own quiet-at-rest/
+         brighter-on-hover text, just left-aligned instead of centered. -->
+    <Style x:Key="CategoryNavButtonStyle" TargetType="Button" BasedOn="{StaticResource QuietListButtonStyle}">
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <Setter Property="Padding" Value="16,0,0,0"/>
+    </Style>
+
+    <!-- A small bordered "chip" button — no fill at rest, just an outline,
+         sized to fit its own text rather than stretching to fill its
+         cell. Used for Mouse Keys' row value ("Not Mapped", "A", ...) —
+         Fizzil's own feedback on ValueButtonStyle there: it read as one
+         large gray highlight block behind the whole column, not a neat
+         little button. A genuinely separate template rather than a
+         FlatButtonBase-based style, since FlatButtonBase's whole premise
+         (an always-filled background that animates color on hover) is
+         the opposite of what "no fill at rest" needs — a plain Setter-
+         based hover here is fine; it doesn't hit the frozen-Storyboard
+         issue HoverFadeBehavior exists for since there's no DynamicResource
+         inside an animation here, just a plain trigger Setter. -->
+    <Style x:Key="OutlineButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="{DynamicResource ElevatedBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="FontFamily" Value="Segoe UI"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Padding" Value="10,4,10,4"/>
+        <Setter Property="HorizontalAlignment" Value="Right"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bg"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="4">
+                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bg" Property="Background" Value="{DynamicResource HoverBrush}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+                        </Trigger>
+                        <!-- "This is the one currently expanded/open" —
+                             RemapCard's Key value uses this instead of
+                             FlatButtonBase's underline (which ValueButtonStyle
+                             relied on) now that its value chip is an
+                             OutlineButtonStyle, not a filled ValueButtonStyle
+                             one. A thin accent border reads as "active"
+                             against the chip's own plain Elevated fill,
+                             even though this style otherwise has no border. -->
+                        <Trigger Property="Tag" Value="True">
+                            <Setter TargetName="Bg" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                            <Setter TargetName="Bg" Property="BorderThickness" Value="1"/>
+                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <!-- A section heading, like "Folder pictures" in the Windows folder-
@@ -164,8 +460,16 @@
          underline" — this Tag means something visually different (a full
          color swap), so it gets a second small template rather than
          overloading one Tag with two meanings. Still animated/rounded the
-         same way. SetToggleAppearance's equivalent. -->
+         same way. SetToggleAppearance's equivalent.
+
+         Foreground starts at TextSecondaryBrush (dim), not FlatButtonBase's
+         own TextPrimaryBrush default — a bare "✕" icon button reads as too
+         loud/attention-grabbing sitting bright white at rest next to
+         everything else that's gone neutral this pass; Discord's own
+         low-emphasis icon buttons (a remove/close glyph) stay muted until
+         hovered or, here, armed via Tag. -->
     <Style x:Key="ToggleFillButtonStyle" TargetType="Button" BasedOn="{StaticResource FlatButtonBase}">
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
@@ -188,6 +492,11 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
 </ResourceDictionary>

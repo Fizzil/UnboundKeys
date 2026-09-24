@@ -14,17 +14,68 @@
          animate a brush's Color property directly (SolidColorBrush.Color
          is what ColorAnimation targets), which only works on a real Color
          resource; anything binding a plain fill (a TextBlock's Foreground,
-         say) uses the Brush ones instead of building a brush inline. -->
-    <Color x:Key="BackgroundColor">#FF000000</Color>
+         say) uses the Brush ones instead of building a brush inline.
+
+         BackgroundColor is a hair off pure black (not #000000) on
+         purpose — dark-mode UI research is consistent that pure black
+         behind bright, saturated text causes eye strain, and that a
+         design built entirely on true black vs. one true gray reads as
+         flatter than a few deliberately-different near-black tones. This
+         is the darkest of those tones (the page itself); ButtonColor
+         below is the next step up (cards/rows), giving the app two
+         layers of depth instead of one flat black plane.
+
+         ElevatedColor is a third step up — Discord/VS Code's own
+         approach to depth: a handful of near-black tones for page vs.
+         card vs. "floating" surfaces (a popup, an active tab, a hovered
+         row) instead of borders to mark what's on top. Used for exactly
+         those cases — SecondaryButtonStyle's hover fill, a popup's own
+         background — not for baseline card/row fills, which stay on
+         ButtonColor.
+
+         TextPrimaryColor/TextSecondaryColor are the big change of this
+         pass: genuinely neutral grays for text, unrelated to the accent
+         hue, matching Discord/VS Code's own palettes (the large majority
+         of their text is white/light-gray, not their brand color) —
+         Fizzil's own finding from a screenshot review: almost everything
+         in this app was still some shade of red, which read as loud
+         rather than professional. AccentColor is now reserved for things
+         that are genuinely active/selected or the one primary action
+         (see PrimaryButtonStyle, and the Tag="True" triggers throughout
+         Theme.Controls.xaml) — not the default text color.
+
+         HoverColor is neutral now too, for the same reason — a plain
+         lighter-gray fill on hover, not a colored one, so color still
+         reads as "selected," not just "moused over." MutedColor is
+         unchanged and still accent-tinted on purpose (Fizzil's own call):
+         it keeps doing its existing job on dividers/borders (below,
+         SectionRuleStyle), where a faint theme-colored touch is wanted
+         even though text itself has gone fully neutral. -->
+    <Color x:Key="BackgroundColor">#FF0A0A0A</Color>
     <Color x:Key="ButtonColor">#FF121212</Color>
+    <Color x:Key="ElevatedColor">#FF1C1C1C</Color>
     <Color x:Key="AccentColor">#FFE6461E</Color>
-    <Color x:Key="HoverColor">#FF3C140C</Color>
+    <Color x:Key="HoverColor">#FF282828</Color>
     <Color x:Key="MutedColor">#FF962E14</Color>
+    <Color x:Key="TextPrimaryColor">#FFF2F3F5</Color>
+    <Color x:Key="TextSecondaryColor">#FF949BA4</Color>
+    <!-- A card's own outline — just barely lighter than ElevatedColor, so
+         there's an edge without a visible line. The first attempt at this
+         (a near-white tone) was too high-contrast against the near-black
+         page to read as "subtle" no matter how thin the border itself
+         was — Fizzil's own correction: low contrast, not a thinner line,
+         is what makes a border barely noticeable. Still accent-tinted on
+         purpose, same reasoning as MutedColor above. -->
+    <Color x:Key="CardBorderColor">#FF423330</Color>
 
     <SolidColorBrush x:Key="BackgroundBrush" Color="{StaticResource BackgroundColor}"/>
     <SolidColorBrush x:Key="ButtonBrush" Color="{StaticResource ButtonColor}"/>
+    <SolidColorBrush x:Key="ElevatedBrush" Color="{StaticResource ElevatedColor}"/>
     <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}"/>
     <SolidColorBrush x:Key="HoverBrush" Color="{StaticResource HoverColor}"/>
     <SolidColorBrush x:Key="MutedBrush" Color="{StaticResource MutedColor}"/>
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimaryColor}"/>
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondaryColor}"/>
+    <SolidColorBrush x:Key="CardBorderBrush" Color="{StaticResource CardBorderColor}"/>
 
 </ResourceDictionary>

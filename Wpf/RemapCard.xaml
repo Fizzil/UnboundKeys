@@ -1,9 +1,15 @@
 <UserControl x:Class="UnboundKeys.Wpf.RemapCard"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             Width="370">
-    <Border BorderBrush="{DynamicResource MutedBrush}" BorderThickness="1" CornerRadius="8"
-            Effect="{StaticResource CardShadow}">
+             Width="440">
+    <!-- CardBorderBrush (a near-white tone with just a hint of the accent
+         color), not MutedBrush — Fizzil's own request: a plain color
+         change on the outline itself, not another glow. No Effect here
+         either anymore — CardShadow's blur was rendering the whole card
+         (SecondaryButtonStyle's now-transparent Repeat/Hold/Reset
+         included) with a soft "fuzzy" look Fizzil flagged, not a clean
+         edge glow the way it read on an opaque card. -->
+    <Border BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1" CornerRadius="8">
         <StackPanel Margin="1">
 
             <!-- Key 1, plus "Add Key" and up to two extra keys — all built
@@ -23,16 +29,20 @@
             <!-- Repeat / Hold / Reset share one row — see RemapCardTab's
                  own comment on why (matches the reference layout Fizzil
                  pointed at: short actions grouped, not stacked as three
-                 full-width bars). -->
+                 full-width bars). SecondaryButtonStyle — Discord/VS
+                 Code's own "ghost button" pattern (Fizzil's new standing
+                 rule): quiet at rest, an Elevated-shade fill on hover,
+                 no border. Not PrimaryButtonStyle — none of these three
+                 is the one bold action in this card. -->
             <Grid Height="40">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <Button x:Name="RepeatButton" Grid.Column="0" Content="Repeat" Click="RepeatButton_Click" Style="{StaticResource ListButtonStyle}"/>
-                <Button x:Name="HoldButton" Grid.Column="1" Content="Hold" Click="HoldButton_Click" Style="{StaticResource ListButtonStyle}"/>
-                <Button x:Name="ResetButton" Grid.Column="2" Content="Reset" Click="ResetButton_Click" Style="{StaticResource ListButtonStyle}"/>
+                <Button x:Name="RepeatButton" Grid.Column="0" Content="Repeat" Click="RepeatButton_Click" Style="{StaticResource SecondaryButtonStyle}"/>
+                <Button x:Name="HoldButton" Grid.Column="1" Content="Hold" Click="HoldButton_Click" Style="{StaticResource SecondaryButtonStyle}"/>
+                <Button x:Name="ResetButton" Grid.Column="2" Content="Reset" Click="ResetButton_Click" Style="{StaticResource SecondaryButtonStyle}"/>
             </Grid>
 
             <!-- The timing row: duration first and biggest (it's the one
@@ -52,7 +62,7 @@
                     <ColumnDefinition Width="4*"/>
                     <ColumnDefinition Width="18*"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock x:Name="DurationText" Grid.Column="0" Foreground="{DynamicResource MutedBrush}"
+                <TextBlock x:Name="DurationText" Grid.Column="0" Foreground="{DynamicResource TextSecondaryBrush}"
                            FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 <Button x:Name="PlusOneButton" Grid.Column="1" Content="1" Click="PlusOneButton_Click" Style="{StaticResource TinyButtonStyle}"/>
                 <Button x:Name="PlusTenthButton" Grid.Column="2" Content=".1" Click="PlusTenthButton_Click" Style="{StaticResource TinyButtonStyle}"/>
