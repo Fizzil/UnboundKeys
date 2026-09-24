@@ -44,6 +44,8 @@
     <EmbeddedResource Include="Assets\skull-red.png" />
     <EmbeddedResource Include="Assets\skull-green.png" />
     <EmbeddedResource Include="Assets\skull-blue.png" />
+    <!-- The on-screen keyboard's word-suggestion list (see WordPredictor). -->
+    <EmbeddedResource Include="Assets\words-en.txt" />
   </ItemGroup>
 
   <ItemGroup>

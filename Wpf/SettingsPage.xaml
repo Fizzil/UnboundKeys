@@ -30,6 +30,6 @@
         </Grid>
 
         <TextBlock Text="ABOUT" Style="{StaticResource SectionHeaderStyle}" Margin="4,16,0,2"/>
-        <TextBlock x:Name="AboutText" FontSize="12" Margin="12,0,12,8" Foreground="{DynamicResource TextSecondaryBrush}"/>
+        <TextBlock x:Name="AboutText" FontSize="12" Margin="12,0,12,8" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}"/>
     </StackPanel>
 </UserControl>

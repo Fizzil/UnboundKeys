@@ -1,19 +1,37 @@
 <UserControl x:Class="UnboundKeys.Wpf.KeyboardPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <!-- The dashboard's side of the on-screen keyboard: a switch to show
-         it (wired up when the keyboard itself is ported — Stage B) and
-         every remappable key as a tile, so remapping happens here by
-         left-click instead of by right-clicking a key on the keyboard
-         (a right button that's been remapped can't right-click anything
-         in this app, the hook swallows it). -->
+    <!-- The dashboard's side of the on-screen keyboard: the switch that
+         shows and hides it (DashboardShell owns the window), and every
+         remappable key as a tile, so remapping happens here by left-click
+         instead of by right-clicking a key on the keyboard (a right
+         button that's been remapped can't right-click anything in this
+         app — the hook swallows it). -->
     <StackPanel>
-        <TextBlock Text="The on-screen keyboard sends keys to your game with the mouse. Any of its letter and number keys can be remapped — click one below."
+        <TextBlock Text="The on-screen keyboard types into your game with the mouse. Any of its letter and number keys can be remapped — click one below."
                    FontSize="12" TextWrapping="Wrap" Margin="12,4,12,10" Foreground="{DynamicResource TextSecondaryBrush}"/>
-        <Button x:Name="ShowKeyboardToggle" Content="Show on-screen keyboard" IsEnabled="False"
+        <Button x:Name="ShowKeyboardToggle" Content="Show on-screen keyboard"
                 Style="{StaticResource RailToggleStyle}" Margin="4,0,4,0"/>
-        <TextBlock Text="Coming with the keyboard port — until then the keyboard still opens from the current dashboard."
+        <TextBlock Text="Drag it by the handle on its left edge. Mini collapses it to a single strip; Maxi brings it back."
                    FontSize="11" TextWrapping="Wrap" Margin="16,0,12,4" Foreground="{DynamicResource TextSecondaryBrush}"/>
+
+        <!-- Small is about the footprint of Windows' own on-screen
+             keyboard (the one this replaces); Large is the full-size
+             layout. Applied live to an open keyboard. -->
+        <Grid Height="44" Margin="4,4,4,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="Keyboard size" Style="{StaticResource RowLabelStyle}"/>
+            <Border Grid.Column="1" Style="{StaticResource SegmentGroupStyle}" Margin="0,0,8,0">
+                <UniformGrid Rows="1" Width="270">
+                    <Button x:Name="SmallSizeButton" Content="Small" Click="SizeButton_Click" Style="{StaticResource SegmentButtonStyle}"/>
+                    <Button x:Name="MediumSizeButton" Content="Medium" Click="SizeButton_Click" Style="{StaticResource SegmentButtonStyle}"/>
+                    <Button x:Name="LargeSizeButton" Content="Large" Click="SizeButton_Click" Style="{StaticResource SegmentButtonStyle}"/>
+                </UniformGrid>
+            </Border>
+        </Grid>
 
         <TextBlock Text="KEYS" Style="{StaticResource SectionHeaderStyle}" Margin="4,12,0,4"/>
         <UniformGrid x:Name="KeyGrid" Columns="9"/>

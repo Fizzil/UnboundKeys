@@ -92,6 +92,19 @@ internal static class Settings
         public string ActiveProfile { get; set; } = DefaultProfileName;
         public Dictionary<string, ProfileData> Profiles { get; set; } = new();
 
+        // Where the on-screen keyboard was last left (in WPF's
+        // device-independent pixels), and whether it was collapsed to its
+        // strip — app-wide, not per profile: a spot on this screen isn't
+        // part of a mapping set. Null until the keyboard has been moved.
+        public double? KeyboardLeft { get; set; }
+        public double? KeyboardTop { get; set; }
+        public bool KeyboardMini { get; set; }
+
+        // How big the on-screen keyboard is drawn (1.0 = full size).
+        // Defaults to about the footprint of Windows' own on-screen
+        // keyboard, the one it replaces (Fizzil's ask).
+        public double KeyboardScale { get; set; } = 0.65;
+
         // Pre-profiles shape — only ever read, for one-time migration.
         public Dictionary<string, ushort>? KeyMap { get; set; }
         public Dictionary<string, KeyBehavior>? Behaviors { get; set; }
@@ -171,6 +184,34 @@ internal static class Settings
     {
         var saved = Read();
         saved.ActiveProfile = profile;
+        Write(saved);
+    }
+
+    public static (double? Left, double? Top, bool Mini) LoadKeyboardPlacement()
+    {
+        var saved = Read();
+        return (saved.KeyboardLeft, saved.KeyboardTop, saved.KeyboardMini);
+    }
+
+    public static void SaveKeyboardPlacement(double left, double top, bool mini)
+    {
+        var saved = Read();
+        saved.KeyboardLeft = left;
+        saved.KeyboardTop = top;
+        saved.KeyboardMini = mini;
+        Write(saved);
+    }
+
+    public static double LoadKeyboardScale()
+    {
+        double scale = Read().KeyboardScale;
+        return scale > 0 ? scale : 0.65;
+    }
+
+    public static void SaveKeyboardScale(double scale)
+    {
+        var saved = Read();
+        saved.KeyboardScale = scale;
         Write(saved);
     }
 

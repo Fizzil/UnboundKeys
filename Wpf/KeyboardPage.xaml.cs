@@ -13,15 +13,25 @@ namespace UnboundKeys.Wpf;
 public partial class KeyboardPage : IDashboardPage
 {
     private readonly Dictionary<string, (Button Tile, TextBlock Mapping)> _keys = new();
+    private readonly Dictionary<Button, double> _scaleOf;
 
     internal event Action<IRemapSource, string, string>? EditRequested;
     public event Action? ShowKeyboardRequested;
+    public event Action<double>? ScaleSelected;
 
     public string Title => "Keyboard";
 
     public KeyboardPage()
     {
         InitializeComponent();
+
+        _scaleOf = new Dictionary<Button, double>
+        {
+            [SmallSizeButton] = 0.65,
+            [MediumSizeButton] = 0.8,
+            [LargeSizeButton] = 1.0,
+        };
+        ShowScale(Settings.LoadKeyboardScale());
 
         foreach (var key in VirtualKeyCatalog.Keys)
         {
@@ -50,6 +60,34 @@ public partial class KeyboardPage : IDashboardPage
 
         ShowKeyboardToggle.Click += (_, _) => ShowKeyboardRequested?.Invoke();
         Refresh();
+    }
+
+    public void SetKeyboardShown(bool shown) => ShowKeyboardToggle.Tag = shown;
+
+    private void SizeButton_Click(object sender, RoutedEventArgs e)
+    {
+        double scale = _scaleOf[(Button)sender];
+        Settings.SaveKeyboardScale(scale);
+        ShowScale(scale);
+        ScaleSelected?.Invoke(scale);
+    }
+
+    // Lights whichever segment is nearest the saved value.
+    private void ShowScale(double scale)
+    {
+        Button? nearest = null;
+        double nearestDistance = double.MaxValue;
+        foreach (var (button, value) in _scaleOf)
+        {
+            double distance = Math.Abs(value - scale);
+            if (distance < nearestDistance)
+            {
+                nearest = button;
+                nearestDistance = distance;
+            }
+        }
+        foreach (var button in _scaleOf.Keys)
+            button.Tag = button == nearest;
     }
 
     public void Refresh()

@@ -24,8 +24,10 @@ public partial class DashboardShell
     private const double DragStripHeight = 52;
 
     private readonly Dictionary<DashboardSection, FrameworkElement> _pages = new();
+    private readonly KeyboardPage _keyboardPage;
     private DashboardSection _section = DashboardSection.Mouse;
     private FrameworkElement? _editor;
+    private VirtualKeyboardWindow? _keyboard;
 
     public event Action? MinimizeRequested;
     public event Action? CloseRequested;
@@ -43,9 +45,11 @@ public partial class DashboardShell
         var voicePage = new VoicePage();
         voicePage.EditRequested += OpenEditor;
         _pages[DashboardSection.Voice] = voicePage;
-        var keyboardPage = new KeyboardPage();
-        keyboardPage.EditRequested += OpenEditor;
-        _pages[DashboardSection.Keyboard] = keyboardPage;
+        _keyboardPage = new KeyboardPage();
+        _keyboardPage.EditRequested += OpenEditor;
+        _keyboardPage.ShowKeyboardRequested += ToggleKeyboard;
+        _keyboardPage.ScaleSelected += scale => _keyboard?.ApplyScale(scale);
+        _pages[DashboardSection.Keyboard] = _keyboardPage;
         var settingsPage = new SettingsPage();
         settingsPage.ProfileSelected += SwitchToProfile;
         settingsPage.ResetAllRequested += ResetAllMappings;
@@ -88,6 +92,34 @@ public partial class DashboardShell
         }
         PageHost.Content = _pages[section];
         Body.ScrollToTop();
+        // Every route here follows something that may have changed a key's
+        // mapping (an editor closing, a profile switch, Reset All).
+        _keyboard?.RefreshCustomizedIndicators();
+    }
+
+    // The dashboard owns the on-screen keyboard window: one at a time,
+    // shown and hidden from the Keyboard page's switch (and, in Stage C,
+    // from the overlay icon too). Reopens in whichever of Mini/Maxi it was
+    // last left in.
+    private void ToggleKeyboard()
+    {
+        if (_keyboard != null)
+        {
+            _keyboard.Close();
+            return;
+        }
+
+        var (_, _, mini) = Settings.LoadKeyboardPlacement();
+        var keyboard = new VirtualKeyboardWindow(mini);
+        keyboard.Closed += (_, _) =>
+        {
+            _keyboard = null;
+            _keyboardPage.SetKeyboardShown(false);
+        };
+        keyboard.PlaceNear(Window.GetWindow(this));
+        _keyboard = keyboard;
+        _keyboardPage.SetKeyboardShown(true);
+        keyboard.Show();
     }
 
     // The editor page: the section's list is replaced by that one
@@ -193,7 +225,11 @@ public partial class DashboardShell
     private void FlyoutDismiss_Click(object sender, MouseButtonEventArgs e) => CloseProfileFlyout();
 
     private void Minimize_Click(object sender, RoutedEventArgs e) => MinimizeRequested?.Invoke();
-    private void Close_Click(object sender, RoutedEventArgs e) => CloseRequested?.Invoke();
+    private void Close_Click(object sender, RoutedEventArgs e)
+    {
+        _keyboard?.Close();
+        CloseRequested?.Invoke();
+    }
 
     protected override void OnPreviewMouseLeftButtonDown(MouseButtonEventArgs e)
     {
@@ -211,6 +247,8 @@ public partial class DashboardShell
         // DragMove runs the native move loop, which honors the window's
         // no-activate style — the window moves without taking focus.
         window.DragMove();
+        if (window is NoActivateWindow noActivate)
+            noActivate.KeepOnScreen();
         e.Handled = true;
     }
 

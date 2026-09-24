@@ -668,6 +668,50 @@
         <Setter Property="Margin" Value="2,0,0,0"/>
     </Style>
 
+    <!-- One key of the on-screen keyboard: a filled cap that lightens on
+         hover, with the accent underline on Tag="True" — the same
+         "currently down / currently active" signal, held for a sticky
+         modifier or Caps. Deliberately no press-flash fill: a key can be
+         held for a repeat, and a solid accent fill looked wrong for that
+         (the WinForms keyboard's own finding). Content stretches to fill
+         the cap so VirtualKeyboardWindow can lay a "customized" wash over
+         the whole key underneath its label. -->
+    <Style x:Key="KeyCapStyle" TargetType="Button">
+        <Setter Property="Background" Value="{DynamicResource ButtonBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="FontFamily" Value="Segoe UI"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Margin" Value="2"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid>
+                        <Border x:Name="Bg" Background="{TemplateBinding Background}" CornerRadius="4"/>
+                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                        <Border x:Name="Underline" Height="2" CornerRadius="1" Margin="5,0,5,3"
+                                VerticalAlignment="Bottom" Background="Transparent"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bg" Property="Background" Value="{DynamicResource ElevatedBrush}"/>
+                        </Trigger>
+                        <Trigger Property="Tag" Value="{StaticResource TagOn}">
+                            <Setter TargetName="Underline" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- ===== Settings-row pieces used inside the editor card ===== -->
 
     <!-- The label on the left of a "label … control" row. -->

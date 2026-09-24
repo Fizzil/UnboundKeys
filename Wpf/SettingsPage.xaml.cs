@@ -58,9 +58,10 @@ public partial class SettingsPage : IDashboardPage
         ConfirmDeleteBehavior.AttachTo(ResetAllButton, () => ResetAllRequested?.Invoke());
 
         var version = typeof(SettingsPage).Assembly.GetName().Version;
-        AboutText.Text = version == null
+        string title = version == null
             ? "UnboundKeys — built by Fizzil"
             : $"UnboundKeys v{version.Major}.{version.Minor}.{version.Build} — built by Fizzil";
+        AboutText.Text = title + "\nWord suggestions use the OpenSubtitles-based FrequencyWords list by Hermit Dave (CC BY-SA 4.0).";
 
         RebuildProfileList();
     }

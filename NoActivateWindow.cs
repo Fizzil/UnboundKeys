@@ -82,6 +82,28 @@ public class NoActivateWindow : Window
         HwndSource.FromHwnd(hwnd)?.AddHook(WndProc);
     }
 
+    // Keeps the whole window inside the combined screen area — called
+    // after a drag, so a window (and its own drag handle with it) can't
+    // be left stranded out of reach; without this the only way back
+    // would be closing and reopening it. Also right after it opens, in
+    // case a remembered position belongs to a monitor that's gone.
+    public void KeepOnScreen()
+    {
+        double width = ActualWidth > 0 ? ActualWidth : Width;
+        double height = ActualHeight > 0 ? ActualHeight : Height;
+        if (double.IsNaN(width) || double.IsNaN(height))
+            return;
+
+        double minLeft = SystemParameters.VirtualScreenLeft;
+        double maxLeft = minLeft + SystemParameters.VirtualScreenWidth - width;
+        double minTop = SystemParameters.VirtualScreenTop;
+        double maxTop = minTop + SystemParameters.VirtualScreenHeight - height;
+        if (maxLeft >= minLeft)
+            Left = Math.Clamp(Left, minLeft, maxLeft);
+        if (maxTop >= minTop)
+            Top = Math.Clamp(Top, minTop, maxTop);
+    }
+
     // Same fix as NonActivatingForm's WinForms version, same reason:
     // Windows enforces a minimum trackable window size well over 100px on
     // every top-level window by default, silently widening anything
