@@ -8,25 +8,27 @@
         SizeToContent="WidthAndHeight" WindowStartupLocation="Manual">
     <!-- The on-screen keyboard: its own always-on-top window that never
          takes focus (NoActivateWindow), so every key goes to whatever the
-         game is. A grip strip down the left edge drags it — a tall target
-         that's easy to hit with a mouse — and the rows are built in code
-         (see Row1..Row5 / MiniRow). AllowsTransparency for Fade's dimming
-         and the rounded corners. -->
+         game is. A grip strip down the RIGHT edge drags it — a tall target
+         that's easy to hit, and right next to Mini/Maxi, so collapsing,
+         expanding and moving all happen in one corner without the mouse
+         travelling (Fizzil's ergonomics call). The rows are built in code
+         from KeyboardLayout. AllowsTransparency for Fade's dimming and
+         the rounded corners. -->
     <Border x:Name="Root" Background="{DynamicResource BackgroundBrush}" BorderBrush="{DynamicResource CardBorderBrush}"
             BorderThickness="1" CornerRadius="8">
         <Grid>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="18"/>
                 <ColumnDefinition Width="780"/>
+                <ColumnDefinition Width="18"/>
             </Grid.ColumnDefinitions>
 
-            <Border Grid.Column="0" Background="{DynamicResource ButtonBrush}" CornerRadius="7,0,0,7" Cursor="SizeAll"
+            <Border Grid.Column="1" Background="{DynamicResource ButtonBrush}" CornerRadius="0,7,7,0" Cursor="SizeAll"
                     ToolTip="Drag to move the keyboard" MouseLeftButtonDown="Grip_MouseLeftButtonDown">
                 <TextBlock Text="&#x22EE;" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"
                            Foreground="{DynamicResource TextSecondaryBrush}"/>
             </Border>
 
-            <StackPanel x:Name="FullLayout" Grid.Column="1" Margin="4">
+            <StackPanel x:Name="FullLayout" Grid.Column="0" Margin="4">
                 <!-- Word suggestions for the word in progress (see
                      WordPredictor) — a key-height strip, kept even when
                      empty so the keys never jump, with its right corner
@@ -44,7 +46,7 @@
                     <ContentControl x:Name="MiniKeyHost" Grid.Column="1"/>
                 </Grid>
             </StackPanel>
-            <StackPanel x:Name="MiniLayout" Grid.Column="1" Margin="4" Visibility="Collapsed"/>
+            <StackPanel x:Name="MiniLayout" Grid.Column="0" Margin="4" Visibility="Collapsed"/>
         </Grid>
     </Border>
 </uk:NoActivateWindow>

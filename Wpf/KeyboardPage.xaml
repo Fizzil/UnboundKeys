@@ -15,7 +15,7 @@
         <TextBlock Text="ON-SCREEN KEYBOARD" Style="{StaticResource SectionHeaderStyle}" Margin="4,18,0,2"/>
         <Button x:Name="ShowKeyboardToggle" Content="Show on-screen keyboard"
                 Style="{StaticResource RailToggleStyle}" Margin="4,0,4,0"/>
-        <TextBlock Text="Drag it by the handle on its left edge. Mini collapses it to a single strip; Maxi brings it back."
+        <TextBlock Text="Drag it by the handle on its right edge. Mini collapses it to a single strip; Maxi brings it back."
                    FontSize="11" TextWrapping="Wrap" Margin="16,0,12,4" Foreground="{DynamicResource TextSecondaryBrush}"/>
 
         <!-- Small is about the footprint of Windows' own on-screen
