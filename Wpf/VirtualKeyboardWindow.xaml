@@ -28,10 +28,21 @@
 
             <StackPanel x:Name="FullLayout" Grid.Column="1" Margin="4">
                 <!-- Word suggestions for the word in progress (see
-                     WordPredictor) — a fixed-height strip, kept even when
-                     empty so the keys never jump. Only for the full layout:
-                     the Mini strip has no letters to type with. -->
-                <UniformGrid x:Name="SuggestionRow" Rows="1" Height="34" Margin="0,0,0,4"/>
+                     WordPredictor) — a key-height strip, kept even when
+                     empty so the keys never jump, with its right corner
+                     given to the Mini key: 1/15 of the width, the same
+                     cell Maxi has in the collapsed strip, so Mini and Maxi
+                     sit in exactly the same spot (see KeyboardLayout.MiniKey).
+                     Only for the full layout: the Mini strip has no
+                     letters to type with. -->
+                <Grid Height="44">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="14*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <UniformGrid x:Name="SuggestionRow" Rows="1"/>
+                    <ContentControl x:Name="MiniKeyHost" Grid.Column="1"/>
+                </Grid>
             </StackPanel>
             <StackPanel x:Name="MiniLayout" Grid.Column="1" Margin="4" Visibility="Collapsed"/>
         </Grid>

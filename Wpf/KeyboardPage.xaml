@@ -1,16 +1,20 @@
 <UserControl x:Class="UnboundKeys.Wpf.KeyboardPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <!-- The dashboard's side of the on-screen keyboard: the switch that
-         shows and hides it (DashboardShell owns the window), its size,
-         and a map of the keyboard — the same rows the keyboard itself
-         uses (KeyboardLayout) — where the remappable digits and letters
-         are drawn as real keys you can click to remap, and everything
-         else as a quiet outline. Fizzil's own idea: at a glance, the
-         bright keys are the ones you can change. -->
+    <!-- The keyboard map first — the same rows the on-screen keyboard
+         itself uses (KeyboardLayout), with the remappable digits and
+         letters drawn as real keys you can click to remap and everything
+         else as a quiet outline (Fizzil's own idea: at a glance, the
+         bright keys are the ones you can change) — then the on-screen
+         keyboard's own switch and size, which DashboardShell acts on. -->
     <StackPanel>
+        <TextBlock Text="The bright keys are the ones you can remap — click one. A key that's been changed shows what it sends now."
+                   FontSize="11" TextWrapping="Wrap" Margin="12,4,12,8" Foreground="{DynamicResource TextSecondaryBrush}"/>
+        <StackPanel x:Name="KeyRows" Margin="2,0,2,0"/>
+
+        <TextBlock Text="ON-SCREEN KEYBOARD" Style="{StaticResource SectionHeaderStyle}" Margin="4,18,0,2"/>
         <Button x:Name="ShowKeyboardToggle" Content="Show on-screen keyboard"
-                Style="{StaticResource RailToggleStyle}" Margin="4,4,4,0"/>
+                Style="{StaticResource RailToggleStyle}" Margin="4,0,4,0"/>
         <TextBlock Text="Drag it by the handle on its left edge. Mini collapses it to a single strip; Maxi brings it back."
                    FontSize="11" TextWrapping="Wrap" Margin="16,0,12,4" Foreground="{DynamicResource TextSecondaryBrush}"/>
 
@@ -31,10 +35,5 @@
                 </UniformGrid>
             </Border>
         </Grid>
-
-        <TextBlock Text="KEYS" Style="{StaticResource SectionHeaderStyle}" Margin="4,14,0,2"/>
-        <TextBlock Text="The bright keys are the ones you can remap — click one. A key that's been changed shows what it sends now."
-                   FontSize="11" TextWrapping="Wrap" Margin="12,0,12,6" Foreground="{DynamicResource TextSecondaryBrush}"/>
-        <StackPanel x:Name="KeyRows" Margin="2,0,2,0"/>
     </StackPanel>
 </UserControl>

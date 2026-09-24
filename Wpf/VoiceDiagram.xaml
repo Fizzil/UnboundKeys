@@ -1,31 +1,70 @@
 <UserControl x:Class="UnboundKeys.Wpf.VoiceDiagram"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <!-- The Voice page's picture, drawn like the mouse so it re-themes: a
-         woman in profile speaking (sound waves from her mouth) and, below,
-         a key being pressed — the key's label is whatever the hovered row
-         sends, so the picture reads "say this, and this gets pressed". -->
+    <!-- The Voice page's picture: a woman in profile, speaking, drawn as
+         thin line art (the style Fizzil pointed at — a few flowing
+         strokes, no filled shape), sound waves from her mouth, and below,
+         a key being pressed whose label follows the hovered row, so the
+         picture reads "say this, and this gets pressed". Strokes only, in
+         the text colors, so it re-themes with everything else. -->
     <Viewbox Stretch="Uniform">
         <Canvas Width="200" Height="300">
-            <!-- head and hair, one silhouette -->
-            <Path Data="M 92,34 C 118,34 134,52 132,74 C 131,84 127,90 129,96 C 138,104 150,114 150,122 C 150,128 140,130 134,132 C 136,138 140,142 138,148 C 142,152 142,156 137,160 C 136,166 140,170 136,176 C 132,184 120,190 108,192 C 102,194 98,200 98,212 C 98,224 100,236 104,248 C 84,254 64,258 44,270 C 30,240 26,210 30,180 C 30,140 32,100 44,70 C 54,48 72,34 92,34 Z"
-                  Fill="{DynamicResource ButtonBrush}" Stroke="{DynamicResource TextSecondaryBrush}" StrokeThickness="2" StrokeLineJoin="Round"/>
-            <!-- a strand of hair sweeping back -->
-            <Path Data="M 96,42 C 70,58 54,96 56,150 C 58,190 66,220 72,250"
-                  Stroke="{DynamicResource TextSecondaryBrush}" StrokeThickness="1.5" Opacity="0.7" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
-            <!-- a closed eye -->
-            <Path Data="M 116,98 C 120,95 126,95 130,98"
-                  Stroke="{DynamicResource TextSecondaryBrush}" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
-            <!-- sound waves -->
-            <Path x:Name="Waves" Data="M 158,139.4 A 22,22 0 0 1 158,164.6 M 169.5,131.3 A 36,36 0 0 1 169.5,172.7 M 181,123.3 A 50,50 0 0 1 181,180.7"
+
+            <!-- profile: forehead, brow, nose, lips, chin, jaw, throat -->
+            <Path Data="M 112,52 C 122,58 131,72 132,88 C 132,92 131,96 132,100 C 138,108 148,118 150,126 C 151,130 148,133 143,133 C 140,133 139,136 140,139 C 142,141 145,143 145,147 C 145,149 142,150 140,150 C 144,152 145,157 143,160 C 141,163 139,165 139,166 C 144,169 145,175 142,178 C 136,186 122,194 110,196 C 108,208 110,224 114,236"
+                  Stroke="{DynamicResource TextPrimaryBrush}" StrokeThickness="1.8" Opacity="0.85"
+                  StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
+            <!-- back of the neck -->
+            <Path Data="M 84,196 C 82,210 80,224 78,238"
+                  Stroke="{DynamicResource TextPrimaryBrush}" StrokeThickness="1.4" Opacity="0.6"
+                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+            <!-- brow, closed eye, one lash -->
+            <Path Data="M 114,84 C 120,80 128,80 134,83"
+                  Stroke="{DynamicResource TextPrimaryBrush}" StrokeThickness="1.4" Opacity="0.7"
+                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+            <Path Data="M 118,101 C 122,98 128,98 133,101 M 133,101 L 136,104"
+                  Stroke="{DynamicResource TextPrimaryBrush}" StrokeThickness="1.6" Opacity="0.85"
+                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+
+            <!-- hair: the crown, then strands sweeping back and down, with
+                 a fringe piece falling at the temple -->
+            <Path Data="M 112,52 C 100,38 76,36 60,50 C 46,62 40,84 42,108 C 44,130 34,150 22,168"
+                  Stroke="{DynamicResource TextPrimaryBrush}" StrokeThickness="1.8" Opacity="0.65"
+                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+            <Path Data="M 110,54 C 104,66 100,80 100,96"
+                  Stroke="{DynamicResource TextPrimaryBrush}" StrokeThickness="1.3" Opacity="0.55"
+                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+            <Path Data="M 116,50 C 100,58 88,82 86,110 C 84,140 74,166 56,186"
+                  Stroke="{DynamicResource TextPrimaryBrush}" StrokeThickness="1.3" Opacity="0.55"
+                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+            <Path Data="M 96,60 C 82,80 78,110 80,140 C 82,170 88,200 82,236 C 80,250 76,262 68,274"
+                  Stroke="{DynamicResource TextPrimaryBrush}" StrokeThickness="1.3" Opacity="0.5"
+                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+            <Path Data="M 60,50 C 48,72 44,98 48,124 C 52,150 44,176 30,196"
+                  Stroke="{DynamicResource TextPrimaryBrush}" StrokeThickness="1.2" Opacity="0.45"
+                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+            <Path Data="M 42,108 C 36,132 26,150 8,164"
+                  Stroke="{DynamicResource TextPrimaryBrush}" StrokeThickness="1.2" Opacity="0.45"
+                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+            <Path Data="M 86,110 C 70,130 50,142 28,144"
+                  Stroke="{DynamicResource TextPrimaryBrush}" StrokeThickness="1.2" Opacity="0.45"
+                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+            <Path Data="M 56,186 C 48,200 36,208 22,212"
+                  Stroke="{DynamicResource TextPrimaryBrush}" StrokeThickness="1.2" Opacity="0.4"
+                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+
+            <!-- sound waves, from the lips -->
+            <Path x:Name="Waves" Data="M 164,135.4 A 22,22 0 0 1 164,160.6 M 175.5,127.3 A 36,36 0 0 1 175.5,168.7 M 187,119.3 A 50,50 0 0 1 187,176.7"
                   Stroke="{DynamicResource AccentBrush}" StrokeThickness="2.5" Opacity="0.45"
                   StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
-            <!-- the key: a base peeking out below a cap sitting on it -->
-            <Rectangle Canvas.Left="128" Canvas.Top="214" Width="56" Height="46" RadiusX="6" RadiusY="6"
-                       Fill="{DynamicResource ButtonBrush}" Stroke="{DynamicResource CardBorderBrush}" StrokeThickness="1"/>
-            <Rectangle Canvas.Left="128" Canvas.Top="206" Width="56" Height="44" RadiusX="6" RadiusY="6"
+
+            <!-- the key: one cap, with its underside showing as a soft
+                 lip below rather than a second outlined box -->
+            <Rectangle Canvas.Left="132" Canvas.Top="218" Width="54" Height="44" RadiusX="6" RadiusY="6"
+                       Fill="{DynamicResource HoverBrush}"/>
+            <Rectangle Canvas.Left="132" Canvas.Top="214" Width="54" Height="44" RadiusX="6" RadiusY="6"
                        Fill="{DynamicResource ElevatedBrush}" Stroke="{DynamicResource CardBorderBrush}" StrokeThickness="1"/>
-            <TextBlock x:Name="KeyLabel" Canvas.Left="128" Canvas.Top="206" Width="56" Height="44" Padding="4,13,4,0"
+            <TextBlock x:Name="KeyLabel" Canvas.Left="132" Canvas.Top="214" Width="54" Height="44" Padding="4,13,4,0"
                        TextAlignment="Center" TextTrimming="CharacterEllipsis" FontSize="12" FontWeight="SemiBold"
                        Foreground="{DynamicResource TextPrimaryBrush}"/>
         </Canvas>

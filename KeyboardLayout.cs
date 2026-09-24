@@ -29,7 +29,16 @@ public static class KeyboardLayout
 
     public static KeySpec[][] FullRows() => new[] { Row1(), Row2(), Row3(), Row4(), Row5() };
 
-    // Esc, backtick, the number row (remappable), -, =, Backspace, Mini.
+    // "Mini" isn't on any row: it sits in the top-right corner of the
+    // word-suggestion strip above Row1, one fifteenth of the width — the
+    // exact cell "Maxi" (MiniRow's last key) occupies in the collapsed
+    // strip, so toggling between the two never moves the button out from
+    // under the mouse (Fizzil's ask). Backspace took over its old slot.
+    public static KeySpec MiniKey => Toggle("Mini", 1);
+
+    // Esc, backtick, the number row (remappable), -, =, Backspace (wide —
+    // it has Mini's former width as well as its own, so every other key
+    // on the row keeps its size).
     private static KeySpec[] Row1() => new[]
     {
         Plain("Esc", 0x1B, false, 1.2),
@@ -46,8 +55,7 @@ public static class KeyboardLayout
         Remap("v0", "0", 1, ")"),
         Plain("-", 0xBD, false, 1, "_"),
         Plain("=", 0xBB, false, 1, "+"),
-        Plain("⌫", 0x08, false, 1),
-        Toggle("Mini", 1.4),
+        Plain("⌫", 0x08, false, 2.4),
     };
 
     // Tab, Q–P (remappable), brackets/backslash, Del.

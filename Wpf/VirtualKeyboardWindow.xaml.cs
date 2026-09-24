@@ -72,6 +72,7 @@ public partial class VirtualKeyboardWindow
 
         foreach (var row in FullRows())
             FullLayout.Children.Add(BuildRow(row));
+        MiniKeyHost.Content = BuildKey(MiniKey);
         MiniLayout.Children.Add(BuildRow(MiniRow()));
         ApplyMiniMode();
         ApplyScale(Settings.LoadKeyboardScale());
@@ -118,45 +119,50 @@ public partial class VirtualKeyboardWindow
 
         for (int i = 0; i < specs.Length; i++)
         {
-            var spec = specs[i];
-
-            var label = new TextBlock
-            {
-                Text = spec.Label,
-                FontSize = spec.LargeLabel ? 16 : 13,
-                HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center,
-            };
-            // The "this key is customized" wash: a faint accent layer under
-            // the label, over the whole cap (see RefreshCustomizedIndicators).
-            var wash = new Border { CornerRadius = new CornerRadius(4), Opacity = 0.24, Visibility = Visibility.Collapsed, IsHitTestVisible = false };
-            wash.SetResourceReference(Border.BackgroundProperty, "AccentBrush");
-
-            var content = new Grid();
-            content.Children.Add(wash);
-            content.Children.Add(label);
-
-            var button = new Button { Content = content };
-            button.SetResourceReference(StyleProperty, "KeyCapStyle");
+            var button = BuildKey(specs[i]);
             Grid.SetColumn(button, i);
             row.Children.Add(button);
-            WireKey(button, spec);
-
-            if (spec.Kind == KeyKind.Remappable)
-                _remappableWashes.Add((wash, spec.Id!));
-            if (spec.Kind == KeyKind.StickyFixed)
-                _stickyButtons.Add((button, spec.Id!));
-            // A remappable letter specifically ("va".."vz") — the digits'
-            // ids ("v1".."v0") have a digit second, so they're skipped.
-            if (spec.Kind == KeyKind.Remappable && spec.Id is { Length: 2 } id && id[0] == 'v' && char.IsLower(id[1]))
-                _letterLabels.Add((label, spec.Label));
-            if (spec.ShiftLabel != null)
-                _shiftableLabels.Add((label, spec.Label, spec.ShiftLabel));
-            if (spec.Kind == KeyKind.Plain && spec.Vk == VkCapital)
-                _capsLockButtons.Add(button);
         }
 
         return row;
+    }
+
+    private Button BuildKey(KeySpec spec)
+    {
+        var label = new TextBlock
+        {
+            Text = spec.Label,
+            FontSize = spec.LargeLabel ? 16 : 13,
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        // The "this key is customized" wash: a faint accent layer under
+        // the label, over the whole cap (see RefreshCustomizedIndicators).
+        var wash = new Border { CornerRadius = new CornerRadius(4), Opacity = 0.24, Visibility = Visibility.Collapsed, IsHitTestVisible = false };
+        wash.SetResourceReference(Border.BackgroundProperty, "AccentBrush");
+
+        var content = new Grid();
+        content.Children.Add(wash);
+        content.Children.Add(label);
+
+        var button = new Button { Content = content };
+        button.SetResourceReference(StyleProperty, "KeyCapStyle");
+        WireKey(button, spec);
+
+        if (spec.Kind == KeyKind.Remappable)
+            _remappableWashes.Add((wash, spec.Id!));
+        if (spec.Kind == KeyKind.StickyFixed)
+            _stickyButtons.Add((button, spec.Id!));
+        // A remappable letter specifically ("va".."vz") — the digits'
+        // ids ("v1".."v0") have a digit second, so they're skipped.
+        if (spec.Kind == KeyKind.Remappable && spec.Id is { Length: 2 } id && id[0] == 'v' && char.IsLower(id[1]))
+            _letterLabels.Add((label, spec.Label));
+        if (spec.ShiftLabel != null)
+            _shiftableLabels.Add((label, spec.Label, spec.ShiftLabel));
+        if (spec.Kind == KeyKind.Plain && spec.Vk == VkCapital)
+            _capsLockButtons.Add(button);
+
+        return button;
     }
 
     // Press on the way DOWN (a real key types the instant it's pressed),
