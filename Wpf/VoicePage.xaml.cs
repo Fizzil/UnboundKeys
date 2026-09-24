@@ -42,10 +42,32 @@ public partial class VoicePage : IDashboardPage
         hint.SetResourceReference(TextBlock.ForegroundProperty, "TextSecondaryBrush");
         Rows.Children.Add(hint);
 
+        // Full rows of three, then whatever's left over — "press ten" —
+        // centered beneath in a row of the same three columns, so it sits
+        // under "press eight" at the same width (Fizzil's symmetry call).
+        var words = KeyMap.RemappableWords;
+        int inFullRows = words.Length - words.Length % 3;
+
         var keypad = new UniformGrid { Columns = 3, Margin = new Thickness(2, 0, 2, 0) };
-        foreach (var word in KeyMap.RemappableWords)
-            keypad.Children.Add(BuildTile(word));
+        for (int i = 0; i < inFullRows; i++)
+            keypad.Children.Add(BuildTile(words[i]));
         Rows.Children.Add(keypad);
+
+        if (inFullRows < words.Length)
+        {
+            var lastRow = new Grid { Margin = new Thickness(2, 0, 2, 0) };
+            for (int column = 0; column < 3; column++)
+                lastRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            int leftover = words.Length - inFullRows;
+            int firstColumn = (3 - leftover) / 2;
+            for (int i = inFullRows; i < words.Length; i++)
+            {
+                var tile = BuildTile(words[i]);
+                Grid.SetColumn(tile, firstColumn + (i - inFullRows));
+                lastRow.Children.Add(tile);
+            }
+            Rows.Children.Add(lastRow);
+        }
 
         Refresh();
         Diagram.SetKey(MappingRow.ValueOf(KeyMapSource.Instance, KeyMap.RemappableWords[0]));
