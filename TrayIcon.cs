@@ -38,7 +38,7 @@ internal sealed class TrayIcon : IDisposable
     public void SetPaused(bool paused)
     {
         _icon.Icon = paused ? _paused : _listening;
-        _icon.Text = paused ? "UnboundKeys — paused" : "UnboundKeys — listening";
+        _icon.Text = paused ? "UnboundKeys — voice paused" : "UnboundKeys — listening";
     }
 
     public void Dispose()

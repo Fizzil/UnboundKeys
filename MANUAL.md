@@ -67,7 +67,7 @@ Fade dims the dashboard and the on-screen keyboard to 20% so you can see the gam
 
 ## Listening
 
-The **Listening** switch pauses everything UnboundKeys catches in the background — voice commands, mouse remaps and remapped keys on a real keyboard — and releases anything held. The tray icon dims while paused; switch it back on to resume. The on-screen keyboard keeps working either way, since its keys are clicked on purpose.
+The **Listening** switch pauses the voice keys only. With it off, nothing you say does anything, and whatever a spoken word was holding or repeating is released. Mouse remaps, the on-screen keyboard and remapped keys on a real keyboard keep working, so you can mute the voice keys in a menu or a chat without losing your mouse buttons. The tray icon dims while paused; switch it back on to resume.
 
 ## Safety nets
 
@@ -75,7 +75,7 @@ Because Infinite holds and repeats can run indefinitely, UnboundKeys is built so
 
 - Voice keys, mouse keys and the on-screen keyboard each get their own slots: only one *word*, one *mouse button* and one *keyboard key* can be doing an infinite hold at a time (and likewise an infinite repeat) — starting a new one only bumps whichever of the same kind had that slot, never the other kinds. Infinite repeats of different kinds run side by side, each on its own timer, without queueing or blocking one another.
 - **"Press stop"**, two quick clicks of the on-screen keyboard's **Caps**, or a double-tap of a real **Caps Lock** key releases everything currently held or repeating, all at once, no matter what's mapped. Caps Lock's own on/off state ends up right back where it started, since two real toggles cancel out.
-- Pausing Listening, quitting UnboundKeys, or switching away from the game window (alt-tab, or switching browser tabs) all release everything automatically too.
+- Quitting UnboundKeys, or switching away from the game window (alt-tab, or switching browser tabs), releases everything automatically too. Pausing Listening releases whatever the voice keys were holding.
 - The on-screen keyboard's sticky modifiers are released whenever the keyboard closes, so a Shift or Ctrl can't be left held down.
 
 ## Profiles

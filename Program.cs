@@ -95,23 +95,24 @@ static class Program
             Task.Run(() => KeyExecutor.Execute(id, keys, behavior));
         };
 
-        // The dashboard's Listening switch. Pausing also releases anything
-        // mid-hold/repeat — with listening off there'd be no way to say the
-        // word (or press the button) again to let go of it.
+        // The dashboard rail Listening switch pauses the voice keys only.
+        // Fizzil wants the mouse buttons and both keyboards to keep working
+        // while the mic is ignored (a menu, a chat), so the mouse and
+        // physical-key hooks stay up. Only what a spoken word is holding or
+        // repeating is released: with the mic paused there is no saying the
+        // word again to let go of it, whereas a mouse or keyboard hold can
+        // still be ended by pressing its button again.
         ListeningMode.Changed += () =>
         {
             if (ListeningMode.IsPaused)
             {
                 voice.Pause();
-                mouse.Pause();
-                physical.Pause();
-                KeyExecutor.ReleaseAll();
+                foreach (var word in KeyMap.RemappableWords)
+                    KeyExecutor.ForceRelease(word);
             }
             else
             {
                 voice.Resume();
-                mouse.Resume();
-                physical.Resume();
             }
             tray.SetPaused(ListeningMode.IsPaused);
         };
