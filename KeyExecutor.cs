@@ -124,8 +124,9 @@ internal static class KeyExecutor
         new(CheckFocus, null, FocusCheckIntervalMs, FocusCheckIntervalMs);
     private const int FocusCheckIntervalMs = 300;
 
-    // A word can have up to three keys (its main one plus two extras) that
-    // all fire together as a combo — pressing each down in quick succession,
+    // A word can have several keys (its main one plus up to
+    // RemapStore.MaxExtraKeys extras) that all fire together as a combo —
+    // pressing each down in quick succession,
     // then releasing each in quick succession, rather than one full
     // down-then-up cycle per key. That's as close to truly simultaneous as
     // discrete SendInput calls get, and it's imperceptible in practice.

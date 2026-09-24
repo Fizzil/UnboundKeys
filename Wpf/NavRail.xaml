@@ -17,7 +17,7 @@
         <Grid Grid.Row="0">
             <StackPanel Margin="20,0,12,0" VerticalAlignment="Center">
                 <TextBlock Text="UnboundKeys" Style="{StaticResource PageTitleStyle}"/>
-                <TextBlock x:Name="VersionText" Style="{StaticResource SectionHeaderStyle}" Margin="0" FontWeight="Normal" FontSize="11"/>
+                <TextBlock x:Name="VersionText" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"/>
             </StackPanel>
             <Border Style="{StaticResource SectionRuleStyle}" Margin="12,0,12,0" VerticalAlignment="Bottom"/>
         </Grid>

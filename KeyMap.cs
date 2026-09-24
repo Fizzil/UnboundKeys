@@ -35,8 +35,8 @@ public static class KeyMap
     // profile's saved settings (if any) on top of the defaults below.
     public static Dictionary<string, ushort> Words => _store.Words;
 
-    // Spoken word -> up to two additional keys pressed alongside the one in
-    // Words, all at once (e.g. binding Ctrl and C alongside the main key
+    // Spoken word -> up to RemapStore.MaxExtraKeys additional keys pressed
+    // alongside the one in Words, all at once (e.g. binding Ctrl and C alongside the main key
     // makes the word send Ctrl+C as a combo). Empty by default. Loaded from
     // the active profile the same way Words is.
     public static Dictionary<string, List<ushort>> ExtraWords => _store.ExtraWords;

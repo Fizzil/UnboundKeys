@@ -51,8 +51,8 @@ internal static class Settings
     {
         public Dictionary<string, ushort> KeyMap { get; set; } = new();
 
-        // Up to two extra keys per word, fired alongside its main key as a
-        // combo. Absent entirely from settings files saved before this
+        // Up to RemapStore.MaxExtraKeys extra keys per word, fired alongside
+        // its main key as a combo. Absent entirely from settings files saved before this
         // existed — deserializing just leaves this at its empty default, so
         // older profiles need no migration step.
         public Dictionary<string, List<ushort>> ExtraKeys { get; set; } = new();

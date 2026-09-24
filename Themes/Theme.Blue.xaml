@@ -24,6 +24,7 @@
     <Color x:Key="MutedColor">#FF275B96</Color>
     <Color x:Key="TextPrimaryColor">#FFF2F3F5</Color>
     <Color x:Key="TextSecondaryColor">#FF949BA4</Color>
+    <Color x:Key="HeadingColor">#FFA7CBF4</Color>
     <!-- See Theme.Red.xaml's own comment — barely lighter than
          ElevatedColor, not a near-white/high-contrast line. -->
     <Color x:Key="CardBorderColor">#FF303540</Color>
@@ -36,6 +37,7 @@
     <SolidColorBrush x:Key="MutedBrush" Color="{StaticResource MutedColor}"/>
     <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimaryColor}"/>
     <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondaryColor}"/>
+    <SolidColorBrush x:Key="HeadingBrush" Color="{StaticResource HeadingColor}"/>
     <SolidColorBrush x:Key="CardBorderBrush" Color="{StaticResource CardBorderColor}"/>
 
 </ResourceDictionary>

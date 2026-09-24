@@ -69,11 +69,16 @@ internal sealed class RemapStore
         Save();
     }
 
-    // Capped at two extras (three keys total per id); a no-op past that,
-    // so it's safe to call speculatively without checking the count first.
+    // How many keys can fire alongside an id's main key — six keys in all
+    // (Fizzil's ask; it was two extras). The one number both the store
+    // and the editor card check.
+    public const int MaxExtraKeys = 5;
+
+    // Capped at MaxExtraKeys; a no-op past that, so it's safe to call
+    // speculatively without checking the count first.
     public void AddExtraKey(string id, ushort vkCode)
     {
-        if (ExtraWords[id].Count >= 2)
+        if (ExtraWords[id].Count >= MaxExtraKeys)
             return;
 
         ExtraWords[id].Add(vkCode);

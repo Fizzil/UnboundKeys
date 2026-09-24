@@ -125,8 +125,8 @@ public partial class RemapCard
         }
 
         // After the keys, not before them — an "add" belongs at the end
-        // of the list it adds to. Gone once both extra slots are used.
-        if (extras.Count < 2)
+        // of the list it adds to. Gone once every extra slot is used.
+        if (extras.Count < RemapStore.MaxExtraKeys)
         {
             var addKeyButton = new Button
             {
@@ -490,19 +490,26 @@ public partial class RemapCard
 
     // ---- Show/hide with animation ----
 
-    // Skips when the element is already in the requested state — every
-    // caller passes the full desired state, so re-expanding something
-    // that's already open would otherwise replay its animation from 0.
+    // What each section is meant to be right now, by intent rather than by
+    // its current Visibility — a section mid-collapse is still Visible,
+    // and a request to show it again must not be mistaken for "already
+    // shown". Every caller passes the full desired state, so a repeat of
+    // the same intent is skipped instead of replaying the animation.
+    private readonly Dictionary<FrameworkElement, bool> _sectionShown = new();
+
     private void SetElementVisible(FrameworkElement element, bool visible, bool animate)
     {
-        bool shown = element.Visibility == Visibility.Visible;
+        if (animate && _sectionShown.TryGetValue(element, out bool shown) && shown == visible)
+            return;
+        _sectionShown[element] = visible;
+
         if (animate)
         {
-            if (shown != visible)
-                AnimateHeight(element, visible);
+            AnimateHeight(element, visible);
         }
         else if (visible)
         {
+            element.BeginAnimation(HeightProperty, null);
             element.Visibility = Visibility.Visible;
             element.ClearValue(HeightProperty);
         }
@@ -515,27 +522,33 @@ public partial class RemapCard
     // Grows/shrinks an element's Height instead of snapping straight to
     // its final size. A plain FrameworkElement, not a specific panel type,
     // since the sections are a mix of Grids and StackPanels.
+    //
+    // A finished DoubleAnimation keeps HOLDING its last value on the
+    // property (FillBehavior.HoldEnd), outranking any Height set in code —
+    // so a collapsed section stayed pinned at 0 and the next expand
+    // measured it as 0 tall and animated from 0 to 0 (the "Duration
+    // disappeared after Reset" bug). Every path here therefore removes
+    // the previous animation (BeginAnimation(…, null)) before measuring,
+    // and again once it completes, so the element goes back to sizing
+    // itself naturally and can grow with its content afterward.
     private void AnimateHeight(FrameworkElement element, bool expand)
     {
         if (expand)
         {
+            element.BeginAnimation(HeightProperty, null);
             element.Visibility = Visibility.Visible;
-            element.Height = double.NaN;
-            // Before the first layout pass ActualWidth is 0 and Width is
-            // unset (NaN) now that the card stretches to its host, and a
-            // NaN measure throws — unconstrained is the safe fallback.
+            element.ClearValue(HeightProperty);
+            // Before the first layout pass ActualWidth is 0 (the card has
+            // no fixed Width any more) and a NaN measure throws —
+            // unconstrained is the safe fallback.
             element.Measure(new Size(ActualWidth > 0 ? ActualWidth : double.PositiveInfinity, double.PositiveInfinity));
             double targetHeight = element.DesiredSize.Height;
-            element.Height = 0;
 
             var anim = new DoubleAnimation(0, targetHeight, TimeSpan.FromMilliseconds(180))
             {
                 EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut },
             };
-            // Clears the explicit Height once the animation lands, so the
-            // element sizes naturally to itself afterward instead of
-            // staying pinned to whatever it measured at the moment it opened.
-            anim.Completed += (_, _) => element.ClearValue(HeightProperty);
+            anim.Completed += (_, _) => element.BeginAnimation(HeightProperty, null);
             element.BeginAnimation(HeightProperty, anim);
         }
         else
@@ -545,7 +558,11 @@ public partial class RemapCard
             {
                 EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn },
             };
-            anim.Completed += (_, _) => element.Visibility = Visibility.Collapsed;
+            anim.Completed += (_, _) =>
+            {
+                element.Visibility = Visibility.Collapsed;
+                element.BeginAnimation(HeightProperty, null);
+            };
             element.BeginAnimation(HeightProperty, anim);
         }
     }
@@ -553,12 +570,13 @@ public partial class RemapCard
     // Same animation, but to a caller-given height instead of measuring
     // the element's own natural size — used for the category split view,
     // which is a fixed height by design (see AddKeyRow's own comment).
+    // Here the hold at the target height is wanted, so only the collapse
+    // releases it.
     private void AnimateHeight(FrameworkElement element, bool expand, double explicitTargetHeight)
     {
         if (expand)
         {
             element.Visibility = Visibility.Visible;
-            element.Height = 0;
             var anim = new DoubleAnimation(0, explicitTargetHeight, TimeSpan.FromMilliseconds(180))
             {
                 EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut },
@@ -572,7 +590,11 @@ public partial class RemapCard
             {
                 EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn },
             };
-            anim.Completed += (_, _) => element.Visibility = Visibility.Collapsed;
+            anim.Completed += (_, _) =>
+            {
+                element.Visibility = Visibility.Collapsed;
+                element.BeginAnimation(HeightProperty, null);
+            };
             element.BeginAnimation(HeightProperty, anim);
         }
     }
