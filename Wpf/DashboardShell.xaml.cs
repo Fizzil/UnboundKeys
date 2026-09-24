@@ -32,8 +32,9 @@ public partial class DashboardShell
     public event Action? MinimizeRequested;
     public event Action? CloseRequested;
     public event Action? QuitRequested;
-    // The keyboard Menu key: the window shows itself.
-    public event Action? ShowRequested;
+    // The keyboard Menu key: the window shows or hides itself (Fizzil: one
+    // key, both ways, like the tray icon).
+    public event Action? ToggleRequested;
 
     internal DashboardShell()
     {
@@ -123,7 +124,7 @@ public partial class DashboardShell
         };
         keyboard.PlaceNear(Window.GetWindow(this));
         _keyboard = keyboard;
-        keyboard.MenuRequested += () => ShowRequested?.Invoke();
+        keyboard.MenuRequested += () => ToggleRequested?.Invoke();
         _keyboardPage.SetKeyboardShown(true);
         keyboard.Show();
     }

@@ -67,7 +67,8 @@ public partial class VirtualKeyboardWindow
 
     public bool IsMini => _isMini;
 
-    // The Menu key. The dashboard window owns what happens (it shows itself).
+    // The Menu key. The dashboard window owns what happens (it shows or
+    // hides itself, like a tray-icon click).
     public event Action? MenuRequested;
 
     public VirtualKeyboardWindow(bool startMini)

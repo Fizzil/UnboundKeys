@@ -58,7 +58,7 @@ The **Keyboard** page shows a map of the keyboard: the lit keys — the digits a
 - **Shift, Ctrl, Alt, Win** are sticky: click one (it lights up), then click the key it should combine with — everything lets go together. Click a lit modifier again to cancel it.
 - **Caps** stays lit while Caps Lock is on, and the letters show as capitals. Two quick clicks of Caps is the panic button: it releases everything and lifts Fade.
 - **Word suggestions** appear above the keys as you type; click one to type the rest of the word plus a space. Words you type are remembered and float to the top over time. Like Windows' own on-screen keyboard, it loses track of the word if you click somewhere else or use the arrow keys, and picks up again at your next word.
-- **Mini** collapses it to a single strip of the essential keys; **Maxi** brings it back. **Fade** dims it along with the dashboard. **Menu** brings the dashboard back, no microphone or taskbar needed. Those keys and the drag grip on the right edge sit in the same corner in both layouts, so nothing moves out from under your mouse.
+- **Mini** collapses it to a single strip of the essential keys; **Maxi** brings it back. **Fade** dims it along with the dashboard. **Menu** shows the dashboard, or hides it again, no microphone or taskbar needed. Those keys and the drag grip on the right edge sit in the same corner in both layouts, so nothing moves out from under your mouse.
 - Drag it by the grip on its right edge. It remembers its position and its Mini state.
 - **Keyboard size** (on the Keyboard page) is Small, Medium or Large; Small is about the size of Windows' own on-screen keyboard.
 

@@ -41,7 +41,7 @@ public partial class HelpPage : IDashboardPage
         AddLine("Shift, Ctrl, Alt, Win", "stick: click one, then the key to combine it with.");
         AddLine("Hold a key", "to repeat it.");
         AddLine("Word suggestions", "finish the word when clicked, and learn the words you type.");
-        AddLine("Menu, Fade, Mini, Maxi", "bring this dashboard back, dim it, collapse it to a strip, bring it back. Drag it by the grip on its right edge.");
+        AddLine("Menu, Fade, Mini, Maxi", "show or hide this dashboard, dim it, collapse it to a strip, bring it back. Drag it by the grip on its right edge.");
         AddLine("Remapping a key", "happens on the Keyboard page. A remapped key is caught on a real keyboard too.");
 
         AddHeader("GOOD TO KNOW", topMargin: 16);

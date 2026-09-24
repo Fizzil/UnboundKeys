@@ -44,8 +44,9 @@ public static class KeyboardLayout
     // as well as the dashboard because the keyboard is what is on screen
     // mid-game: with the dashboard hidden, Listening off and the taskbar
     // out of reach, Menu is the one mouse-only way to bring the dashboard
-    // back, and Fade the one way out of a dimmed screen. Backspace took
-    // over the old Mini slot on Row1.
+    // back (and it tucks the dashboard away again when it is showing, the
+    // same as a tray-icon click), and Fade is the one way out of a dimmed
+    // screen. Backspace took over the old Mini slot on Row1.
     public static KeySpec FadeKey => Fade(1);
     public static KeySpec MiniKey => Toggle("Mini", 1);
     public static KeySpec MenuKey => Menu(1);
