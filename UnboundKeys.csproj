@@ -11,6 +11,9 @@
     <UseWPF>true</UseWPF>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationIcon>Assets\skull.ico</ApplicationIcon>
+    <!-- Asks Windows for administrator rights at launch — see the manifest
+         for why remapping into a game needs it. -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
     <StartupObject>UnboundKeys.Program</StartupObject>
     <Company>Built by Fizzil^.^</Company>
     <Version>3.0.0</Version>
