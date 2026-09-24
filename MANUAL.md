@@ -2,53 +2,109 @@
 
 How UnboundKeys behaves. See [README.md](README.md) for what it's for and how to install it.
 
-## Voice Keys commands
+Everything here works with the left mouse button alone: no right-clicks, no scroll wheel, no typing. That's deliberate — a remapped right button or wheel is swallowed by UnboundKeys itself, so the app never depends on them.
 
-Say "press" `one` through `ten`, or `stop`. Nothing else is recognized; speech recognition runs fully offline and its vocabulary is limited to just these words, so ordinary conversation won't trigger anything.
+## The dashboard
 
-By default `one`–`nine` map to the number keys, and `ten` maps to `0`. Every word's key, and how it behaves, is remappable from the dashboard's **Voice Keys** button (left-click the skull icon).
+The dashboard is a fixed-size window with four pages down its left side — **Mouse**, **Voice**, **Keyboard** and **Settings** — and, in the bottom-left corner, the current **profile**, a **Listening** switch and a **Fade** switch.
 
-## Mouse Keys commands
+- Drag it by its top strip (the app's name, or the page title). It remembers where you leave it.
+- The **—** and **✕** at the top right minimize and close it. Closing only hides it: UnboundKeys keeps running in the system tray (the skull icon by the clock). Click that icon, or say **"press menu"**, to bring it back. If Windows has tucked the icon behind the little **^** arrow, drag it out onto the taskbar once.
+- It never takes keyboard focus, so a game underneath keeps receiving input while you click around in it.
+- **Quit** is at the bottom of Settings — two clicks, to avoid accidents.
 
-Right Click, Middle Click, Mouse 4, Mouse 5, Wheel Up, and Wheel Down can each be remapped to a keyboard key too, from the dashboard's **Mouse Keys** button. Left Click is never remappable — it's the one gesture that always opens the dashboard, so there's never a mapping that can lock you out of reaching it. Mouse buttons are always independently active alongside Voice Keys.
+## Voice commands
 
-A button starts unmapped (a normal click) until you assign it a key; once mapped, pressing it sends the key instead of the usual click.
+Say **"press"** and a number, `one` through `ten`. Speech recognition runs fully offline with a vocabulary limited to just these words, so ordinary conversation won't trigger anything.
 
-## How a key can behave
+By default `one`–`nine` send the number keys and `ten` sends `0`. What each word sends, and how, is changed on the **Voice** page: click a word's tile.
 
-Each word or button can be set to:
+Three commands always work, whatever's mapped:
 
-- **Tap** — a single key press (the default).
-- **Repeat** — taps the key repeatedly for a set duration.
-- **Hold** — holds the key down for a set duration.
-- **Infinite** — instead of a fixed duration, saying the word (or pressing the button) starts the hold/repeat, and saying/pressing it again stops it.
+| Say | Effect |
+|---|---|
+| **"press stop"** | releases every key currently held or repeating |
+| **"press menu"** | brings the dashboard back |
+| **"press fade"** | turns Fade on or off |
 
-Saying the word (or pressing the button) again while a Repeat or Hold is still running — Infinite or not — stops it early instead of waiting out its full duration. That makes a long fixed duration a usable stand-in for Infinite whenever you'd rather have a backstop maximum length than a truly indefinite hold.
+## Mouse keys
 
-## Multiple keys per word or button
+Right Click, Middle Click, Mouse 4, Mouse 5, Wheel Up and Wheel Down can each send a key too. On the **Mouse** page, click a button on the drawn mouse — or its row — to change it. A button starts unmapped (a normal click) until you assign it a key; once mapped, pressing it sends the key instead of the usual click.
 
-"Add Key," under a word's or button's Key row, adds up to two more keys to it — enough for a three-key combo like Ctrl+Alt+Delete, or a short sequence of abilities.
+Left Click is never remappable: it's the one button that always works as a click, so no mapping can ever lock you out of the app.
 
-- **Tap** and **Hold** press every key together, all at once.
-- **Repeat** instead cycles through them one at a time — Key 1, then Key 2, then Key 3, then back to Key 1 — using the normal fixed gap between each, unless "Repeat Interval" is turned on to set a custom gap for one or more of them.
+## Editing a mapping
+
+Clicking a mouse button, a spoken word or a keyboard key opens its editor page (**‹ Back** returns to the list).
+
+- **Keys** — Key 1 is what it sends. **+ Add key** adds more, up to six in all; the **✕** beside an extra key removes it (click it once to arm it, then again). Clicking a key's value opens a picker: hover a category on the left, then click a key on the right — hover near the top or bottom edge of a long list to scroll it.
+- **Mode** — **Tap** presses the keys once (the default). **Repeat** taps them again and again. **Hold** keeps them pressed.
+- **Duration** — for Repeat and Hold: how long, in steps of +0.1 s and +1 s, or **Reset** to 0. **Infinite** instead runs until you say the word (or press the button) again; turning Infinite on clears the duration, and changing the duration turns Infinite off.
+- **Custom gaps between keys** — for Repeat with two or more keys: how long to wait after each key before the next one, one row per key. A gap left at *default* is the usual 0.1 s.
+- **Reset this mapping** puts it back to its default. Tapping Reset three times quickly also reveals **Reset every mapping**, the same as Settings → Reset All.
+
+Saying a word (or pressing a button) again while its Repeat or Hold is still running — Infinite or not — stops it early. That makes a long fixed duration a usable stand-in for Infinite whenever you'd rather have a backstop maximum length.
+
+With several keys: **Tap** and **Hold** press them all together, as a combo like Ctrl+C. **Repeat** cycles through them one at a time — Key 1, then Key 2, and so on, then back to Key 1 — with the default gap between each unless you've set custom gaps.
+
+## The on-screen keyboard
+
+The **Keyboard** page shows a map of the keyboard: the lit keys — the digits and letters — are the ones you can remap; click one to edit it. A key that's been changed shows what it now sends, and the same key on a real keyboard is caught too. Everything else on the keyboard (Tab, Enter, Shift, the arrows…) is a plain key.
+
+**Show on-screen keyboard** opens the keyboard itself — a floating window that stays on top and never takes focus, so it types into whatever is behind it.
+
+- Click a key to press it; hold it to repeat. Its letter and number keys send whatever they've been remapped to.
+- **Shift, Ctrl, Alt, Win** are sticky: click one (it lights up), then click the key it should combine with — everything lets go together. Click a lit modifier again to cancel it.
+- **Caps** stays lit while Caps Lock is on, and the letters show as capitals. Two quick clicks of Caps is the panic button: it releases everything and lifts Fade.
+- **Word suggestions** appear above the keys as you type; click one to type the rest of the word plus a space. Words you type are remembered and float to the top over time. Like Windows' own on-screen keyboard, it loses track of the word if you click somewhere else or use the arrow keys, and picks up again at your next word.
+- **Mini** collapses it to a single strip of the essential keys; **Maxi** brings it back. **Fade** dims it along with the dashboard. Those keys and the drag grip on the right edge sit in the same corner in both layouts, so nothing moves out from under your mouse.
+- Drag it by the grip on its right edge. It remembers its position and its Mini state.
+- **Keyboard size** (on the Keyboard page) is Small, Medium or Large; Small is about the size of Windows' own on-screen keyboard.
+
+## Fade
+
+Fade dims the dashboard and the on-screen keyboard to 20% so you can see the game through them; they stay clickable. Turn it on or off from the dashboard's Fade switch, the keyboard's Fade key, or by saying "press fade". The panic taps (two quick clicks of the keyboard's Caps, or a double-tap of a real Caps Lock) lift it too.
+
+## Listening
+
+The **Listening** switch pauses everything UnboundKeys catches in the background — voice commands, mouse remaps and remapped keys on a real keyboard — and releases anything held. The tray icon dims while paused; switch it back on to resume. The on-screen keyboard keeps working either way, since its keys are clicked on purpose.
 
 ## Safety nets
 
-Because Infinite holds/repeats can run indefinitely, UnboundKeys is built so a stuck key is never the only way out:
+Because Infinite holds and repeats can run indefinitely, UnboundKeys is built so a stuck key is never the only way out:
 
-- Voice Keys, Mouse Keys, and the virtual keyboard each get their own independent set of slots: only one *word*, one *mouse button*, and one *virtual key* can each be doing an infinite hold at a time — starting a new one only bumps whichever one of the same kind had that slot before, never the other kinds. The same split applies to infinite repeat, so all three can be infinite-holding (or infinite-repeating) at once without interfering with each other.
-- Running an infinite-repeat on more than one of them at once doesn't queue or block any of them — they're independent loops, each tapping its own key on its own timer.
-- Saying **"press stop"**, or double-tapping the physical **Caps Lock** key (within about a second), releases everything currently held or repeating — Voice Keys, Mouse Keys, and the virtual keyboard (including any sticky Shift/Ctrl/Alt/Win) all at once. Works no matter what, even if nothing at all is mapped, and is never suppressed, so it never interferes with what's in focus. Two taps rather than three or one is deliberate: two real toggles put Caps Lock's own on/off state right back where it started, with no lingering side effect to notice or undo.
-- Pausing listening, closing UnboundKeys, or switching away from the game window (alt-tab, or switching browser tabs) all release everything automatically too.
+- Voice keys, mouse keys and the on-screen keyboard each get their own slots: only one *word*, one *mouse button* and one *keyboard key* can be doing an infinite hold at a time (and likewise an infinite repeat) — starting a new one only bumps whichever of the same kind had that slot, never the other kinds. Infinite repeats of different kinds run side by side, each on its own timer, without queueing or blocking one another.
+- **"Press stop"**, two quick clicks of the on-screen keyboard's **Caps**, or a double-tap of a real **Caps Lock** key releases everything currently held or repeating, all at once, no matter what's mapped. Caps Lock's own on/off state ends up right back where it started, since two real toggles cancel out.
+- Pausing Listening, quitting UnboundKeys, or switching away from the game window (alt-tab, or switching browser tabs) all release everything automatically too.
+- The on-screen keyboard's sticky modifiers are released whenever the keyboard closes, so a Shift or Ctrl can't be left held down.
 
 ## Profiles
 
-Each profile has its own full set of key mappings — the ten words, the six mouse buttons, and the virtual keyboard's remappable keys — useful for different games, or different setups. Switching profiles swaps everything over at once. Up to 10 profiles total.
+Each profile is a complete set of mappings — the ten words, the six mouse buttons, the keyboard's remappable keys — plus its color theme. Switching profiles swaps everything over at once. Up to ten profiles.
+
+- Switch from the **profile chip** in the dashboard's bottom-left corner, or from Settings.
+- **Add Profile** (in Settings) creates a fresh one, named "Profile 1", "Profile 2"… — new profiles start with the words at their default keys and the mouse buttons unmapped.
+- **Rename** opens an on-screen letter grid: spell the name with the mouse, then **Done**. Names are capitalized for you.
+- The **✕** deletes a profile — click it once to arm, then again. Deleting the active profile switches you to Default.
+- **Default** always exists and can't be renamed or deleted.
+
+## Settings
+
+- **Theme** — Red, Green or Blue; the choice is saved with the current profile.
+- **Profiles** — as above.
+- **Reset All** — every mapping in the current profile back to its default (two clicks).
+- **Quit** — stops UnboundKeys completely (two clicks), releasing anything held.
 
 ## Saved data
 
-Everything is saved to `%AppData%\UnboundKeys\settings.json` and reloaded automatically next launch.
+Everything is saved to `%AppData%\UnboundKeys\settings.json` — profiles and mappings, the active profile and theme, the dashboard's and keyboard's positions and the keyboard's size — and reloaded next launch. The keyboard's learned words are in `%AppData%\UnboundKeys\learned-words.txt`.
 
 ## Troubleshooting
 
-**A mapped mouse button (or virtual keyboard key) does nothing in a specific game — the game still reacts to the real click/key instead of the mapped one, even though Voice Keys works fine in the same game.** Try running UnboundKeys as Administrator (right-click its shortcut → **Run as administrator**). Some games require elevated privileges to run, and Windows can prevent a non-elevated app's input remapping from affecting an elevated one — UnboundKeys needs to be running at least as high a privilege level as the game. If running as Administrator doesn't fix it, the game's anti-cheat (EasyAntiCheat, BattlEye, Vanguard, etc.) may be specifically blocking the kind of low-level input hook UnboundKeys uses, since it's the same technique some cheat tools use — that's not something UnboundKeys can work around.
+**Windows asks for permission every time UnboundKeys starts.** That's expected: it runs as administrator so its key presses reach games that run elevated, and so it can see their input at all. Click **Yes**.
+
+**A mapped mouse button or keyboard key does nothing in a specific game — it still reacts to the real click or key instead of the mapped one — even though voice keys work there.** The game's anti-cheat (EasyAntiCheat, BattlEye, Vanguard…) may be blocking the kind of low-level input hook UnboundKeys uses, since it's the same technique some cheat tools use. That isn't something UnboundKeys can work around.
+
+**UnboundKeys says it couldn't start speech recognition.** Make sure a microphone is connected and chosen as the default input under Windows Settings → System → Sound, then start it again.
+
+**The tray icon isn't visible.** Windows hides new tray icons behind the **^** arrow by the clock; click it and drag the skull out onto the taskbar once. Saying "press menu" brings the dashboard back regardless.

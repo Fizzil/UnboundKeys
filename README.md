@@ -1,45 +1,38 @@
 # UnboundKeys
 
-Remap mouse buttons and voice commands to keyboard keys, with full control over how each one gets pressed — a small Windows overlay built for playing **The Isle: Evrima**.
-
-## Screenshots
-
-<p float="left">
-  <img src="Assets/screenshots/UBK-Voice-Keys.png" width="30%" alt="The Voice Keys tab open, showing word 1's remap card with a Ctrl+X combo, Repeat, and the K1/K2 timing row" />
-  <img src="Assets/screenshots/UBK-Mouse-Keys.png" width="30%" alt="The Mouse Keys tab open, showing the six remappable mouse buttons" />
-  <img src="Assets/screenshots/UBK-Profile.png" width="30%" alt="The Profile tab, showing Default and a custom 'the isle' profile" />
-</p>
-
-<img src="Assets/screenshots/UBK-Keyboard.png" width="100%" alt="The full-size on-screen keyboard, Keyboard/Mouse Keys/Voice Keys/Profile/Fade row above it" />
-<img src="Assets/screenshots/UBK-Keyboard-Mini.png" width="100%" alt="The keyboard collapsed down to its minimized quick-access strip" />
-<img src="Assets/screenshots/UBK-RGB-Color-Themes.png" width="100%" alt="The Red/Green/Blue color theme picker" />
+Remap mouse buttons, spoken words and an on-screen keyboard to keyboard keys, with full control over how each one gets pressed — a small Windows app built so one person could play PC games with nothing but a mouse and a microphone.
 
 ## What it does
 
-- Say "press one" through "press ten" to send the matching key, or click a key on the built-in on-screen keyboard — a full mouse-clickable keyboard for typing and remapping without any physical keyboard at all.
-- Remap Right Click, Middle Click, Mouse 4/5, and Wheel Up/Down to send a key too — Left Click is left alone on purpose, so you can never lose the ability to click.
-- Remap which key each word or button sends — each one taps its key by default, or can be set to hold or repeat instead — and manage multiple named profiles, left-click the skull icon for a small dashboard.
-- Add up to two more keys to a word or button for a combo, like Ctrl+C — tap and hold press them all together, and repeat cycles through them in sequence, with the timing between each adjustable.
-- Say "press stop," or double-tap the physical Caps Lock key, to release anything currently held down or repeating — a safety net for whenever a command can't be repeated in time. Never interferes with Caps Lock's normal function (its on/off state ends up right back where it started, since two real toggles cancel out).
-- Say the word (or press the button) again while it's mid-hold or mid-repeat to stop it early, instead of waiting out its full duration — handy for setting a long duration as a stand-in for indefinite.
-- Right-click the skull icon to pause listening, or drag it to move it around the screen.
-- Runs fully offline — speech recognition ([Vosk](https://alphacephei.com/vosk/)) happens entirely on your machine. Nothing is sent anywhere.
+- **Voice keys** — say "press one" through "press ten" to send a key. Each word can send any key, or a combo of up to six, tapped once, held down, or repeated — for a set time, or until you say it again.
+- **Mouse keys** — remap Right Click, Middle Click, Mouse 4/5 and Wheel Up/Down the same way. Left Click is never remapped, so you can always click.
+- **On-screen keyboard** — a full keyboard you type on with the mouse: sticky Shift/Ctrl/Alt/Win for combos, hold a key to repeat it, a strip of word suggestions above the keys that learns the words you use, a collapsible Mini strip, and a Fade key. Its letter and number keys can be remapped too, and remapping one also catches that key on a real keyboard.
+- **Profiles** — up to ten complete sets of mappings, each with its own color theme, switched from the dashboard. New ones are named with the mouse; no typing needed anywhere in the app.
+- **Built for a mouse** — everything works with left-click alone (no right-click, no scroll wheel, no keyboard), so it keeps working even when those are remapped, and the dashboard never takes focus away from your game.
+- **Safety nets** — say "press stop", or click the on-screen keyboard's Caps twice quickly, to release anything held or repeating. "Press menu" brings the dashboard back and "press fade" lifts Fade, both hands-free.
+- **Runs fully offline** — speech recognition ([Vosk](https://alphacephei.com/vosk/)) and word suggestions happen entirely on your machine. Nothing is sent anywhere.
 
-See [MANUAL.md](MANUAL.md) for the full details — exact voice commands, safety nets, profile behavior, and everything the dashboard does.
+See [MANUAL.md](MANUAL.md) for the full details — every command, how each setting behaves, and what the dashboard does.
 
 ## Why this exists
 
-UnboundKeys was built as an accessibility tool, for Fizzil — who is disabled — to be able to play *The Isle: Evrima*, using a normal mouse or a specialized **quad mouse** (a mouse with extra physical buttons). It is **not** intended as a way to play the game hands-free with voice alone.
+UnboundKeys was built as an accessibility tool, for Fizzil — who is disabled — to be able to play PC games such as *The Isle: Evrima* and *Space Marine 2*, using a normal mouse or a specialized **quad mouse** (a mouse with extra physical buttons) plus a microphone. It is **not** intended as a way to play hands-free with voice alone.
 
-It's a mouse-button and voice remapper in one: six of a mouse's buttons (Right Click, Middle Click, Mouse 4/5, Wheel Up/Down — Left Click is deliberately left alone, so you always keep the ability to click) run independently alongside up to ten spoken words, each sending a keyboard key with full control over *how* — a single tap, held down, or repeated, for a fixed duration or until you say/press it again.
+It's a mouse-button, voice and on-screen-keyboard remapper in one: six of a mouse's buttons, ten spoken words and the keyboard's letters and digits each send a keyboard key, with full control over *how* — a single tap, held down, or repeated, for a fixed duration or until you say/press it again.
 
 ## Installing
 
 Grab the latest release from the [Releases page](https://github.com/Fizzil/UnboundKeys/releases), unzip it, and run the `.exe`. It's self-contained — no separate .NET install needed.
 
-Windows SmartScreen will likely warn that it's from an unrecognized publisher (it's unsigned) — click **More info → Run anyway**.
+- Windows SmartScreen will likely warn that it's from an unrecognized publisher (it's unsigned) — click **More info → Run anyway**.
+- Windows will ask for administrator permission every time it starts. UnboundKeys needs it so its key presses reach games that run elevated; click **Yes**.
+- The dashboard opens at launch. Closing it just hides it — UnboundKeys keeps running in the system tray (the skull icon by the clock). Click that icon, or say "press menu", to bring the dashboard back; quit from its Settings page.
 
 Requires Windows 10/11 (64-bit) and a microphone.
+
+## Credits
+
+Speech recognition by [Vosk](https://alphacephei.com/vosk/), microphone capture by [NAudio](https://github.com/naudio/NAudio). The on-screen keyboard's word suggestions use the English list from [FrequencyWords](https://github.com/hermitdave/FrequencyWords) by Hermit Dave (CC BY-SA 4.0), derived from OpenSubtitles.
 
 ## A small personal project
 

@@ -19,7 +19,7 @@
     <ApplicationHighDpiMode>SystemAware</ApplicationHighDpiMode>
     <StartupObject>UnboundKeys.Program</StartupObject>
     <Company>Built by Fizzil^.^</Company>
-    <Version>3.0.0</Version>
+    <Version>4.0.0</Version>
     <!-- The exe's own filename carries the version (UnboundKeys-v1.0.0.exe),
          staying in sync automatically on every future bump. RootNamespace
          is pinned separately so embedded resource lookups (Assets\skull.*)
@@ -39,15 +39,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- skull.ico is the taskbar/window icon (ApplicationIcon above uses
-         the same file) — untouched by the color-theme feature below.
-         skull-red/green/blue.png are the overlay's own listening/paused
-         icon, one per ThemeMode color (see OverlayForm.RebuildIconImages);
-         the original skull.png this replaced is no longer referenced. -->
+    <!-- skull.ico is the window/taskbar icon (ApplicationIcon above) and
+         the tray icon, which TrayIcon.cs loads from this resource. -->
     <EmbeddedResource Include="Assets\skull.ico" />
-    <EmbeddedResource Include="Assets\skull-red.png" />
-    <EmbeddedResource Include="Assets\skull-green.png" />
-    <EmbeddedResource Include="Assets\skull-blue.png" />
     <!-- The on-screen keyboard's word-suggestion list (see WordPredictor). -->
     <EmbeddedResource Include="Assets\words-en.txt" />
     <!-- The Voice page's illustration (see Wpf/VoiceDiagram) — black line
