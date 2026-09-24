@@ -27,6 +27,10 @@ public sealed class VoiceEngine : IDisposable
     // is running, now that there's no overlay icon on screen.
     public const string StopWord = "stop";
     public const string MenuWord = "menu";
+    // "press fade" toggles Fade — the spoken way out of a dimmed screen,
+    // where the Fade switch itself is the hardest thing to find (Fizzil
+    // has no physical Caps Lock to double-tap).
+    public const string FadeWord = "fade";
 
     // Fired with the recognized key word (e.g. "one", "escape") whenever a
     // "press <word>" command is heard.
@@ -64,6 +68,7 @@ public sealed class VoiceEngine : IDisposable
         words.AddRange(KeyMap.Words.Keys);
         words.Add(StopWord);
         words.Add(MenuWord);
+        words.Add(FadeWord);
         string grammar = JsonSerializer.Serialize(words);
         _recognizer = new VoskRecognizer(_model, SampleRate, grammar);
 
@@ -100,7 +105,8 @@ public sealed class VoiceEngine : IDisposable
         var spoken = parts[1].Trim();
         if (KeyMap.Words.ContainsKey(spoken)
             || string.Equals(spoken, StopWord, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(spoken, MenuWord, StringComparison.OrdinalIgnoreCase))
+            || string.Equals(spoken, MenuWord, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(spoken, FadeWord, StringComparison.OrdinalIgnoreCase))
             CommandRecognized?.Invoke(spoken);
     }
 

@@ -51,11 +51,16 @@ static class Program
                 Task.Run(KeyExecutor.ReleaseAll);
                 return;
             }
+            // Recognized on the microphone's thread; the windows (and the
+            // switches that mirror Fade) live on the dispatcher's.
             if (word == VoiceEngine.MenuWord)
             {
-                // Recognized on the microphone's thread; the window is the
-                // dispatcher's.
                 app.Dispatcher.InvokeAsync(dashboard.ShowDashboard);
+                return;
+            }
+            if (word == VoiceEngine.FadeWord)
+            {
+                app.Dispatcher.InvokeAsync(FadeMode.Toggle);
                 return;
             }
 
