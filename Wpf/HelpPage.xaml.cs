@@ -27,7 +27,7 @@ public partial class HelpPage : IDashboardPage
         AddHeader("MODES", topMargin: 16);
         AddLine("Tap", "presses the keys once.");
         AddLine("Repeat", "taps them again and again for the duration. With several keys it cycles through them one at a time.");
-        AddLine("Hold", "keeps them pressed for the duration. With several keys it holds them together, like Ctrl+C.");
+        AddLine("Hold", "keeps them pressed for the duration. With several keys it holds them all together, as a combo.");
         AddLine("Infinite", "runs until you say the word or press the button again.");
         AddLine("Say or press it again", "to stop a Repeat or Hold early, Infinite or not.");
 
