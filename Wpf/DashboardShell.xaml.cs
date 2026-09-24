@@ -32,6 +32,8 @@ public partial class DashboardShell
     public event Action? MinimizeRequested;
     public event Action? CloseRequested;
     public event Action? QuitRequested;
+    // The keyboard Menu key: the window shows itself.
+    public event Action? ShowRequested;
 
     internal DashboardShell()
     {
@@ -121,6 +123,7 @@ public partial class DashboardShell
         };
         keyboard.PlaceNear(Window.GetWindow(this));
         _keyboard = keyboard;
+        keyboard.MenuRequested += () => ShowRequested?.Invoke();
         _keyboardPage.SetKeyboardShown(true);
         keyboard.Show();
     }

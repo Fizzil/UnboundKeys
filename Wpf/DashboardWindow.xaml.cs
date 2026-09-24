@@ -17,6 +17,7 @@ public partial class DashboardWindow
         shell.MinimizeRequested += () => WindowState = WindowState.Minimized;
         shell.CloseRequested += Hide;
         shell.QuitRequested += () => QuitRequested?.Invoke();
+        shell.ShowRequested += ShowDashboard;
         Root.Children.Add(shell);
 
         var (left, top) = Settings.LoadDashboardPlacement();

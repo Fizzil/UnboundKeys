@@ -22,7 +22,7 @@ Remap mouse buttons, spoken words and an on-screen keyboard to keyboard keys, wi
 
 - **Voice keys** — say "press one" through "press ten" to send a key. Each word can send any key, or a combo of up to six, tapped once, held down, or repeated — for a set time, or until you say it again.
 - **Mouse keys** — remap Right Click, Middle Click, Mouse 4/5 and Wheel Up/Down the same way. Left Click is never remapped, so you can always click.
-- **On-screen keyboard** — a full keyboard you type on with the mouse: sticky Shift/Ctrl/Alt/Win for combos, hold a key to repeat it, a strip of word suggestions above the keys that learns the words you use, a collapsible Mini strip, and a Fade key. Its letter and number keys can be remapped too, and remapping one also catches that key on a real keyboard.
+- **On-screen keyboard** — a full keyboard you type on with the mouse: sticky Shift/Ctrl/Alt/Win for combos, hold a key to repeat it, a strip of word suggestions above the keys that learns the words you use, a collapsible Mini strip, and Fade and Menu keys. Its letter and number keys can be remapped too, and remapping one also catches that key on a real keyboard.
 - **Profiles** — up to ten complete sets of mappings, each with its own color theme, switched from the dashboard. New ones are named with the mouse; no typing needed anywhere in the app.
 - **Built for a mouse** — everything works with left-click alone (no right-click, no scroll wheel, no keyboard), so it keeps working even when those are remapped, and the dashboard never takes focus away from your game.
 - **Safety nets** — say "press stop", or click the on-screen keyboard's Caps twice quickly, to release anything held or repeating. "Press menu" brings the dashboard back and "press fade" lifts Fade, both hands-free.
@@ -42,7 +42,7 @@ Grab the latest release from the [Releases page](https://github.com/Fizzil/Unbou
 
 - Windows SmartScreen will likely warn that it's from an unrecognized publisher (it's unsigned) — click **More info → Run anyway**.
 - Windows will ask for administrator permission every time it starts. UnboundKeys needs it so its key presses reach games that run elevated; click **Yes**.
-- The dashboard opens at launch. Closing it just hides it — UnboundKeys keeps running in the system tray (the skull icon by the clock). Click that icon, or say "press menu", to bring the dashboard back; quit from its Settings page.
+- The dashboard opens at launch. Closing it just hides it — UnboundKeys keeps running in the system tray (the skull icon by the clock). Click that icon, press Menu on the on-screen keyboard, or say "press menu", to bring the dashboard back; quit from its Settings page.
 
 Requires Windows 10/11 (64-bit) and a microphone.
 

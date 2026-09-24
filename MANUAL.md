@@ -9,7 +9,7 @@ Everything here works with the left mouse button alone: no right-clicks, no scro
 The dashboard is a fixed-size window with five pages down its left side — **Mouse**, **Keyboard**, **Voice**, **Settings** and **Help** — and, in the bottom-left corner, the current **profile**, a **Listening** switch and a **Fade** switch.
 
 - Drag it by its top strip (the app's name, or the page title). It remembers where you leave it.
-- The **—** and **✕** at the top right minimize and close it. Closing only hides it: UnboundKeys keeps running in the system tray (the skull icon by the clock). Click that icon, or say **"press menu"**, to bring it back. If Windows has tucked the icon behind the little **^** arrow, drag it out onto the taskbar once.
+- The **—** and **✕** at the top right minimize and close it. Closing only hides it: UnboundKeys keeps running in the system tray (the skull icon by the clock). Click that icon, press **Menu** on the on-screen keyboard, or say **"press menu"**, to bring it back. If Windows has tucked the icon behind the little **^** arrow, drag it out onto the taskbar once.
 - It never takes keyboard focus, so a game underneath keeps receiving input while you click around in it.
 - **Quit** is at the bottom of Settings — two clicks, to avoid accidents.
 - **Help** is this manual in one page: the voice commands, the modes, the safety nets and the on-screen keyboard tricks.
@@ -58,7 +58,7 @@ The **Keyboard** page shows a map of the keyboard: the lit keys — the digits a
 - **Shift, Ctrl, Alt, Win** are sticky: click one (it lights up), then click the key it should combine with — everything lets go together. Click a lit modifier again to cancel it.
 - **Caps** stays lit while Caps Lock is on, and the letters show as capitals. Two quick clicks of Caps is the panic button: it releases everything and lifts Fade.
 - **Word suggestions** appear above the keys as you type; click one to type the rest of the word plus a space. Words you type are remembered and float to the top over time. Like Windows' own on-screen keyboard, it loses track of the word if you click somewhere else or use the arrow keys, and picks up again at your next word.
-- **Mini** collapses it to a single strip of the essential keys; **Maxi** brings it back. **Fade** dims it along with the dashboard. Those keys and the drag grip on the right edge sit in the same corner in both layouts, so nothing moves out from under your mouse.
+- **Mini** collapses it to a single strip of the essential keys; **Maxi** brings it back. **Fade** dims it along with the dashboard. **Menu** brings the dashboard back, no microphone or taskbar needed. Those keys and the drag grip on the right edge sit in the same corner in both layouts, so nothing moves out from under your mouse.
 - Drag it by the grip on its right edge. It remembers its position and its Mini state.
 - **Keyboard size** (on the Keyboard page) is Small, Medium or Large; Small is about the size of Windows' own on-screen keyboard.
 
@@ -108,4 +108,4 @@ Everything is saved to `%AppData%\UnboundKeys\settings.json` — profiles and ma
 
 **UnboundKeys says it couldn't start speech recognition.** Make sure a microphone is connected and chosen as the default input under Windows Settings → System → Sound, then start it again.
 
-**The tray icon isn't visible.** Windows hides new tray icons behind the **^** arrow by the clock; click it and drag the skull out onto the taskbar once. Saying "press menu" brings the dashboard back regardless.
+**The tray icon isn't visible.** Windows hides new tray icons behind the **^** arrow by the clock; click it and drag the skull out onto the taskbar once. The keyboard's Menu key, or saying "press menu", brings the dashboard back regardless.

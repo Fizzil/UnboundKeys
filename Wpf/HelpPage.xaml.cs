@@ -41,11 +41,11 @@ public partial class HelpPage : IDashboardPage
         AddLine("Shift, Ctrl, Alt, Win", "stick: click one, then the key to combine it with.");
         AddLine("Hold a key", "to repeat it.");
         AddLine("Word suggestions", "finish the word when clicked, and learn the words you type.");
-        AddLine("Mini, Maxi, Fade", "collapse it to a strip, bring it back, dim it. Drag it by the grip on its right edge.");
+        AddLine("Menu, Fade, Mini, Maxi", "bring this dashboard back, dim it, collapse it to a strip, bring it back. Drag it by the grip on its right edge.");
         AddLine("Remapping a key", "happens on the Keyboard page. A remapped key is caught on a real keyboard too.");
 
         AddHeader("GOOD TO KNOW", topMargin: 16);
-        AddLine("Closing this window", "hides it. UnboundKeys keeps running in the tray by the clock; click the icon there or say \"press menu\". Quit is in Settings.");
+        AddLine("Closing this window", "hides it. UnboundKeys keeps running in the tray by the clock; click the icon there, press Menu on the on-screen keyboard, or say \"press menu\". Quit is in Settings.");
         AddLine("The permission prompt", "appears because UnboundKeys runs as administrator, so its key presses reach games that run elevated.");
         AddLine("Profiles", "are complete sets of mappings, each with its own theme. Switch from the chip at the bottom left.");
         AddLine("Everything is saved", @"in %AppData%\UnboundKeys. The full manual is in the GitHub repository.");

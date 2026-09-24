@@ -67,6 +67,9 @@ public partial class VirtualKeyboardWindow
 
     public bool IsMini => _isMini;
 
+    // The Menu key. The dashboard window owns what happens (it shows itself).
+    public event Action? MenuRequested;
+
     public VirtualKeyboardWindow(bool startMini)
     {
         InitializeComponent();
@@ -74,6 +77,7 @@ public partial class VirtualKeyboardWindow
 
         foreach (var row in FullRows())
             FullLayout.Children.Add(BuildRow(row));
+        MenuKeyHost.Content = BuildKey(MenuKey);
         FadeKeyHost.Content = BuildKey(FadeKey);
         MiniKeyHost.Content = BuildKey(MiniKey);
         MiniLayout.Children.Add(BuildRow(MiniRow()));
@@ -247,6 +251,10 @@ public partial class VirtualKeyboardWindow
                 case KeyKind.MiniToggle:
                     button.Tag = false;
                     ToggleMiniMode();
+                    break;
+                case KeyKind.Menu:
+                    button.Tag = false;
+                    MenuRequested?.Invoke();
                     break;
                 case KeyKind.FadeToggle:
                     // Its highlight follows Fade's real state via

@@ -32,10 +32,10 @@
                 <!-- Word suggestions for the word in progress (see
                      WordPredictor) — a key-height strip, kept even when
                      empty so the keys never jump, with its right corner
-                     given to the Fade and Mini keys: 1/16 of the width
-                     each, the same cells Fade and Maxi have in the
+                     given to the Menu, Fade and Mini keys: 1/17 of the width
+                     each, the same cells Menu, Fade and Maxi have in the
                      collapsed strip, so they sit in exactly the same spot
-                     in both layouts (see KeyboardLayout.FadeKey/MiniKey).
+                     in both layouts (see KeyboardLayout.MenuKey/FadeKey/MiniKey).
                      Only for the full layout: the Mini strip has no
                      letters to type with. -->
                 <Grid Height="44">
@@ -43,10 +43,12 @@
                         <ColumnDefinition Width="14*"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     <UniformGrid x:Name="SuggestionRow" Rows="1"/>
-                    <ContentControl x:Name="FadeKeyHost" Grid.Column="1"/>
-                    <ContentControl x:Name="MiniKeyHost" Grid.Column="2"/>
+                    <ContentControl x:Name="MenuKeyHost" Grid.Column="1"/>
+                    <ContentControl x:Name="FadeKeyHost" Grid.Column="2"/>
+                    <ContentControl x:Name="MiniKeyHost" Grid.Column="3"/>
                 </Grid>
             </StackPanel>
             <StackPanel x:Name="MiniLayout" Grid.Column="0" Margin="4" Visibility="Collapsed"/>

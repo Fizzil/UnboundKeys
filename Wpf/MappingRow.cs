@@ -73,7 +73,7 @@ internal sealed class MappingRow : Grid
         labelPanel.Children.Add(text);
         Children.Add(labelPanel);
 
-        _chip = new Button { Content = value, Width = 150, Margin = new Thickness(0, 0, 8, 0) };
+        _chip = new Button { Content = ChipText(value), Width = 150, Margin = new Thickness(0, 0, 8, 0) };
         _chip.SetResourceReference(StyleProperty, "OutlineButtonStyle");
         _chip.Click += (_, _) => Clicked?.Invoke();
         SetColumn(_chip, 1);
@@ -86,7 +86,11 @@ internal sealed class MappingRow : Grid
         MouseLeave += (_, _) => { _hovered = false; UpdateHighlight(); HoverChanged?.Invoke(false); };
     }
 
-    public void SetChipText(string value) => _chip.Content = value;
+    public void SetChipText(string value) => _chip.Content = ChipText(value);
+
+    // A TextBlock rather than a bare string so a long combo trims with an
+    // ellipsis instead of spilling out of the chip.
+    private static TextBlock ChipText(string value) => new() { Text = value, TextTrimming = TextTrimming.CharacterEllipsis };
 
     public void SetLinked(bool linked)
     {
@@ -97,8 +101,20 @@ internal sealed class MappingRow : Grid
     private void UpdateHighlight() =>
         _highlight.Visibility = _hovered || _linked ? Visibility.Visible : Visibility.Collapsed;
 
-    // Every IRemapSource label is "Key 1: X"; the row only shows X.
-    public static string ValueOf(IRemapSource source, string id)
+    // Every IRemapSource label is "Key 1: X". A chip shows X plus any
+    // extra keys, "Ctrl + C", so a combo reads as what it actually sends
+    // (Fizzil found "Ctrl" alone misleading). The separator is a parameter
+    // because the keyboard map only has room for "Ctrl+C".
+    public static string ValueOf(IRemapSource source, string id, string separator = " + ")
+    {
+        string primary = PrimaryOf(source, id);
+        if (!source.ExtraWords.TryGetValue(id, out var extras) || extras.Count == 0)
+            return primary;
+        return primary + separator + string.Join(separator, extras.Select(KeyCatalog.DisplayNameFor));
+    }
+
+    // The main key alone, for the drawn key cap on the Voice page.
+    public static string PrimaryOf(IRemapSource source, string id)
     {
         string full = source.KeyLabelFor(id);
         int i = full.IndexOf(": ", StringComparison.Ordinal);

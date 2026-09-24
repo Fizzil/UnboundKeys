@@ -67,7 +67,7 @@ public partial class KeyboardPage : IDashboardPage
         wash.SetResourceReference(Border.BackgroundProperty, "AccentBrush");
 
         var labelText = new TextBlock { Text = label, FontSize = 13, HorizontalAlignment = System.Windows.HorizontalAlignment.Center };
-        var mapping = new TextBlock { FontSize = 9, HorizontalAlignment = System.Windows.HorizontalAlignment.Center, Margin = new Thickness(0, -1, 0, 0) };
+        var mapping = new TextBlock { FontSize = 9, HorizontalAlignment = System.Windows.HorizontalAlignment.Center, Margin = new Thickness(0, -1, 0, 0), TextTrimming = TextTrimming.CharacterEllipsis };
         mapping.SetResourceReference(TextBlock.ForegroundProperty, "AccentBrush");
 
         var stack = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
@@ -145,7 +145,7 @@ public partial class KeyboardPage : IDashboardPage
             bool customized = VirtualKeyMap.IsCustomized(id);
             tile.Tag = customized;
             wash.Visibility = customized ? Visibility.Visible : Visibility.Collapsed;
-            mapping.Text = customized ? MappingRow.ValueOf(VirtualKeyMapSource.Instance, id) : "";
+            mapping.Text = customized ? MappingRow.ValueOf(VirtualKeyMapSource.Instance, id, "+") : "";
         }
     }
 }

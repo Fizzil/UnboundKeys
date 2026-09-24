@@ -70,7 +70,7 @@ public partial class VoicePage : IDashboardPage
         }
 
         Refresh();
-        Diagram.SetKey(MappingRow.ValueOf(KeyMapSource.Instance, KeyMap.RemappableWords[0]));
+        Diagram.SetKey(MappingRow.PrimaryOf(KeyMapSource.Instance, KeyMap.RemappableWords[0]));
     }
 
     private Button BuildTile(string word)
@@ -91,7 +91,7 @@ public partial class VoicePage : IDashboardPage
         phraseLine.Children.Add(icon);
         phraseLine.Children.Add(phrase);
 
-        var mapping = new TextBlock { FontSize = 12, HorizontalAlignment = System.Windows.HorizontalAlignment.Center, Margin = new Thickness(0, 3, 0, 0) };
+        var mapping = new TextBlock { FontSize = 12, HorizontalAlignment = System.Windows.HorizontalAlignment.Center, Margin = new Thickness(0, 3, 0, 0), TextTrimming = TextTrimming.CharacterEllipsis };
 
         var content = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
         content.Children.Add(phraseLine);
@@ -102,7 +102,7 @@ public partial class VoicePage : IDashboardPage
         tile.Click += (_, _) => EditRequested?.Invoke(KeyMapSource.Instance, word, spoken);
         tile.MouseEnter += (_, _) =>
         {
-            Diagram.SetKey(MappingRow.ValueOf(KeyMapSource.Instance, word));
+            Diagram.SetKey(MappingRow.PrimaryOf(KeyMapSource.Instance, word));
             Diagram.SetSpeaking(true);
         };
         tile.MouseLeave += (_, _) => Diagram.SetSpeaking(false);
@@ -128,7 +128,7 @@ public partial class VoicePage : IDashboardPage
             mapping.Text = MappingRow.ValueOf(KeyMapSource.Instance, word);
             mapping.SetResourceReference(TextBlock.ForegroundProperty, customized ? "AccentBrush" : "TextSecondaryBrush");
         }
-        Diagram.SetKey(MappingRow.ValueOf(KeyMapSource.Instance, KeyMap.RemappableWords[0]));
+        Diagram.SetKey(MappingRow.PrimaryOf(KeyMapSource.Instance, KeyMap.RemappableWords[0]));
     }
 
     private void AddHeader(string text, double topMargin)
