@@ -1,0 +1,71 @@
+<UserControl x:Class="UnboundKeys.Wpf.DashboardShell"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Width="390"
+             Background="{DynamicResource BackgroundBrush}">
+    <StackPanel>
+
+        <!-- Top-level tab strip: Keyboard / Mouse Keys / Voice Keys /
+             Profile / Fade — matches DashboardForm's own prime-tab row
+             (WinForms), minus the collapsing-drawer-anchored-to-the-icon
+             mechanics (that's OverlayForm's job, Phase 8 — this shell
+             just holds a fixed-size window's worth of content for now,
+             closer to a conventional tabbed window, which is also the
+             direction of the Windows folder-properties reference Fizzil
+             pointed at). -->
+        <Grid Height="40">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Button x:Name="KeyboardTabButton" Grid.Column="0" Content="Keyboard" Click="PrimeTab_Click" Style="{StaticResource ListButtonStyle}"/>
+            <Button x:Name="MouseTabButton" Grid.Column="1" Content="Mouse Keys" Click="PrimeTab_Click" Style="{StaticResource ListButtonStyle}"/>
+            <Button x:Name="VoiceTabButton" Grid.Column="2" Content="Voice Keys" Click="PrimeTab_Click" Style="{StaticResource ListButtonStyle}"/>
+            <Button x:Name="ProfileTabButton" Grid.Column="3" Content="Profile" Click="PrimeTab_Click" Style="{StaticResource ListButtonStyle}"/>
+            <Button x:Name="FadeTabButton" Grid.Column="4" Content="Fade" Click="PrimeTab_Click" Style="{StaticResource ListButtonStyle}"/>
+        </Grid>
+
+        <!-- Voice Keys: a sub-tab row (10..1, matching the order Fizzil's
+             already seen in the WinForms app) selecting which word's
+             RemapCard shows beneath it. All ten cards are built once up
+             front and just shown/hidden — same as DashboardForm's own
+             _cards dictionary (WinForms) — so each card's own state
+             (an expanded category list, say) survives switching away and
+             back. -->
+        <StackPanel x:Name="VoicePanel" Visibility="Collapsed">
+            <UniformGrid x:Name="VoiceSubTabRow" Rows="1" Height="40" Margin="0,1,0,0"/>
+            <!-- All ten cards live in this one Grid cell (a Grid with no
+                 row/column definitions overlaps its children rather than
+                 stacking them) — only the selected word's card is
+                 Visible at a time, matching DashboardForm's own
+                 show/hide-in-place approach (WinForms) so each card's own
+                 state survives switching away and back. -->
+            <Grid x:Name="VoiceCardHost" Margin="0,8,0,8" HorizontalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- Mouse Keys: same shape as Voice Keys, one sub-tab per
+             physical button. Not built yet — placeholder for now. -->
+        <StackPanel x:Name="MousePanel" Visibility="Collapsed">
+            <TextBlock Text="Mouse Keys — coming in a later pass." Foreground="{DynamicResource MutedBrush}"
+                       Margin="12,12,12,12" TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <!-- Profile: hosts the real ProfilesTab (Phase 6, already done). -->
+        <ContentControl x:Name="ProfilePanel" Visibility="Collapsed" Margin="0,8,0,0" HorizontalAlignment="Center"/>
+
+        <!-- Keyboard/Fade need VirtualKeyboardForm/FadeMode, later phases
+             — placeholders for now. -->
+        <StackPanel x:Name="KeyboardPanel" Visibility="Collapsed">
+            <TextBlock Text="Keyboard — comes with Phase 7 (the on-screen keyboard)." Foreground="{DynamicResource MutedBrush}"
+                       Margin="12,12,12,12" TextWrapping="Wrap"/>
+        </StackPanel>
+        <StackPanel x:Name="FadePanel" Visibility="Collapsed">
+            <TextBlock Text="Fade — comes with Phase 8 (the overlay icon)." Foreground="{DynamicResource MutedBrush}"
+                       Margin="12,12,12,12" TextWrapping="Wrap"/>
+        </StackPanel>
+
+    </StackPanel>
+</UserControl>
