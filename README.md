@@ -15,7 +15,7 @@ Remap mouse buttons, spoken words and an on-screen keyboard to keyboard keys, wi
   <img src="Assets/screenshots/UBK-Help.png" width="32%" alt="The Help page: the manual in one page" />
 </p>
 
-<img src="Assets/screenshots/UBK-Keyboard.png" width="100%" alt="The on-screen keyboard, with word suggestions above the keys and Fade, Mini and the drag grip in its top-right corner" />
+<img src="Assets/screenshots/UBK-Keyboard.png" width="100%" alt="The on-screen keyboard, with word suggestions above the keys and Menu, Fade, Mini and the drag grip in its top-right corner" />
 <img src="Assets/screenshots/UBK-Keyboard-Mini.png" width="100%" alt="The keyboard collapsed to its Mini strip" />
 
 ## What it does
