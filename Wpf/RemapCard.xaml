@@ -2,92 +2,94 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              MinWidth="440">
-    <!-- CardBorderBrush (a near-white tone with just a hint of the accent
-         color), not MutedBrush — Fizzil's own request: a plain color
-         change on the outline itself, not another glow. No Effect here
-         either anymore — CardShadow's blur was rendering the whole card
-         (SecondaryButtonStyle's now-transparent Repeat/Hold/Reset
-         included) with a soft "fuzzy" look Fizzil flagged, not a clean
-         edge glow the way it read on an opaque card. -->
+    <!-- The editor for one mapping, laid out as rows of "label on the
+         left, control on the right" — Discord's settings-page shape —
+         instead of the WinForms card's rows of small buttons. Keys first
+         (built in code: Key 1, up to two extras with a two-click Remove,
+         then "+ Add key"), then how the keys are sent: a Mode switch
+         (Tap / Repeat / Hold), the Duration with +0.1 s / +1 s / Reset
+         and an Infinite switch while Repeat or Hold is on, custom per-key
+         gaps while Repeat has 2+ keys, and Reset at the bottom. Sections
+         that don't apply are collapsed and animate open when they do. -->
     <Border BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1" CornerRadius="8">
-        <StackPanel Margin="1">
+        <StackPanel Margin="1,1,1,8">
 
-            <!-- Key 1, plus "Add Key" and up to two extra keys — all built
-                 dynamically in code (see RebuildKeyGroup) since the count
-                 varies. Each key gets its own label/value row (only the
-                 value side clickable, matching RemapCardTab's own
-                 BuildKeyLabelRow) and its own animated category list
-                 directly beneath it. -->
             <StackPanel x:Name="KeyGroup"/>
 
-            <!-- Blank gap between the Key group and the action row —
-                 same idea as RemapCardTab's own keyRepeatGap (WinForms):
-                 a plain spacer, not another row, so the card reads as
-                 two distinct sections instead of one continuous grid. -->
-            <Border Height="8" Background="Transparent"/>
+            <Border Height="10" Background="Transparent"/>
 
-            <!-- Repeat / Hold / Reset share one row — see RemapCardTab's
-                 own comment on why (matches the reference layout Fizzil
-                 pointed at: short actions grouped, not stacked as three
-                 full-width bars). SecondaryButtonStyle — Discord/VS
-                 Code's own "ghost button" pattern (Fizzil's new standing
-                 rule): quiet at rest, an Elevated-shade fill on hover,
-                 no border. Not PrimaryButtonStyle — none of these three
-                 is the one bold action in this card. -->
-            <Grid Height="40">
+            <!-- Exactly one of Tap / Repeat / Hold — one segmented control
+                 rather than two independent toggles that happened to
+                 cancel each other. Tap is "neither Repeat nor Hold" in
+                 KeyBehavior terms. -->
+            <Grid Height="48">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <Button x:Name="RepeatButton" Grid.Column="0" Content="Repeat" Click="RepeatButton_Click" Style="{StaticResource SecondaryButtonStyle}"/>
-                <Button x:Name="HoldButton" Grid.Column="1" Content="Hold" Click="HoldButton_Click" Style="{StaticResource SecondaryButtonStyle}"/>
-                <Button x:Name="ResetButton" Grid.Column="2" Content="Reset" Click="ResetButton_Click" Style="{StaticResource SecondaryButtonStyle}"/>
+                <TextBlock Text="Mode" Style="{StaticResource RowLabelStyle}"/>
+                <Border Grid.Column="1" Style="{StaticResource SegmentGroupStyle}" Margin="0,0,8,0">
+                    <UniformGrid Rows="1" Width="288">
+                        <Button x:Name="TapButton" Content="Tap" Click="TapButton_Click" Style="{StaticResource SegmentButtonStyle}"/>
+                        <Button x:Name="RepeatButton" Content="Repeat" Click="RepeatButton_Click" Style="{StaticResource SegmentButtonStyle}"/>
+                        <Button x:Name="HoldButton" Content="Hold" Click="HoldButton_Click" Style="{StaticResource SegmentButtonStyle}"/>
+                    </UniformGrid>
+                </Border>
             </Grid>
+            <TextBlock x:Name="ModeHint" Style="{StaticResource RowHintStyle}"/>
 
-            <!-- The timing row: duration first and biggest (it's the one
-                 piece of information here), then the +1/+0.1/reset
-                 cluster that adjusts it, then a plain spacer, then
-                 Infinite set apart on its own since it replaces the whole
-                 idea of a duration rather than adjusting it — same layout
-                 as RemapCardTab's own timingPanel (WinForms), shown only
-                 while Repeat or Hold is on, animated open/closed the same
-                 way the category lists are. -->
-            <Grid x:Name="TimingPanel" Height="0" Visibility="Collapsed" ClipToBounds="True">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="36*"/>
-                    <ColumnDefinition Width="14*"/>
-                    <ColumnDefinition Width="14*"/>
-                    <ColumnDefinition Width="14*"/>
-                    <ColumnDefinition Width="4*"/>
-                    <ColumnDefinition Width="18*"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock x:Name="DurationText" Grid.Column="0" Foreground="{DynamicResource TextSecondaryBrush}"
-                           FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                <Button x:Name="PlusOneButton" Grid.Column="1" Content="1" Click="PlusOneButton_Click" Style="{StaticResource TinyButtonStyle}"/>
-                <Button x:Name="PlusTenthButton" Grid.Column="2" Content=".1" Click="PlusTenthButton_Click" Style="{StaticResource TinyButtonStyle}"/>
-                <Button x:Name="ResetDurationButton" Grid.Column="3" Content="&#8635;" Click="ResetDurationButton_Click" Style="{StaticResource TinyButtonStyle}"/>
-                <Border Grid.Column="4" Background="Transparent"/>
-                <Button x:Name="InfiniteButton" Grid.Column="5" Content="&#8734;" Click="InfiniteButton_Click" Style="{StaticResource TinyButtonStyle}"/>
-            </Grid>
+            <!-- Duration and Infinite: only meaningful while Repeat or Hold
+                 is on. Editing the duration switches Infinite off and
+                 Infinite clears the duration — the two are alternatives,
+                 same rule as the WinForms card. -->
+            <StackPanel x:Name="TimingPanel" Height="0" Visibility="Collapsed" ClipToBounds="True">
+                <Grid Height="44">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Duration" Style="{StaticResource RowLabelStyle}"/>
+                    <TextBlock x:Name="DurationText" Grid.Column="1" Style="{StaticResource ValueTextStyle}"/>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
+                        <Button x:Name="PlusTenthButton" Content="+0.1 s" Click="PlusTenthButton_Click" Style="{StaticResource StepButtonStyle}"/>
+                        <Button x:Name="PlusOneButton" Content="+1 s" Click="PlusOneButton_Click" Style="{StaticResource StepButtonStyle}"/>
+                        <Button x:Name="ResetDurationButton" Content="Reset" Click="ResetDurationButton_Click" Style="{StaticResource StepButtonStyle}"/>
+                    </StackPanel>
+                </Grid>
+                <Button x:Name="InfiniteButton" Click="InfiniteButton_Click" Style="{StaticResource RailToggleStyle}" Height="48" Margin="4,0,4,0">
+                    <StackPanel>
+                        <TextBlock Text="Infinite"/>
+                        <TextBlock Text="Keeps going until you trigger it again" Style="{StaticResource InlineHintStyle}"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
 
-            <!-- Repeat Interval: only shown while Repeat is on for a card
-                 with 2+ keys — a plain toggle, no value of its own.
-                 Turning it on reveals KeyIntervalRow below (one K button
-                 per key, built dynamically since the count varies — see
-                 RebuildKeyIntervalRow). Matches RemapCardTab's own
-                 repeatIntervalButton/keyIntervalRowPanel (WinForms). -->
-            <Button x:Name="RepeatIntervalButton" Content="Repeat Interval" Height="0" Visibility="Collapsed"
-                    Click="RepeatIntervalButton_Click" Style="{StaticResource ListButtonStyle}"/>
-            <Grid x:Name="KeyIntervalRow" Height="0" Visibility="Collapsed" ClipToBounds="True"/>
+            <!-- Per-key gaps: only for Repeat with 2+ keys. The switch
+                 reveals one row per key (built in code, since the count
+                 varies), each with its own buttons — no "pick a key, then
+                 use the shared buttons" mode. -->
+            <StackPanel x:Name="GapsPanel" Height="0" Visibility="Collapsed" ClipToBounds="True">
+                <Button x:Name="RepeatIntervalButton" Click="RepeatIntervalButton_Click" Style="{StaticResource RailToggleStyle}" Height="48" Margin="4,0,4,0">
+                    <StackPanel>
+                        <TextBlock Text="Custom gaps between keys"/>
+                        <TextBlock Text="Wait a different time after each key before the next" Style="{StaticResource InlineHintStyle}"/>
+                    </StackPanel>
+                </Button>
+                <StackPanel x:Name="KeyIntervalRows" Height="0" Visibility="Collapsed" ClipToBounds="True"/>
+            </StackPanel>
 
-            <!-- Reset All: hidden until the Reset button's own three-rapid-
-                 taps easter egg reveals it (see ResetButton_Click) — resets
-                 every card, not just this one, once the dashboard shell
-                 exists to coordinate that (not part of this slice yet, so
-                 for now it just resets this card again). -->
-            <Button x:Name="ResetAllButton" Content="Reset All" Height="0" Visibility="Collapsed"
-                    Click="ResetAllButton_Click" Style="{StaticResource NestedButtonStyle}"/>
+            <Border Height="6" Background="Transparent"/>
+
+            <!-- Reset All is hidden until Reset is tapped three times fast
+                 (see ResetButton_Click) — a shortcut, not the only route:
+                 Settings has a visible one too. -->
+            <StackPanel Orientation="Horizontal" Margin="8,0,0,0">
+                <Button x:Name="ResetButton" Content="Reset this mapping" Click="ResetButton_Click"
+                        Style="{StaticResource SecondaryButtonStyle}" Height="36" Padding="12,0,12,0"/>
+                <Button x:Name="ResetAllButton" Content="Reset every mapping" Click="ResetAllButton_Click" Visibility="Collapsed"
+                        Style="{StaticResource SecondaryButtonStyle}" Height="36" Padding="12,0,12,0" Margin="8,0,0,0"/>
+            </StackPanel>
 
         </StackPanel>
     </Border>

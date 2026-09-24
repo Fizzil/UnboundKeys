@@ -138,8 +138,8 @@ public partial class SettingsPage : IDashboardPage
             Grid.SetColumn(rename, 1);
             row.Children.Add(rename);
 
-            var delete = new Button { Content = "✕", Width = 44, Height = 36, Margin = new Thickness(0, 0, 8, 0) };
-            delete.SetResourceReference(StyleProperty, "ToggleFillButtonStyle");
+            var delete = new Button();
+            delete.SetResourceReference(StyleProperty, "RemoveButtonStyle");
             ConfirmDeleteBehavior.AttachTo(delete, () =>
             {
                 bool wasActive = name == KeyMap.ActiveProfile;

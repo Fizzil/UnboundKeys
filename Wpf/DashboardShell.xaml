@@ -26,11 +26,19 @@
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <Grid Grid.Row="0">
+            <!-- The header doubles as the window's title bar: the whole top
+                 strip (this and the rail's name plate) drags the window —
+                 see OnPreviewMouseLeftButtonDown — and the two chrome
+                 buttons top-right minimize and close it. -->
+            <Grid Grid.Row="0" Background="Transparent">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <Button x:Name="BackButton" Content="‹ Back" Style="{StaticResource BackButtonStyle}"
                             Visibility="Collapsed" Click="BackButton_Click"/>
                     <TextBlock x:Name="PageTitle" Style="{StaticResource PageTitleStyle}"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Button Content="&#xE921;" Style="{StaticResource WindowButtonStyle}" ToolTip="Minimize" Click="Minimize_Click"/>
+                    <Button Content="&#xE8BB;" Style="{StaticResource WindowButtonStyle}" ToolTip="Close" Click="Close_Click"/>
                 </StackPanel>
                 <Border Style="{StaticResource SectionRuleStyle}" Margin="0" VerticalAlignment="Bottom"/>
             </Grid>

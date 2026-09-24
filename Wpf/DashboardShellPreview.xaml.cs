@@ -10,10 +10,12 @@ public partial class DashboardShellPreview
     public DashboardShellPreview()
     {
         InitializeComponent();
-        Root.Children.Insert(0, new DashboardShell());
+
+        var shell = new DashboardShell();
+        shell.MinimizeRequested += () => WindowState = WindowState.Minimized;
+        shell.CloseRequested += Close;
+        Root.Children.Add(shell);
 
         FadeMode.Changed += () => ApplyWindowOpacity(FadeMode.IsOn ? FadeMode.FadedOpacity : 1.0);
     }
-
-    private void Close_Click(object sender, RoutedEventArgs e) => Close();
 }

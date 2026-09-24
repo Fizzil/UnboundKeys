@@ -18,9 +18,17 @@ namespace UnboundKeys.Wpf;
 // overlay's job (Stage C); this control just fills its window.
 public partial class DashboardShell
 {
+    // The top strip — the rail's name plate and the page header — is the
+    // drag handle for whatever window this lives in (there's no title
+    // bar); its buttons are excluded so they still click.
+    private const double DragStripHeight = 52;
+
     private readonly Dictionary<DashboardSection, FrameworkElement> _pages = new();
     private DashboardSection _section = DashboardSection.Mouse;
     private FrameworkElement? _editor;
+
+    public event Action? MinimizeRequested;
+    public event Action? CloseRequested;
 
     internal DashboardShell()
     {
@@ -183,4 +191,37 @@ public partial class DashboardShell
     }
 
     private void FlyoutDismiss_Click(object sender, MouseButtonEventArgs e) => CloseProfileFlyout();
+
+    private void Minimize_Click(object sender, RoutedEventArgs e) => MinimizeRequested?.Invoke();
+    private void Close_Click(object sender, RoutedEventArgs e) => CloseRequested?.Invoke();
+
+    protected override void OnPreviewMouseLeftButtonDown(MouseButtonEventArgs e)
+    {
+        base.OnPreviewMouseLeftButtonDown(e);
+
+        if (FlyoutLayer.Visibility == Visibility.Visible || e.GetPosition(this).Y > DragStripHeight)
+            return;
+        if (IsInsideButton(e.OriginalSource as DependencyObject))
+            return;
+
+        var window = Window.GetWindow(this);
+        if (window == null)
+            return;
+
+        // DragMove runs the native move loop, which honors the window's
+        // no-activate style — the window moves without taking focus.
+        window.DragMove();
+        e.Handled = true;
+    }
+
+    private bool IsInsideButton(DependencyObject? node)
+    {
+        for (; node != null && node != this; node = ParentOf(node))
+            if (node is System.Windows.Controls.Primitives.ButtonBase)
+                return true;
+        return false;
+    }
+
+    private static DependencyObject? ParentOf(DependencyObject node) =>
+        node is System.Windows.Media.Visual ? System.Windows.Media.VisualTreeHelper.GetParent(node) : LogicalTreeHelper.GetParent(node);
 }

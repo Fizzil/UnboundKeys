@@ -9,11 +9,7 @@
         WindowStartupLocation="CenterScreen">
     <!-- The dashboard window in its real shape — fixed size, no chrome,
          always on top, never takes focus — so the preview exercises the
-         same focus behavior the shipped app will. The ✕ is preview-only:
-         the real window is opened and closed from the overlay icon. -->
-    <Grid x:Name="Root">
-        <Button Content="✕" Style="{StaticResource SecondaryButtonStyle}" Width="32" Height="32"
-                HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,10,10,0" Panel.ZIndex="1"
-                Click="Close_Click"/>
-    </Grid>
+         same focus behavior the shipped app will. Dragging, minimize and
+         close all come from the shell's own header. -->
+    <Grid x:Name="Root"/>
 </uk:NoActivateWindow>
