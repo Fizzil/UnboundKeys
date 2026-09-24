@@ -5,7 +5,7 @@ namespace UnboundKeys.Wpf;
 public enum DashboardSection
 {
     Mouse,
-    Voice,
     Keyboard,
+    Voice,
     Settings,
 }

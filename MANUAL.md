@@ -6,7 +6,7 @@ Everything here works with the left mouse button alone: no right-clicks, no scro
 
 ## The dashboard
 
-The dashboard is a fixed-size window with four pages down its left side — **Mouse**, **Voice**, **Keyboard** and **Settings** — and, in the bottom-left corner, the current **profile**, a **Listening** switch and a **Fade** switch.
+The dashboard is a fixed-size window with four pages down its left side — **Mouse**, **Keyboard**, **Voice** and **Settings** — and, in the bottom-left corner, the current **profile**, a **Listening** switch and a **Fade** switch.
 
 - Drag it by its top strip (the app's name, or the page title). It remembers where you leave it.
 - The **—** and **✕** at the top right minimize and close it. Closing only hides it: UnboundKeys keeps running in the system tray (the skull icon by the clock). Click that icon, or say **"press menu"**, to bring it back. If Windows has tucked the icon behind the little **^** arrow, drag it out onto the taskbar once.

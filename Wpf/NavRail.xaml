@@ -30,16 +30,16 @@
                     <TextBlock Text="Mouse" VerticalAlignment="Center"/>
                 </StackPanel>
             </Button>
-            <Button x:Name="VoiceButton" Style="{StaticResource NavRailButtonStyle}" Click="Nav_Click">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="&#xE720;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                    <TextBlock Text="Voice" VerticalAlignment="Center"/>
-                </StackPanel>
-            </Button>
             <Button x:Name="KeyboardButton" Style="{StaticResource NavRailButtonStyle}" Click="Nav_Click">
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="&#xE765;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" Margin="0,0,10,0"/>
                     <TextBlock Text="Keyboard" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+            <Button x:Name="VoiceButton" Style="{StaticResource NavRailButtonStyle}" Click="Nav_Click">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE720;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <TextBlock Text="Voice" VerticalAlignment="Center"/>
                 </StackPanel>
             </Button>
             <Button x:Name="SettingsButton" Style="{StaticResource NavRailButtonStyle}" Click="Nav_Click">
