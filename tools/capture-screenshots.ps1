@@ -82,6 +82,17 @@ function Find-Button($root, $text) {
   return $null
 }
 
+# The layout rebuild after Mini/Maxi takes a moment to reach the
+# automation tree, so poll for the key that proves it happened.
+function Wait-Button($root, $text, $timeoutMs = 5000) {
+  $sw = [Diagnostics.Stopwatch]::StartNew()
+  while ($sw.ElapsedMilliseconds -lt $timeoutMs) {
+    if ($null -ne (Find-Button $root $text)) { return $true }
+    Start-Sleep -Milliseconds 300
+  }
+  return $false
+}
+
 # Buttons wired to Click (rail, switches, tiles): the Invoke pattern.
 function Invoke-Button($root, $text, $settle = 700) {
   $b = Find-Button $root $text
@@ -163,12 +174,12 @@ if ($isMini) { Save-Window $kb "UBK-Keyboard-Mini.png" 10 } else { Save-Window $
 if ($Method -eq "sendinput") {
   if ($isMini) {
     Push-Key $kb "Maxi"
-    if ($null -eq (Find-Button $kb "Mini")) { throw "Maxi click did not switch the layout" }
+    if (-not (Wait-Button $kb "Mini")) { throw "Maxi click did not switch the layout" }
     Save-Window $kb "UBK-Keyboard.png" 10
     Push-Key $kb "Mini"
   } else {
     Push-Key $kb "Mini"
-    if ($null -eq (Find-Button $kb "Maxi")) { throw "Mini click did not switch the layout" }
+    if (-not (Wait-Button $kb "Maxi")) { throw "Mini click did not switch the layout" }
     Save-Window $kb "UBK-Keyboard-Mini.png" 10
     Push-Key $kb "Maxi"
   }

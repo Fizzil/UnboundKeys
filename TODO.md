@@ -16,8 +16,6 @@ Notes for a future session — not urgent.
 
 ## Ideas
 
-- **An icon of its own.** The skull (Assets/skull.ico) is still the app
-  and tray icon; the rest of the app has moved on from that look.
 - **Per-monitor DPI.** The app is system-DPI-aware; a second monitor at
   a different scale will render blurry there.
 - **Suggestion accept key.** Fizzil's original idea for the suggestion

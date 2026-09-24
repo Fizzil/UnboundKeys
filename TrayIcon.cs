@@ -52,7 +52,9 @@ internal sealed class TrayIcon : IDisposable
         var assembly = Assembly.GetExecutingAssembly();
         using var stream = assembly.GetManifestResourceStream(resourceName)
             ?? throw new InvalidOperationException($"Embedded resource not found: {resourceName}");
-        return new Icon(stream);
+        // At the size the tray actually draws (20 px at 125% scaling), so
+        // Windows picks that frame of the icon instead of shrinking a big one.
+        return new Icon(stream, System.Windows.Forms.SystemInformation.SmallIconSize);
     }
 
     // Greyed and half-transparent — the same treatment the old overlay
