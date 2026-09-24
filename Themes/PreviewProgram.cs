@@ -28,6 +28,6 @@ internal static class PreviewProgram
         // same for the active color theme.
         app.Resources.MergedDictionaries.Add(new System.Windows.ResourceDictionary { Source = new Uri("Themes/Theme.Red.xaml", UriKind.Relative) });
         app.Resources.MergedDictionaries.Add(new System.Windows.ResourceDictionary { Source = new Uri("Themes/Theme.Controls.xaml", UriKind.Relative) });
-        app.Run(new UnboundKeys.Wpf.RemapCardPreview());
+        app.Run(new StyleGallery());
     }
 }

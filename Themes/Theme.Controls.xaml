@@ -133,6 +133,30 @@
         <Setter Property="Padding" Value="28,0,0,0"/>
     </Style>
 
+    <!-- A section heading, like "Folder pictures" in the Windows folder-
+         properties dialog Fizzil pointed at — a small caption naming a
+         group of related rows, with a thin rule underneath separating it
+         from the group's own content. Muted, not full accent, since it's
+         naming the group rather than acting as a command — same
+         "muted = secondary" language as everywhere else in this file. -->
+    <Style x:Key="SectionHeaderStyle" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+        <Setter Property="FontFamily" Value="Segoe UI"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Margin" Value="4,0,0,4"/>
+    </Style>
+
+    <!-- The thin rule under a SectionHeaderStyle heading — a plain 1px
+         line, not a full row, so a group of rows reads as visually
+         gathered under its own heading rather than just floating above
+         it. -->
+    <Style x:Key="SectionRuleStyle" TargetType="Border">
+        <Setter Property="Height" Value="1"/>
+        <Setter Property="Background" Value="{DynamicResource MutedBrush}"/>
+        <Setter Property="Margin" Value="0,0,0,6"/>
+    </Style>
+
     <!-- A toggle that shows on/off by fully inverting its colors instead
          of an underline — the confirm-delete "✕"'s armed state, the Reset
          button's tap-flash. Its own template rather than reusing

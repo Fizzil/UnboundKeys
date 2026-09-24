@@ -55,5 +55,13 @@
             <Button Content="&#10005; (armed)" Tag="True" Style="{StaticResource ToggleFillButtonStyle}"/>
         </UniformGrid>
 
+        <TextBlock Text="SectionHeaderStyle + SectionRuleStyle (Windows folder-properties reference)" Foreground="#666" FontSize="11" Margin="0,10,0,2"/>
+        <StackPanel Margin="0,4,0,0">
+            <TextBlock Text="Profiles" Style="{StaticResource SectionHeaderStyle}"/>
+            <Border Style="{StaticResource SectionRuleStyle}"/>
+            <Button Content="Add Profile" Height="40" Margin="0,0,0,1" Style="{StaticResource ListButtonStyle}"/>
+            <Button Content="Default" Height="40" Tag="True" Style="{StaticResource ListButtonStyle}"/>
+        </StackPanel>
+
     </StackPanel>
 </Window>
