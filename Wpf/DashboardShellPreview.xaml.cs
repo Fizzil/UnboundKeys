@@ -16,6 +16,7 @@ public partial class DashboardShellPreview
         shell.CloseRequested += Close;
         Root.Children.Add(shell);
 
-        FadeMode.Changed += () => ApplyWindowOpacity(FadeMode.IsOn ? FadeMode.FadedOpacity : 1.0);
+        FadeMode.Changed += () => Opacity = FadeMode.IsOn ? FadeMode.FadedOpacity : 1.0;
+        Opacity = FadeMode.IsOn ? FadeMode.FadedOpacity : 1.0;
     }
 }

@@ -23,10 +23,6 @@ public class NoActivateWindow : Window
     private const int WM_GETMINMAXINFO = 0x0024;
     private const int GCL_STYLE = -26;
     private const int CS_DROPSHADOW = 0x00020000;
-    private const int WS_EX_LAYERED = 0x00080000;
-    private const uint LWA_ALPHA = 0x2;
-
-    private double _windowOpacity = 1.0;
 
     [StructLayout(LayoutKind.Sequential)]
     private struct POINT
@@ -57,9 +53,6 @@ public class NoActivateWindow : Window
     [DllImport("user32.dll")]
     private static extern int SetClassLong(IntPtr hWnd, int nIndex, int dwNewLong);
 
-    [DllImport("user32.dll")]
-    private static extern bool SetLayeredWindowAttributes(IntPtr hWnd, uint crKey, byte bAlpha, uint dwFlags);
-
     public NoActivateWindow()
     {
         // Covers the "first time this window is shown" case; WS_EX_NOACTIVATE
@@ -77,40 +70,16 @@ public class NoActivateWindow : Window
         int exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
         SetWindowLong(hwnd, GWL_EXSTYLE, exStyle | WS_EX_NOACTIVATE);
 
-        // CS_DROPSHADOW — the same native soft-edge shadow Windows already
-        // draws around a ToolTip or context menu, applied here so a
-        // popup (the mouse-button remap card, in particular) visibly
-        // floats above whatever's behind it, Discord-popout style,
-        // without needing a per-pixel-alpha AllowsTransparency window
-        // (a heavier, more complex route WPF would otherwise require for
-        // a custom-drawn shadow). Square shadow around RemapCard's own
-        // rounded corners is a known, accepted trade-off of this
-        // approach — it's how Windows' own native tooltips look too.
+        // CS_DROPSHADOW — the same native soft-edge shadow Windows draws
+        // around a ToolTip or context menu, so a floating window visibly
+        // sits above whatever's behind it. Only takes effect on a window
+        // that isn't layered: one with AllowsTransparency (the dashboard,
+        // for Fade's whole-window dimming) draws its own edges and gets
+        // no native shadow — a harmless no-op there.
         int classStyle = GetClassLong(hwnd, GCL_STYLE);
         SetClassLong(hwnd, GCL_STYLE, classStyle | CS_DROPSHADOW);
 
-        if (_windowOpacity < 1.0)
-            ApplyWindowOpacity(_windowOpacity);
-
         HwndSource.FromHwnd(hwnd)?.AddHook(WndProc);
-    }
-
-    // Fade mode's whole-window dimming. Not Window.Opacity — that only
-    // works with AllowsTransparency (a per-pixel layered window, which
-    // also loses the native drop shadow above); this is the plain
-    // WS_EX_LAYERED alpha that WinForms' Form.Opacity uses, and it works
-    // on any window. Safe to call before the handle exists: the value is
-    // kept and applied in OnSourceInitialized.
-    public void ApplyWindowOpacity(double opacity)
-    {
-        _windowOpacity = Math.Clamp(opacity, 0.0, 1.0);
-        var hwnd = new WindowInteropHelper(this).Handle;
-        if (hwnd == IntPtr.Zero)
-            return;
-
-        int exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
-        SetWindowLong(hwnd, GWL_EXSTYLE, exStyle | WS_EX_LAYERED);
-        SetLayeredWindowAttributes(hwnd, 0, (byte)Math.Round(_windowOpacity * 255), LWA_ALPHA);
     }
 
     // Same fix as NonActivatingForm's WinForms version, same reason:

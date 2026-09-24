@@ -59,11 +59,13 @@
     <Color x:Key="MutedColor">#FF962E14</Color>
     <Color x:Key="TextPrimaryColor">#FFF2F3F5</Color>
     <Color x:Key="TextSecondaryColor">#FF949BA4</Color>
-    <!-- Headings (the app's name, a page's title): the accent lightened
-         most of the way to white — Fizzil's call: plain white read as too
-         stark for a title, and this keeps the theme's character in the
-         one place text is allowed to carry color. -->
-    <Color x:Key="HeadingColor">#FFF4AC9A</Color>
+    <!-- Headings (the app's name, a page's title): a soft white — a step
+         below TextPrimary, since plain white read as too stark for a
+         title (Fizzil), and a tinted heading read as washed out. The
+         theme's color shows up beside a heading instead (the "Keys" in
+         UnboundKeys, the bar next to a page title), so this stays the
+         same neutral in all three themes. -->
+    <Color x:Key="HeadingColor">#FFDBDEE1</Color>
     <!-- A card's own outline — just barely lighter than ElevatedColor, so
          there's an edge without a visible line. The first attempt at this
          (a near-white tone) was too high-contrast against the near-black

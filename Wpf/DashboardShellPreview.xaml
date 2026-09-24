@@ -4,12 +4,16 @@
         xmlns:uk="clr-namespace:UnboundKeys"
         Title="UnboundKeys"
         Width="720" Height="540"
-        WindowStyle="None" ResizeMode="NoResize" Topmost="True"
+        WindowStyle="None" ResizeMode="NoResize" Topmost="True" AllowsTransparency="True"
         Background="{DynamicResource BackgroundBrush}"
         WindowStartupLocation="CenterScreen">
     <!-- The dashboard window in its real shape — fixed size, no chrome,
          always on top, never takes focus — so the preview exercises the
          same focus behavior the shipped app will. Dragging, minimize and
-         close all come from the shell's own header. -->
+         close all come from the shell's own header. AllowsTransparency is
+         what lets Fade dim the whole window through Window.Opacity: a
+         WPF window ignores Opacity otherwise, and the WinForms-style
+         layered-alpha trick doesn't work on WPF either (WPF spots the
+         layered flag and takes over the rendering, dropping the alpha). -->
     <Grid x:Name="Root"/>
 </uk:NoActivateWindow>

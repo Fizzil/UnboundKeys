@@ -638,8 +638,9 @@
     </Style>
 
     <!-- The content area's page title ("Mouse", "Right Button", ...) and
-         the rail's app name — HeadingBrush, a light tint of the accent,
-         not plain white (see Theme.Red.xaml's own comment). -->
+         the rail's app name — HeadingBrush, a soft white (see
+         Theme.Red.xaml's own comment); the theme color sits beside the
+         text, not in it. -->
     <Style x:Key="PageTitleStyle" TargetType="TextBlock">
         <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}"/>
         <Setter Property="FontFamily" Value="Segoe UI"/>
