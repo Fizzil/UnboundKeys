@@ -46,6 +46,9 @@
     <EmbeddedResource Include="Assets\skull-blue.png" />
     <!-- The on-screen keyboard's word-suggestion list (see WordPredictor). -->
     <EmbeddedResource Include="Assets\words-en.txt" />
+    <!-- The Voice page's illustration (see Wpf/VoiceDiagram) — black line
+         art on white, turned into a tintable mask at load time. -->
+    <EmbeddedResource Include="Assets\voice-profile.png" />
   </ItemGroup>
 
   <ItemGroup>

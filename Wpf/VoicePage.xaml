@@ -10,7 +10,7 @@
             <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
-        <local:VoiceDiagram x:Name="Diagram" Width="160" VerticalAlignment="Top" Margin="4,12,24,0"/>
+        <local:VoiceDiagram x:Name="Diagram" Width="190" VerticalAlignment="Top" Margin="4,12,20,0"/>
         <StackPanel x:Name="Rows" Grid.Column="1"/>
     </Grid>
 </UserControl>
