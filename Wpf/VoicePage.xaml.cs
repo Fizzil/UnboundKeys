@@ -7,6 +7,8 @@ namespace UnboundKeys.Wpf;
 
 public partial class VoicePage : IDashboardPage
 {
+    private const string MicrophoneGlyph = "";
+
     private readonly Dictionary<string, MappingRow> _rows = new();
 
     internal event Action<IRemapSource, string, string>? EditRequested;
@@ -29,17 +31,26 @@ public partial class VoicePage : IDashboardPage
 
         foreach (var word in KeyMap.RemappableWords)
         {
-            string label = $"press {word}";
-            var row = new MappingRow(label, MappingRow.ValueOf(KeyMapSource.Instance, word));
-            row.Clicked += () => EditRequested?.Invoke(KeyMapSource.Instance, word, $"\"{label}\"");
+            string spoken = $"\"press {word}\"";
+            var row = new MappingRow(spoken, MappingRow.ValueOf(KeyMapSource.Instance, word), MicrophoneGlyph);
+            row.Clicked += () => EditRequested?.Invoke(KeyMapSource.Instance, word, spoken);
+            row.HoverChanged += hovered =>
+            {
+                if (hovered)
+                    Diagram.SetKey(MappingRow.ValueOf(KeyMapSource.Instance, word));
+                Diagram.SetSpeaking(hovered);
+            };
             _rows[word] = row;
             Rows.Children.Add(row);
         }
+
+        Diagram.SetKey(MappingRow.ValueOf(KeyMapSource.Instance, KeyMap.RemappableWords[0]));
     }
 
     public void Refresh()
     {
         foreach (var (word, row) in _rows)
             row.SetChipText(MappingRow.ValueOf(KeyMapSource.Instance, word));
+        Diagram.SetKey(MappingRow.ValueOf(KeyMapSource.Instance, KeyMap.RemappableWords[0]));
     }
 }

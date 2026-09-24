@@ -2,16 +2,15 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <!-- The dashboard's side of the on-screen keyboard: the switch that
-         shows and hides it (DashboardShell owns the window), and every
-         remappable key as a tile, so remapping happens here by left-click
-         instead of by right-clicking a key on the keyboard (a right
-         button that's been remapped can't right-click anything in this
-         app — the hook swallows it). -->
+         shows and hides it (DashboardShell owns the window), its size,
+         and a map of the keyboard — the same rows the keyboard itself
+         uses (KeyboardLayout) — where the remappable digits and letters
+         are drawn as real keys you can click to remap, and everything
+         else as a quiet outline. Fizzil's own idea: at a glance, the
+         bright keys are the ones you can change. -->
     <StackPanel>
-        <TextBlock Text="The on-screen keyboard types into your game with the mouse. Any of its letter and number keys can be remapped — click one below."
-                   FontSize="12" TextWrapping="Wrap" Margin="12,4,12,10" Foreground="{DynamicResource TextSecondaryBrush}"/>
         <Button x:Name="ShowKeyboardToggle" Content="Show on-screen keyboard"
-                Style="{StaticResource RailToggleStyle}" Margin="4,0,4,0"/>
+                Style="{StaticResource RailToggleStyle}" Margin="4,4,4,0"/>
         <TextBlock Text="Drag it by the handle on its left edge. Mini collapses it to a single strip; Maxi brings it back."
                    FontSize="11" TextWrapping="Wrap" Margin="16,0,12,4" Foreground="{DynamicResource TextSecondaryBrush}"/>
 
@@ -33,7 +32,9 @@
             </Border>
         </Grid>
 
-        <TextBlock Text="KEYS" Style="{StaticResource SectionHeaderStyle}" Margin="4,12,0,4"/>
-        <UniformGrid x:Name="KeyGrid" Columns="9"/>
+        <TextBlock Text="KEYS" Style="{StaticResource SectionHeaderStyle}" Margin="4,14,0,2"/>
+        <TextBlock Text="The bright keys are the ones you can remap — click one. A key that's been changed shows what it sends now."
+                   FontSize="11" TextWrapping="Wrap" Margin="12,0,12,6" Foreground="{DynamicResource TextSecondaryBrush}"/>
+        <StackPanel x:Name="KeyRows" Margin="2,0,2,0"/>
     </StackPanel>
 </UserControl>

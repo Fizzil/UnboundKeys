@@ -1,0 +1,33 @@
+<UserControl x:Class="UnboundKeys.Wpf.VoiceDiagram"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- The Voice page's picture, drawn like the mouse so it re-themes: a
+         woman in profile speaking (sound waves from her mouth) and, below,
+         a key being pressed — the key's label is whatever the hovered row
+         sends, so the picture reads "say this, and this gets pressed". -->
+    <Viewbox Stretch="Uniform">
+        <Canvas Width="200" Height="300">
+            <!-- head and hair, one silhouette -->
+            <Path Data="M 92,34 C 118,34 134,52 132,74 C 131,84 127,90 129,96 C 138,104 150,114 150,122 C 150,128 140,130 134,132 C 136,138 140,142 138,148 C 142,152 142,156 137,160 C 136,166 140,170 136,176 C 132,184 120,190 108,192 C 102,194 98,200 98,212 C 98,224 100,236 104,248 C 84,254 64,258 44,270 C 30,240 26,210 30,180 C 30,140 32,100 44,70 C 54,48 72,34 92,34 Z"
+                  Fill="{DynamicResource ButtonBrush}" Stroke="{DynamicResource TextSecondaryBrush}" StrokeThickness="2" StrokeLineJoin="Round"/>
+            <!-- a strand of hair sweeping back -->
+            <Path Data="M 96,42 C 70,58 54,96 56,150 C 58,190 66,220 72,250"
+                  Stroke="{DynamicResource TextSecondaryBrush}" StrokeThickness="1.5" Opacity="0.7" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+            <!-- a closed eye -->
+            <Path Data="M 116,98 C 120,95 126,95 130,98"
+                  Stroke="{DynamicResource TextSecondaryBrush}" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+            <!-- sound waves -->
+            <Path x:Name="Waves" Data="M 158,139.4 A 22,22 0 0 1 158,164.6 M 169.5,131.3 A 36,36 0 0 1 169.5,172.7 M 181,123.3 A 50,50 0 0 1 181,180.7"
+                  Stroke="{DynamicResource AccentBrush}" StrokeThickness="2.5" Opacity="0.45"
+                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+            <!-- the key: a base peeking out below a cap sitting on it -->
+            <Rectangle Canvas.Left="128" Canvas.Top="214" Width="56" Height="46" RadiusX="6" RadiusY="6"
+                       Fill="{DynamicResource ButtonBrush}" Stroke="{DynamicResource CardBorderBrush}" StrokeThickness="1"/>
+            <Rectangle Canvas.Left="128" Canvas.Top="206" Width="56" Height="44" RadiusX="6" RadiusY="6"
+                       Fill="{DynamicResource ElevatedBrush}" Stroke="{DynamicResource CardBorderBrush}" StrokeThickness="1"/>
+            <TextBlock x:Name="KeyLabel" Canvas.Left="128" Canvas.Top="206" Width="56" Height="44" Padding="4,13,4,0"
+                       TextAlignment="Center" TextTrimming="CharacterEllipsis" FontSize="12" FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+        </Canvas>
+    </Viewbox>
+</UserControl>

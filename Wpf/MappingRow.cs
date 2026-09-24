@@ -20,7 +20,9 @@ internal sealed class MappingRow : Grid
     public event Action? Clicked;
     public event Action<bool>? HoverChanged;
 
-    public MappingRow(string label, string value)
+    // glyph, when given, is a Segoe MDL2 Assets icon shown before the label
+    // (the Voice page's microphone).
+    public MappingRow(string label, string value, string? glyph = null)
     {
         Height = 48;
         Margin = new Thickness(0, 0, 0, 4);
@@ -41,16 +43,35 @@ internal sealed class MappingRow : Grid
         SetColumnSpan(divider, 2);
         Children.Add(divider);
 
+        var labelPanel = new StackPanel
+        {
+            Orientation = System.Windows.Controls.Orientation.Horizontal,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(12, 0, 0, 0),
+        };
+        if (glyph != null)
+        {
+            var icon = new TextBlock
+            {
+                Text = glyph,
+                FontSize = 14,
+                FontFamily = new System.Windows.Media.FontFamily("Segoe MDL2 Assets"),
+                Margin = new Thickness(0, 0, 10, 0),
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            icon.SetResourceReference(TextBlock.ForegroundProperty, "TextSecondaryBrush");
+            labelPanel.Children.Add(icon);
+        }
         var text = new TextBlock
         {
             Text = label,
             FontSize = 13,
             FontFamily = new System.Windows.Media.FontFamily("Segoe UI"),
-            Margin = new Thickness(12, 0, 0, 0),
             VerticalAlignment = VerticalAlignment.Center,
         };
         text.SetResourceReference(TextBlock.ForegroundProperty, "TextSecondaryBrush");
-        Children.Add(text);
+        labelPanel.Children.Add(text);
+        Children.Add(labelPanel);
 
         _chip = new Button { Content = value, Width = 150, Margin = new Thickness(0, 0, 8, 0) };
         _chip.SetResourceReference(StyleProperty, "OutlineButtonStyle");

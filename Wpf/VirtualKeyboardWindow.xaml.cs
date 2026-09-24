@@ -6,21 +6,23 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
+using static UnboundKeys.KeyboardLayout;
 using Button = System.Windows.Controls.Button;
 
 namespace UnboundKeys.Wpf;
 
 // WPF port of VirtualKeyboardForm.cs (WinForms) — the floating keyboard
-// for typing with a mouse. Same layout, same behavior: a key fires the
-// instant it's pressed and repeats while held; Shift/Ctrl/Alt/Win are
-// sticky (see StickyModifiers) so combos work one click at a time; the
-// digits and letters are remappable (VirtualKeyMap) and wear a faint
-// accent wash once customized; Caps tracks its own state and doubles as
-// the panic button (two quick clicks release everything and lift Fade);
-// Mini collapses it to one quick-access strip. What's gone is the
-// right-click-to-remap path — a remapped right button can't right-click
-// anything in this app, so remapping lives on the dashboard's Keyboard
-// page instead.
+// for typing with a mouse. Same layout (KeyboardLayout), same behavior:
+// a key fires the instant it's pressed and repeats while held;
+// Shift/Ctrl/Alt/Win are sticky (see StickyModifiers) so combos work one
+// click at a time; the digits and letters are remappable (VirtualKeyMap)
+// and wear a faint accent wash once customized; Caps tracks its own
+// state and doubles as the panic button (two quick clicks release
+// everything and lift Fade); Mini collapses it to one quick-access strip.
+// New here: a strip of word suggestions (WordPredictor) above the keys.
+// What's gone is the right-click-to-remap path — a remapped right button
+// can't right-click anything in this app, so remapping lives on the
+// dashboard's Keyboard page instead.
 public partial class VirtualKeyboardWindow
 {
     private const double RowHeight = 44;
@@ -31,24 +33,8 @@ public partial class VirtualKeyboardWindow
     // Approximate outer size, for keeping a remembered position on screen
     // before the window has measured itself.
     private const double ApproxWidth = 800;
-    private const double ApproxFullHeight = 230;
+    private const double ApproxFullHeight = 270;
     private const double ApproxMiniHeight = 58;
-
-    private enum KeyKind { Plain, Remappable, StickyFixed, MiniToggle }
-
-    private readonly record struct KeySpec(string Label, KeyKind Kind, string? Id, ushort Vk, bool Extended, double Width, string? ShiftLabel, bool LargeLabel = false);
-
-    private static KeySpec Plain(string label, ushort vk, bool extended, double width, string? shiftLabel = null, bool largeLabel = false) =>
-        new(label, KeyKind.Plain, null, vk, extended, width, shiftLabel, largeLabel);
-
-    private static KeySpec Remap(string id, string label, double width, string? shiftLabel = null) =>
-        new(label, KeyKind.Remappable, id, 0, false, width, shiftLabel);
-
-    private static KeySpec StickyFixed(string id, string label, ushort vk, bool extended, double width) =>
-        new(label, KeyKind.StickyFixed, id, vk, extended, width, null);
-
-    private static KeySpec Toggle(string label, double width) =>
-        new(label, KeyKind.MiniToggle, null, 0, false, width, null);
 
     private readonly List<(Button Button, string Id)> _stickyButtons = new();
     private readonly List<(Border Wash, string Id)> _remappableWashes = new();
@@ -84,7 +70,7 @@ public partial class VirtualKeyboardWindow
         InitializeComponent();
         _isMini = startMini;
 
-        foreach (var row in new[] { Row1(), Row2(), Row3(), Row4(), Row5() })
+        foreach (var row in FullRows())
             FullLayout.Children.Add(BuildRow(row));
         MiniLayout.Children.Add(BuildRow(MiniRow()));
         ApplyMiniMode();
@@ -123,116 +109,6 @@ public partial class VirtualKeyboardWindow
             SavePlacement();
         };
     }
-
-    // ---- Layout (identical to VirtualKeyboardForm's rows; see that file
-    // for the reasoning behind each width) ----
-
-    private static KeySpec[] Row1() => new[]
-    {
-        Plain("Esc", 0x1B, false, 1.2),
-        Plain("`", 0xC0, false, 0.8, "~"),
-        Remap("v1", "1", 1, "!"),
-        Remap("v2", "2", 1, "@"),
-        Remap("v3", "3", 1, "#"),
-        Remap("v4", "4", 1, "$"),
-        Remap("v5", "5", 1, "%"),
-        Remap("v6", "6", 1, "^"),
-        Remap("v7", "7", 1, "&"),
-        Remap("v8", "8", 1, "*"),
-        Remap("v9", "9", 1, "("),
-        Remap("v0", "0", 1, ")"),
-        Plain("-", 0xBD, false, 1, "_"),
-        Plain("=", 0xBB, false, 1, "+"),
-        Plain("⌫", 0x08, false, 1),
-        Toggle("Mini", 1.4),
-    };
-
-    private static KeySpec[] Row2() => new[]
-    {
-        Plain("Tab", 0x09, false, 1.5),
-        Remap("vq", "q", 1),
-        Remap("vw", "w", 1),
-        Remap("ve", "e", 1),
-        Remap("vr", "r", 1),
-        Remap("vt", "t", 1),
-        Remap("vy", "y", 1),
-        Remap("vu", "u", 1),
-        Remap("vi", "i", 1),
-        Remap("vo", "o", 1),
-        Remap("vp", "p", 1),
-        Plain("[", 0xDB, false, 1, "{"),
-        Plain("]", 0xDD, false, 1, "}"),
-        Plain("\\", 0xDC, false, 1.35, "|"),
-        Plain("Del", 0x2E, true, 1.65),
-    };
-
-    private static KeySpec[] Row3() => new[]
-    {
-        Plain("Caps", 0x14, false, 1.8),
-        Remap("va", "a", 1),
-        Remap("vs", "s", 1),
-        Remap("vd", "d", 1),
-        Remap("vf", "f", 1),
-        Remap("vg", "g", 1),
-        Remap("vh", "h", 1),
-        Remap("vj", "j", 1),
-        Remap("vk", "k", 1),
-        Remap("vl", "l", 1),
-        Plain(";", 0xBA, false, 1, ":", largeLabel: true),
-        Plain("'", 0xDE, false, 1, "\"", largeLabel: true),
-        Plain("Enter", 0x0D, false, 2.2),
-    };
-
-    private static KeySpec[] Row4() => new[]
-    {
-        StickyFixed("vshift", "Shift", 0x10, false, 2.8),
-        Remap("vz", "z", 1),
-        Remap("vx", "x", 1),
-        Remap("vc", "c", 1),
-        Remap("vv", "v", 1),
-        Remap("vb", "b", 1),
-        Remap("vn", "n", 1),
-        Remap("vm", "m", 1),
-        Plain(",", 0xBC, false, 1, "<", largeLabel: true),
-        Plain(".", 0xBE, false, 1, ">"),
-        Plain("/", 0xBF, false, 1, "?"),
-        StickyFixed("vshift", "Shift", 0x10, false, 2.8),
-    };
-
-    private static KeySpec[] Row5() => new[]
-    {
-        StickyFixed("vctrl", "Ctrl", 0x11, false, 1.5),
-        StickyFixed("vwin", "Win", 0x5B, true, 1.5),
-        StickyFixed("valt", "Alt", 0x12, false, 1.5),
-        Plain("", 0x20, false, 5),
-        StickyFixed("valt", "Alt", 0x12, false, 1.5),
-        StickyFixed("vctrl", "Ctrl", 0x11, false, 1.5),
-        Plain("←", 0x25, true, 1),
-        Plain("↓", 0x28, true, 1),
-        Plain("↑", 0x26, true, 1),
-        Plain("→", 0x27, true, 1),
-    };
-
-    // The collapsed strip — none of these are remappable, which is the
-    // point of collapsing the letters and digits away. Order is Fizzil's.
-    private static KeySpec[] MiniRow() => new[]
-    {
-        Plain("Esc", 0x1B, false, 1),
-        Plain("Tab", 0x09, false, 1),
-        Plain("Caps", 0x14, false, 1),
-        StickyFixed("vctrl", "Ctrl", 0x11, false, 1),
-        StickyFixed("vwin", "Win", 0x5B, true, 1),
-        StickyFixed("valt", "Alt", 0x12, false, 1),
-        Plain("Space", 0x20, false, 1),
-        Plain("←", 0x25, true, 1),
-        Plain("↓", 0x28, true, 1),
-        Plain("↑", 0x26, true, 1),
-        Plain("→", 0x27, true, 1),
-        Plain("Enter", 0x0D, false, 1),
-        Plain("Del", 0x2E, true, 1),
-        Plain("⌫", 0x08, false, 1),
-        Toggle("Maxi", 1),
-    };
 
     private Grid BuildRow(KeySpec[] specs)
     {
@@ -600,7 +476,8 @@ public partial class VirtualKeyboardWindow
     }
 
     // DragMove runs the native move loop, which honors the no-activate
-    // style; it returns once the drag ends, so the new spot is saved then.
+    // style; it returns once the drag ends, so the new spot is checked
+    // against the screen edges and saved then.
     private void Grip_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         DragMove();
