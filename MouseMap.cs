@@ -120,6 +120,16 @@ public static class MouseMap
         Enabled[id] = false;
     }
 
+    // The dashboard's Reset All — every button back to unmapped. Enabled
+    // is cleared first so the store's own save (which closes over it)
+    // writes the switched-off state too.
+    public static void ResetAll()
+    {
+        foreach (var id in ButtonIds)
+            Enabled[id] = false;
+        _store.ResetAllToDefault();
+    }
+
     // Called by DashboardForm alongside KeyMap.SwitchProfile — loads the new
     // profile's mouse mappings into these same dictionaries in place.
     public static void SwitchProfile(string profileName)

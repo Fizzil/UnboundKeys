@@ -99,6 +99,9 @@ public static class VirtualKeyMap
     // Puts a key back to its own natural key, no extras, default behavior.
     public static void ResetToDefault(string id) => _store.ResetToDefault(id);
 
+    // The dashboard's Reset All — every key at once.
+    public static void ResetAll() => _store.ResetAllToDefault();
+
     // Called by DashboardForm alongside KeyMap.SwitchProfile/MouseMap.SwitchProfile
     // — loads the new profile's virtual-keyboard mappings into these same
     // dictionaries in place. No ReleaseAll call here:

@@ -1,12 +1,19 @@
-<Window x:Class="UnboundKeys.Wpf.DashboardShellPreview"
+<uk:NoActivateWindow x:Class="UnboundKeys.Wpf.DashboardShellPreview"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Phase 6 preview — DashboardShell"
-        Width="600" SizeToContent="Height"
+        xmlns:uk="clr-namespace:UnboundKeys"
+        Title="UnboundKeys"
+        Width="720" Height="540"
+        WindowStyle="None" ResizeMode="NoResize" Topmost="True"
         Background="{DynamicResource BackgroundBrush}"
         WindowStartupLocation="CenterScreen">
-    <StackPanel x:Name="Root" Margin="20">
-        <TextBlock Text="Real tabs, real cards. Click Voice Keys, switch between 10..1, open Profile."
-                   Foreground="{DynamicResource MutedBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,12"/>
-    </StackPanel>
-</Window>
+    <!-- The dashboard window in its real shape — fixed size, no chrome,
+         always on top, never takes focus — so the preview exercises the
+         same focus behavior the shipped app will. The ✕ is preview-only:
+         the real window is opened and closed from the overlay icon. -->
+    <Grid x:Name="Root">
+        <Button Content="✕" Style="{StaticResource SecondaryButtonStyle}" Width="32" Height="32"
+                HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,10,10,0" Panel.ZIndex="1"
+                Click="Close_Click"/>
+    </Grid>
+</uk:NoActivateWindow>

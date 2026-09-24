@@ -1,7 +1,7 @@
 <UserControl x:Class="UnboundKeys.Wpf.RemapCard"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             Width="440">
+             MinWidth="440">
     <!-- CardBorderBrush (a near-white tone with just a hint of the accent
          color), not MutedBrush — Fizzil's own request: a plain color
          change on the outline itself, not another glow. No Effect here

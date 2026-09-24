@@ -1,0 +1,17 @@
+<UserControl x:Class="UnboundKeys.Wpf.MousePage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:UnboundKeys.Wpf">
+    <!-- The drawn mouse on the left, the six mappings as rows on the right
+         (BUTTONS, then SCROLL WHEEL — the same grouping Discord's settings
+         use for related rows). Hovering either side lights the other, and
+         clicking either opens that button's editor. -->
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <local:MouseDiagram x:Name="Diagram" Width="160" VerticalAlignment="Top" Margin="4,12,24,0"/>
+        <StackPanel x:Name="Rows" Grid.Column="1"/>
+    </Grid>
+</UserControl>

@@ -11,15 +11,18 @@ using Size = System.Windows.Size;
 
 namespace UnboundKeys.Wpf;
 
-// RemapCardTab.cs (WinForms) ported to WPF, one increment at a time —
-// this slice adds Repeat Interval (per-key gaps) and the Reset All
-// easter egg, completing the card's feature set. Reset All can't yet
-// coordinate with other cards the way DashboardForm does (that shell
-// doesn't exist yet), so for now it just resets this card again.
+// RemapCardTab.cs (WinForms) ported to WPF: the complete editor for one
+// mapping (a spoken word, a mouse button, or an on-screen key) — its
+// keys, Repeat/Hold, timing, per-key repeat gaps, and Reset. Driven
+// entirely through IRemapSource, so the same control serves all three.
+// Reset All is the one thing it can't do alone: it raises
+// ResetAllRequested and lets whatever hosts it reset every mapping.
 public partial class RemapCard
 {
     private readonly IRemapSource _source;
     private readonly string _id;
+
+    internal event Action? ResetAllRequested;
     private bool _repeatOn;
     private bool _holdOn;
     private double _duration;
@@ -172,9 +175,9 @@ public partial class RemapCard
         {
             Height = 1,
             VerticalAlignment = VerticalAlignment.Bottom,
-            Background = (System.Windows.Media.Brush)FindResource("MutedBrush"),
             Opacity = 0.35,
         };
+        divider.SetResourceReference(Border.BackgroundProperty, "MutedBrush");
         Grid.SetColumnSpan(divider, grid.ColumnDefinitions.Count);
         grid.Children.Add(divider);
 
@@ -183,10 +186,10 @@ public partial class RemapCard
             Text = label,
             Style = (System.Windows.Style)FindResource("LabelDisplayStyle"),
             Background = System.Windows.Media.Brushes.Transparent,
-            Foreground = (System.Windows.Media.Brush)FindResource("TextSecondaryBrush"),
             FontSize = 13,
             FontWeight = System.Windows.FontWeights.Normal,
         };
+        labelText.SetResourceReference(TextBlock.ForegroundProperty, "TextSecondaryBrush");
         Grid.SetColumn(labelText, 0);
         grid.Children.Add(labelText);
 
@@ -268,7 +271,7 @@ public partial class RemapCard
         };
         Grid.SetColumn(keyScroll, 1);
         categoryList.Children.Add(keyScroll);
-        AttachEdgeAutoScroll(keyScroll);
+        EdgeAutoScrollBehavior.SetEnable(keyScroll, true);
 
         void HoverCategory(KeyCatalog.Entry[] keys)
         {
@@ -304,48 +307,6 @@ public partial class RemapCard
         HoverCategory(KeyCatalog.Groups[0].Keys);
     }
 
-    // Hovering within a strip near the top/bottom edge auto-scrolls the
-    // key list, instead of requiring a mouse wheel or scrollbar drag —
-    // Fizzil's own request, for a list that can be several times taller
-    // than the fixed split-view area (Letters' 26 keys, say).
-    private static void AttachEdgeAutoScroll(ScrollViewer scroll)
-    {
-        const double edgeZone = 28;
-        const double scrollStep = 6;
-        int direction = 0; // -1 = scrolling up, 0 = not scrolling, 1 = scrolling down
-
-        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(30) };
-        timer.Tick += (_, _) =>
-        {
-            if (direction < 0)
-                scroll.ScrollToVerticalOffset(Math.Max(0, scroll.VerticalOffset - scrollStep));
-            else if (direction > 0)
-                scroll.ScrollToVerticalOffset(Math.Min(scroll.ScrollableHeight, scroll.VerticalOffset + scrollStep));
-        };
-
-        scroll.PreviewMouseMove += (_, e) =>
-        {
-            double y = e.GetPosition(scroll).Y;
-            double h = scroll.ActualHeight;
-
-            direction = h <= 0 ? 0
-                : y < edgeZone && scroll.VerticalOffset > 0 ? -1
-                : y > h - edgeZone && scroll.VerticalOffset < scroll.ScrollableHeight ? 1
-                : 0;
-
-            if (direction != 0)
-                timer.Start();
-            else
-                timer.Stop();
-        };
-
-        scroll.MouseLeave += (_, _) =>
-        {
-            direction = 0;
-            timer.Stop();
-        };
-    }
-
     // The animated-expand/collapse upgrade Fizzil asked for: grows/shrinks
     // an element's Height instead of snapping straight to its final size
     // the way the WinForms version's accordion-via-resize did. Shared by
@@ -358,7 +319,10 @@ public partial class RemapCard
         {
             element.Visibility = Visibility.Visible;
             element.Height = double.NaN;
-            element.Measure(new Size(ActualWidth > 0 ? ActualWidth : Width, double.PositiveInfinity));
+            // Before the first layout pass ActualWidth is 0 and Width is
+            // unset (NaN) now that the card stretches to its host, and a
+            // NaN measure throws — unconstrained is the safe fallback.
+            element.Measure(new Size(ActualWidth > 0 ? ActualWidth : double.PositiveInfinity, double.PositiveInfinity));
             double targetHeight = element.DesiredSize.Height;
             element.Height = 0;
 
@@ -553,11 +517,11 @@ public partial class RemapCard
             var kLabel = new TextBlock
             {
                 Text = $"{_keyIntervalSeconds[kIndex].ToString("0.0", CultureInfo.InvariantCulture)}s",
-                Foreground = (System.Windows.Media.Brush)FindResource("TextSecondaryBrush"),
                 FontSize = 14,
                 HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
             };
+            kLabel.SetResourceReference(TextBlock.ForegroundProperty, "TextSecondaryBrush");
             Grid.SetColumn(kLabel, idx * 2 + 1);
             KeyIntervalRow.Children.Add(kLabel);
         }
@@ -664,8 +628,13 @@ public partial class RemapCard
         }
     }
 
-    // Can't yet coordinate with other cards (DashboardForm, which would
-    // own that, doesn't exist yet — see the plan doc's Phase 6) — resets
-    // this card again for now.
-    private void ResetAllButton_Click(object sender, RoutedEventArgs e) => ResetCard();
+    // This card resets itself; the host (DashboardShell) resets every
+    // other mapping in response to the event and has a visible Reset All
+    // in Settings too — the triple-tap here is a shortcut, not the only
+    // route.
+    private void ResetAllButton_Click(object sender, RoutedEventArgs e)
+    {
+        ResetCard();
+        ResetAllRequested?.Invoke();
+    }
 }

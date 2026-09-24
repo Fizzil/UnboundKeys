@@ -111,6 +111,9 @@ public static class KeyMap
     // its original key with no repeat/hold/duration set, and no extra keys.
     public static void ResetToDefault(string word) => _store.ResetToDefault(word);
 
+    // The dashboard's Reset All — every word at once.
+    public static void ResetAll() => _store.ResetAllToDefault();
+
     // Switches to a different profile: loads its key map and behaviors into
     // the same Words/ExtraWords/Behaviors dictionaries in place (so
     // everything that reads them sees the new profile automatically), and

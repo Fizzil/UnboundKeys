@@ -287,4 +287,38 @@ internal static class Settings
             saved.ActiveProfile = DefaultProfileName;
         Write(saved);
     }
+
+    // Renames a profile in place. Profiles is rebuilt rather than
+    // remove-then-add: System.Text.Json writes (and reads back) a
+    // dictionary in insertion order, so the naive way would drop the
+    // renamed profile to the bottom of the list. Refuses "Default", an
+    // unknown old name, or a new name another profile already uses
+    // (case-insensitively — the map itself is case-sensitive). If the
+    // renamed profile is the active one, the caller must still run the
+    // normal profile switch afterwards: KeyMap.ActiveProfile is what every
+    // save is keyed by, and only SwitchProfile updates it.
+    public static bool RenameProfile(string oldName, string newName)
+    {
+        newName = newName.Trim();
+        if (oldName == DefaultProfileName || newName.Length == 0)
+            return false;
+
+        var saved = Read();
+        if (!saved.Profiles.ContainsKey(oldName))
+            return false;
+        foreach (var existing in saved.Profiles.Keys)
+            if (existing != oldName && existing.Equals(newName, StringComparison.OrdinalIgnoreCase))
+                return false;
+        if (oldName == newName)
+            return true;
+
+        var renamed = new Dictionary<string, ProfileData>();
+        foreach (var (name, data) in saved.Profiles)
+            renamed[name == oldName ? newName : name] = data;
+        saved.Profiles = renamed;
+        if (saved.ActiveProfile == oldName)
+            saved.ActiveProfile = newName;
+        Write(saved);
+        return true;
+    }
 }

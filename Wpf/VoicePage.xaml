@@ -1,0 +1,8 @@
+<UserControl x:Class="UnboundKeys.Wpf.VoicePage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- One row per spoken word, 1 to 10 top-to-bottom (reading order —
+         the WinForms dashboard's 10..1 was an artifact of how its action
+         bar inserted tabs). Same MappingRow as the Mouse page. -->
+    <StackPanel x:Name="Rows"/>
+</UserControl>

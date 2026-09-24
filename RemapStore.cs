@@ -138,6 +138,18 @@ internal sealed class RemapStore
         Save();
     }
 
+    // Every id at once, one save at the end instead of one per id.
+    public void ResetAllToDefault()
+    {
+        foreach (var id in new List<string>(Words.Keys))
+        {
+            Words[id] = DefaultWords[id];
+            ExtraWords[id].Clear();
+            Behaviors[id] = new KeyBehavior();
+        }
+        Save();
+    }
+
     public void Save() => _save(Words, ExtraWords, Behaviors);
 
     // Loads a different profile's mappings into these same three
