@@ -34,6 +34,7 @@ public partial class SettingsPage : IDashboardPage
 
     public event Action<string>? ProfileSelected;
     public event Action? ResetAllRequested;
+    public event Action? QuitRequested;
 
     public string Title => "Settings";
 
@@ -56,6 +57,7 @@ public partial class SettingsPage : IDashboardPage
         NameGrid.Done += OnNameDone;
         NameGrid.Cancelled += EndRename;
         ConfirmDeleteBehavior.AttachTo(ResetAllButton, () => ResetAllRequested?.Invoke());
+        ConfirmDeleteBehavior.AttachTo(QuitButton, () => QuitRequested?.Invoke());
 
         var version = typeof(SettingsPage).Assembly.GetName().Version;
         string title = version == null

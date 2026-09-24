@@ -31,6 +31,7 @@ public partial class DashboardShell
 
     public event Action? MinimizeRequested;
     public event Action? CloseRequested;
+    public event Action? QuitRequested;
 
     internal DashboardShell()
     {
@@ -53,6 +54,7 @@ public partial class DashboardShell
         var settingsPage = new SettingsPage();
         settingsPage.ProfileSelected += SwitchToProfile;
         settingsPage.ResetAllRequested += ResetAllMappings;
+        settingsPage.QuitRequested += () => QuitRequested?.Invoke();
         _pages[DashboardSection.Settings] = settingsPage;
 
         Rail.SectionSelected += ShowSection;
@@ -225,11 +227,10 @@ public partial class DashboardShell
     private void FlyoutDismiss_Click(object sender, MouseButtonEventArgs e) => CloseProfileFlyout();
 
     private void Minimize_Click(object sender, RoutedEventArgs e) => MinimizeRequested?.Invoke();
-    private void Close_Click(object sender, RoutedEventArgs e)
-    {
-        _keyboard?.Close();
-        CloseRequested?.Invoke();
-    }
+    // Only the dashboard goes away (it hides — see DashboardWindow); an
+    // open on-screen keyboard is a typing tool that outlives it, same as
+    // in the WinForms app.
+    private void Close_Click(object sender, RoutedEventArgs e) => CloseRequested?.Invoke();
 
     protected override void OnPreviewMouseLeftButtonDown(MouseButtonEventArgs e)
     {

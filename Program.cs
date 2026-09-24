@@ -2,12 +2,25 @@ using System.Threading.Tasks;
 
 namespace UnboundKeys;
 
+// UnboundKeys' whole runtime lives here: the speech engine and the two
+// input hooks feed KeyExecutor, and the WPF dashboard (Wpf/DashboardWindow)
+// plus a tray icon are the user's side of it. The dashboard hides rather
+// than closing, so the app runs until Quit (in the dashboard's Settings);
+// the tray icon or "press menu" brings the dashboard back.
 static class Program
 {
     [STAThread]
     static void Main()
     {
-        ApplicationConfiguration.Initialize();
+        // Spelled out fully: with both UseWindowsForms (kept for the tray
+        // icon) and UseWPF on, a bare "Application" is ambiguous. The
+        // dashboard hiding must not end the app, hence explicit shutdown.
+        var app = new System.Windows.Application { ShutdownMode = System.Windows.ShutdownMode.OnExplicitShutdown };
+        // The active profile's color theme first, then the shared styles —
+        // ThemeSwapper replaces the first entry in place when the theme
+        // changes, so the order matters.
+        app.Resources.MergedDictionaries.Add(new System.Windows.ResourceDictionary { Source = new Uri($"Themes/Theme.{ThemeMode.Current}.xaml", UriKind.Relative) });
+        app.Resources.MergedDictionaries.Add(new System.Windows.ResourceDictionary { Source = new Uri("Themes/Theme.Controls.xaml", UriKind.Relative) });
 
         VoiceEngine voice;
         try
@@ -16,15 +29,20 @@ static class Program
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
+            System.Windows.MessageBox.Show(
                 $"UnboundKeys couldn't start speech recognition:\n\n{ex.Message}\n\n" +
                 "Make sure a microphone is connected and set up under " +
-                "Windows Settings > Time & Language > Speech.",
+                "Windows Settings > System > Sound.",
                 "UnboundKeys",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error);
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Error);
             return;
         }
+
+        using var mouse = new MouseInputWatcher();
+        using var physical = new PhysicalKeyWatcher();
+        using var tray = new TrayIcon();
+        var dashboard = new Wpf.DashboardWindow();
 
         voice.CommandRecognized += word =>
         {
@@ -33,13 +51,19 @@ static class Program
                 Task.Run(KeyExecutor.ReleaseAll);
                 return;
             }
+            if (word == VoiceEngine.MenuWord)
+            {
+                // Recognized on the microphone's thread; the window is the
+                // dispatcher's.
+                app.Dispatcher.InvokeAsync(dashboard.ShowDashboard);
+                return;
+            }
 
             var keys = KeyMap.GetAllKeys(word);
             var behavior = KeyMap.Behaviors[word];
             Task.Run(() => KeyExecutor.Execute(word, keys, behavior));
         };
 
-        using var mouse = new MouseInputWatcher();
         mouse.ButtonPressed += id =>
         {
             // KeyExecutor tracks in-flight/engaged state per word string —
@@ -50,18 +74,10 @@ static class Program
             Task.Run(() => KeyExecutor.Execute(id, keys, behavior));
         };
 
-        // Its own Caps Lock double-tap panic button, plus mirroring any
-        // customized virtual-keyboard digit/letter onto the real physical
-        // key — see PhysicalKeyWatcher's own class comment.
-        using var physical = new PhysicalKeyWatcher();
-        // Two rapid Caps Lock taps: a panic button that works no matter
-        // what's mapped, or even if nothing at all is — same effect as
-        // saying "press stop". Also releases Fade (directly, not via
-        // Task.Run — this lambda already runs on the UI thread, same as
-        // the hook callback that fires it, and FadeMode.Changed's handlers
-        // touch Form.Opacity/Controls, which needs to happen there) — a
-        // safety net for whenever the screen's too washed out to find the
-        // dashboard's own Fade button.
+        // Two rapid Caps Lock taps on a real keyboard: a panic button that
+        // works no matter what's mapped — same effect as saying "press
+        // stop" — and it lifts Fade too, for whenever the screen's too
+        // washed out to find the Fade switch.
         physical.StopRequested += () =>
         {
             Task.Run(KeyExecutor.ReleaseAll);
@@ -74,17 +90,40 @@ static class Program
             Task.Run(() => KeyExecutor.Execute(id, keys, behavior));
         };
 
+        // The dashboard's Listening switch. Pausing also releases anything
+        // mid-hold/repeat — with listening off there'd be no way to say the
+        // word (or press the button) again to let go of it.
+        ListeningMode.Changed += () =>
+        {
+            if (ListeningMode.IsPaused)
+            {
+                voice.Pause();
+                mouse.Pause();
+                physical.Pause();
+                KeyExecutor.ReleaseAll();
+            }
+            else
+            {
+                voice.Resume();
+                mouse.Resume();
+                physical.Resume();
+            }
+            tray.SetPaused(ListeningMode.IsPaused);
+        };
+
+        tray.Clicked += dashboard.ToggleVisible;
+        dashboard.QuitRequested += () => app.Shutdown();
+
         voice.Start();
         mouse.Start();
         physical.Start();
 
-        using var overlay = new OverlayForm(voice, mouse, physical);
-        Application.Run(overlay);
+        dashboard.Show();
+        app.Run();
 
         // In case a word (or mouse button) was mid-"infinite hold" when the
-        // app was closed — don't leave a real keyboard key stuck down.
+        // app was quit — don't leave a real keyboard key stuck down.
         KeyExecutor.ReleaseAll();
-
         voice.Dispose();
     }
 }

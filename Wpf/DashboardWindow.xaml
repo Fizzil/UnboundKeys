@@ -1,0 +1,18 @@
+<uk:NoActivateWindow x:Class="UnboundKeys.Wpf.DashboardWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:uk="clr-namespace:UnboundKeys"
+        Title="UnboundKeys"
+        Width="720" Height="540"
+        WindowStyle="None" ResizeMode="NoResize" Topmost="True" AllowsTransparency="True"
+        Background="{DynamicResource BackgroundBrush}"
+        WindowStartupLocation="CenterScreen">
+    <!-- The dashboard window: fixed size, no chrome, always on top, never
+         takes focus — so it can sit over a game and be clicked without
+         the game losing the keyboard. Dragging, minimize and close all
+         come from the shell's own header; "close" hides it (the app
+         lives on in the tray — see Program.cs), and it comes back from
+         the tray icon or by saying "press menu". AllowsTransparency is
+         what lets Fade dim the whole window through Window.Opacity. -->
+    <Grid x:Name="Root"/>
+</uk:NoActivateWindow>

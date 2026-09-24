@@ -105,6 +105,11 @@ internal static class Settings
         // keyboard, the one it replaces (Fizzil's ask).
         public double KeyboardScale { get; set; } = 0.65;
 
+        // Where the dashboard window was last left — null until it has
+        // been moved, in which case it opens centered.
+        public double? DashboardLeft { get; set; }
+        public double? DashboardTop { get; set; }
+
         // Pre-profiles shape — only ever read, for one-time migration.
         public Dictionary<string, ushort>? KeyMap { get; set; }
         public Dictionary<string, KeyBehavior>? Behaviors { get; set; }
@@ -199,6 +204,20 @@ internal static class Settings
         saved.KeyboardLeft = left;
         saved.KeyboardTop = top;
         saved.KeyboardMini = mini;
+        Write(saved);
+    }
+
+    public static (double? Left, double? Top) LoadDashboardPlacement()
+    {
+        var saved = Read();
+        return (saved.DashboardLeft, saved.DashboardTop);
+    }
+
+    public static void SaveDashboardPlacement(double left, double top)
+    {
+        var saved = Read();
+        saved.DashboardLeft = left;
+        saved.DashboardTop = top;
         Write(saved);
     }
 

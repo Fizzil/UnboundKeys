@@ -4,12 +4,10 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
+    <!-- The UI is WPF (see Wpf/ and Themes/). WindowsForms stays
+         referenced only for the tray icon (NotifyIcon, which WPF lacks)
+         and the System.Drawing it needs. -->
     <UseWindowsForms>true</UseWindowsForms>
-    <!-- Both true during the WPF migration (see the plan doc) so the new
-         XAML UI can be built up alongside the still-active WinForms one —
-         Program.cs's StartupObject below stays on the WinForms entry
-         point until the new UI is complete and verified, so every build
-         until then keeps producing today's working app unchanged. -->
     <UseWPF>true</UseWPF>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationIcon>Assets\skull.ico</ApplicationIcon>

@@ -22,8 +22,11 @@ public sealed class VoiceEngine : IDisposable
     // "press stop" is a safety-net word, not a real key mapping — recognized
     // the same way as any other "press <word>" command, but Program.cs treats
     // it specially (releases every infinite hold/repeat) instead of looking
-    // it up in KeyMap.Words.
+    // it up in KeyMap.Words. "press menu" is the same kind of thing: it
+    // brings the dashboard up, hands-free — the way back in while a game
+    // is running, now that there's no overlay icon on screen.
     public const string StopWord = "stop";
+    public const string MenuWord = "menu";
 
     // Fired with the recognized key word (e.g. "one", "escape") whenever a
     // "press <word>" command is heard.
@@ -60,6 +63,7 @@ public sealed class VoiceEngine : IDisposable
         var words = new List<string> { "press" };
         words.AddRange(KeyMap.Words.Keys);
         words.Add(StopWord);
+        words.Add(MenuWord);
         string grammar = JsonSerializer.Serialize(words);
         _recognizer = new VoskRecognizer(_model, SampleRate, grammar);
 
@@ -94,7 +98,9 @@ public sealed class VoiceEngine : IDisposable
             return;
 
         var spoken = parts[1].Trim();
-        if (KeyMap.Words.ContainsKey(spoken) || string.Equals(spoken, StopWord, StringComparison.OrdinalIgnoreCase))
+        if (KeyMap.Words.ContainsKey(spoken)
+            || string.Equals(spoken, StopWord, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(spoken, MenuWord, StringComparison.OrdinalIgnoreCase))
             CommandRecognized?.Invoke(spoken);
     }
 
