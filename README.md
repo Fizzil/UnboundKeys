@@ -2,6 +2,22 @@
 
 Remap mouse buttons, spoken words and an on-screen keyboard to keyboard keys, with full control over how each one gets pressed — a small Windows app built so one person could play PC games with nothing but a mouse and a microphone.
 
+## Screenshots
+
+<p float="left">
+  <img src="Assets/screenshots/UBK-Mouse.png" width="32%" alt="The Mouse page: a drawn mouse beside the six remappable buttons" />
+  <img src="Assets/screenshots/UBK-Keyboard-Page.png" width="32%" alt="The Keyboard page: a map of the keyboard with the remappable keys lit, plus the on-screen keyboard's switch and size" />
+  <img src="Assets/screenshots/UBK-Voice.png" width="32%" alt="The Voice page: the always-available commands and the ten spoken words as a keypad" />
+</p>
+<p float="left">
+  <img src="Assets/screenshots/UBK-Editor.png" width="32%" alt="A mapping's editor: its keys, Tap / Repeat / Hold, duration and Infinite" />
+  <img src="Assets/screenshots/UBK-Settings.png" width="32%" alt="Settings: theme swatches, profiles, Reset All and Quit" />
+  <img src="Assets/screenshots/UBK-Help.png" width="32%" alt="The Help page: the manual in one page" />
+</p>
+
+<img src="Assets/screenshots/UBK-Keyboard.png" width="100%" alt="The on-screen keyboard, with word suggestions above the keys and Fade, Mini and the drag grip in its top-right corner" />
+<img src="Assets/screenshots/UBK-Keyboard-Mini.png" width="100%" alt="The keyboard collapsed to its Mini strip" />
+
 ## What it does
 
 - **Voice keys** — say "press one" through "press ten" to send a key. Each word can send any key, or a combo of up to six, tapped once, held down, or repeated — for a set time, or until you say it again.

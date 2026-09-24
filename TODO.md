@@ -18,8 +18,6 @@ Notes for a future session — not urgent.
 
 - **An icon of its own.** The skull (Assets/skull.ico) is still the app
   and tray icon; the rest of the app has moved on from that look.
-- **Screenshots for the README.** The old ones in Assets/screenshots are
-  of the WinForms UI and are no longer linked.
 - **Per-monitor DPI.** The app is system-DPI-aware; a second monitor at
   a different scale will render blurry there.
 - **Suggestion accept key.** Fizzil's original idea for the suggestion
