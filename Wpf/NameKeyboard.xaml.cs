@@ -9,7 +9,7 @@ namespace UnboundKeys.Wpf;
 
 // The Keyboard page's map, made to type: the same rows (KeyboardLayout),
 // the same row height and key look, so it reads as the same keyboard
-// (Fizzil's ask). Letters and digits are the lit key caps; the outlined
+// (Fizzil). Every key is the same outline, letters and digits included; the
 // keys that mean something for a name are live too — Space, Backspace,
 // Shift, Caps, the punctuation, Enter for Done, Esc for Cancel, Del to
 // clear — and the rest (Tab, Ctrl, Win, Alt, the arrows) stay as quiet
@@ -126,23 +126,16 @@ public partial class NameKeyboard
         }
     }
 
-    // A letter or digit, in the on-screen keyboard's lit key cap.
+    // A letter or digit: the same outline as every other key here. The lit
+    // caps on the Keyboard page mean "remappable", which is not the point
+    // of this keyboard (Fizzil).
     private Button BuildTypingKey(KeySpec spec)
     {
-        char c = spec.Label[0];
-        var label = new TextBlock
-        {
-            Text = spec.Label,
-            FontSize = 13,
-            HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center,
-        };
+        char c = char.ToLowerInvariant(spec.Label[0]);
+        var key = BuildOutlinedKey(spec.Label.ToLowerInvariant(), out _, out var label);
         if (char.IsLetter(c))
-            _letters.Add((label, char.ToLowerInvariant(c)));
-
-        var key = new Button { Content = label };
-        key.SetResourceReference(StyleProperty, "KeyCapStyle");
-        key.Click += (_, _) => Type(char.ToLowerInvariant(c));
+            _letters.Add((label, c));
+        key.Click += (_, _) => Type(c);
         return key;
     }
 
