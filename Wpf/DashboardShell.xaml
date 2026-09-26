@@ -53,12 +53,13 @@
             </ScrollViewer>
         </Grid>
 
-        <!-- The profile chip's flyout — Discord's user-panel popout: an
-             in-window layer rather than a second window (no DPI math, no
-             focus questions), rising from the rail's bottom edge over the
-             footer. The transparent catcher behind it spans the whole
-             shell, so a click anywhere else simply closes it. -->
-        <Grid x:Name="FlyoutLayer" Grid.ColumnSpan="2" Visibility="Collapsed" Panel.ZIndex="10">
+        <!-- The profile chip flyout: an in-window layer rather than a
+             second window (no DPI math, no focus questions), sitting in
+             the content column just right of the rail, so the chip that
+             opened it stays in reach and clicking it again closes it
+             (Fizzil). The rail stays live underneath; the transparent
+             catcher covers the content area, so a click there closes it. -->
+        <Grid x:Name="FlyoutLayer" Grid.Column="1" Visibility="Collapsed" Panel.ZIndex="10">
             <Border Background="Transparent" MouseLeftButtonDown="FlyoutDismiss_Click"/>
             <Border Width="220" MaxHeight="520" HorizontalAlignment="Left" VerticalAlignment="Bottom"
                     Margin="8,0,0,8" CornerRadius="8" Padding="6"
