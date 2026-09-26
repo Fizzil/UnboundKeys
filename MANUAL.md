@@ -92,6 +92,8 @@ A profile is a game. Each one has its own colour theme and up to ten **sub-profi
 
 ## Settings
 
+Every section here folds under its heading and, while closed, shows a one-line summary of its state; click the heading to open it.
+
 - **Theme** — Red, Green or Blue; the choice is saved with the current profile.
 - **Profiles** — as above; the heading folds the list away to save room, click it to open.
 - **Start with Windows** — starts UnboundKeys when you sign in, through a scheduled task that runs it as administrator without the permission prompt. **Start with voice keys paused** applies to that automatic start only: the app comes up with Listening off until you flip it on. The task is refreshed each time the app starts, so it keeps pointing at the copy you last ran, updates included.

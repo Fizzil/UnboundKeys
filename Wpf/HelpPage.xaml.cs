@@ -63,33 +63,8 @@ public partial class HelpPage : IDashboardPage
     // same row as Settings uses (Fizzil); closed until clicked.
     private void AddHeader(string text, double topMargin)
     {
-        var body = new StackPanel { Visibility = Visibility.Collapsed };
-        var chevron = new TextBlock
-        {
-            Text = ((char)0xE76C).ToString(),
-            FontFamily = new System.Windows.Media.FontFamily("Segoe MDL2 Assets"),
-            FontSize = 12,
-            VerticalAlignment = VerticalAlignment.Center,
-        };
-        chevron.SetResourceReference(TextBlock.ForegroundProperty, "TextSecondaryBrush");
-
-        var content = new Grid();
-        content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        content.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        content.Children.Add(new TextBlock { Text = text, VerticalAlignment = VerticalAlignment.Center });
-        Grid.SetColumn(chevron, 1);
-        content.Children.Add(chevron);
-
-        var header = new Button { Content = content, Margin = new Thickness(0, topMargin, 0, 0) };
-        header.SetResourceReference(StyleProperty, "DisclosureHeaderStyle");
-        header.Click += (_, _) =>
-        {
-            bool open = body.Visibility != Visibility.Visible;
-            body.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
-            chevron.Text = ((char)(open ? 0xE70D : 0xE76C)).ToString();
-        };
-        Sections.Children.Add(header);
-        Sections.Children.Add(body);
+        var body = new StackPanel();
+        Sections.Children.Add(new FoldSection { Title = text, Content = body, Margin = new Thickness(0, topMargin, 0, 0) });
         _body = body;
     }
 

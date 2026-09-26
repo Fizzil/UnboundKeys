@@ -21,7 +21,6 @@ public partial class SettingsPage : IDashboardPage
 {
     private const int MaxProfiles = 10;
     private const int MaxSubProfiles = 10;
-    private bool _profilesOpen;
 
     // Which profiles show their sub-profiles. The active one opens by
     // itself whenever it changes; the rest are whatever was clicked.
@@ -79,23 +78,27 @@ public partial class SettingsPage : IDashboardPage
         Updates.Launched += () => QuitRequested?.Invoke();
 
         StartupHint.Text = StartupHintText;
-        ProfilesHeader.Click += (_, _) => SetProfilesOpen(!_profilesOpen);
-        SetProfilesOpen(false);
         StartWithWindowsToggle.Tag = Settings.LoadStartWithWindows();
         AutoStartPausedToggle.Tag = Settings.LoadAutoStartPaused();
         AutoStartPausedToggle.IsEnabled = Settings.LoadStartWithWindows();
+        RefreshStartupSummary();
+        UpdatesFold.Summary = "Only when you click";
+        ResetFold.Summary = "Two clicks to confirm";
+        QuitFold.Summary = "Two clicks to confirm";
         StartWithWindowsToggle.Click += (_, _) => ToggleStartWithWindows();
         AutoStartPausedToggle.Click += (_, _) =>
         {
             bool paused = !(AutoStartPausedToggle.Tag is true);
             AutoStartPausedToggle.Tag = paused;
             Settings.SaveStartup(Settings.LoadStartWithWindows(), paused);
+            RefreshStartupSummary();
         };
 
         var version = typeof(SettingsPage).Assembly.GetName().Version;
         string title = version == null
             ? "UnboundKeys — built by Fizzil"
             : $"UnboundKeys v{version.Major}.{version.Minor}.{version.Build} — built by Fizzil";
+        AboutFold.Summary = title;
         AboutText.Text = title + "\nWord suggestions use the OpenSubtitles-based FrequencyWords list by Hermit Dave (CC BY-SA 4.0).";
 
         RebuildProfileList();
@@ -112,17 +115,9 @@ public partial class SettingsPage : IDashboardPage
     {
         foreach (var (name, swatch) in _swatches)
             swatch.Tag = name == ThemeMode.Current;
+        ThemeFold.Summary = ThemeMode.Current;
     }
 
-    // The list folds away under its heading (Fizzil: it took too much
-    // room); closed, the heading carries a one-line summary instead.
-    private void SetProfilesOpen(bool open)
-    {
-        _profilesOpen = open;
-        ProfilesBody.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
-        ProfilesSummary.Visibility = open ? Visibility.Collapsed : Visibility.Visible;
-        ProfilesChevron.Text = ((char)(open ? 0xE70D : 0xE76C)).ToString();
-    }
 
     // Every profile as a row; beneath each open one, its sub-profiles
     // indented, then "+ Add sub-profile"; "+ Add Profile" at the end.
@@ -140,7 +135,7 @@ public partial class SettingsPage : IDashboardPage
         var names = Settings.LoadProfileNames();
         var activeSubs = Settings.LoadSubProfileNames(activeGame);
         string activeSub = Settings.LoadActiveSubProfile(activeGame);
-        ProfilesSummary.Text = activeSubs.Count > 1
+        ProfilesFold.Summary = activeSubs.Count > 1
             ? $"{names.Count} profile{Plural(names.Count)}, {activeGame} · {activeSub} active"
             : $"{names.Count} profile{Plural(names.Count)}, {activeGame} active";
 
@@ -450,6 +445,14 @@ public partial class SettingsPage : IDashboardPage
         ProfileList.Visibility = Visibility.Visible;
     }
 
+    // What the closed STARTUP row says.
+    private void RefreshStartupSummary()
+    {
+        StartupFold.Summary = !Settings.LoadStartWithWindows() ? "Off"
+            : Settings.LoadAutoStartPaused() ? "On, voice keys paused"
+            : "On, listening";
+    }
+
     // Flips the setting and the scheduled task together. If Task Scheduler
     // refuses, the switch stays where it was and the hint says why.
     private void ToggleStartWithWindows()
@@ -471,5 +474,6 @@ public partial class SettingsPage : IDashboardPage
         AutoStartPausedToggle.IsEnabled = on;
         Settings.SaveStartup(on, Settings.LoadAutoStartPaused());
         StartupHint.Text = StartupHintText;
+        RefreshStartupSummary();
     }
 }

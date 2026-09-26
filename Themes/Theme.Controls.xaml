@@ -1,7 +1,8 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=mscorlib"
-                    xmlns:themes="clr-namespace:UnboundKeys.Themes">
+                    xmlns:themes="clr-namespace:UnboundKeys.Themes"
+                    xmlns:wpf="clr-namespace:UnboundKeys.Wpf">
 
     <!-- The value every "this is the active/selected/armed one" trigger
          below compares Tag against. Code sets Tag to a real bool
@@ -397,6 +398,45 @@
         <Setter Property="Height" Value="32"/>
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
         <Setter Property="Padding" Value="4,0,8,0"/>
+    </Style>
+
+    <!-- FoldSection (see Wpf/FoldSection.cs): a disclosure row — title,
+         a grey one-line summary while closed, a chevron at the far right —
+         over the body, which is the control content. IsOpen shows the
+         body and flips the chevron; the code-behind toggles it from the
+         header click. -->
+    <Style TargetType="{x:Type wpf:FoldSection}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="wpf:FoldSection">
+                    <StackPanel>
+                        <Button x:Name="PART_Header" Style="{StaticResource DisclosureHeaderStyle}" Margin="0,10,0,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{TemplateBinding Title}" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="SummaryText" Grid.Column="1" Text="{TemplateBinding Summary}" FontSize="12" FontWeight="Normal"
+                                           Margin="12,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                <TextBlock x:Name="Chevron" Grid.Column="2" Text="&#xE76C;" FontFamily="Segoe MDL2 Assets" FontSize="12"
+                                           VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                            </Grid>
+                        </Button>
+                        <ContentPresenter x:Name="Body" Visibility="Collapsed"/>
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsOpen" Value="True">
+                            <Setter TargetName="Body" Property="Visibility" Value="Visible"/>
+                            <Setter TargetName="SummaryText" Property="Visibility" Value="Collapsed"/>
+                            <Setter TargetName="Chevron" Property="Text" Value="&#xE70D;"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <Style x:Key="SectionHeaderStyle" TargetType="TextBlock">

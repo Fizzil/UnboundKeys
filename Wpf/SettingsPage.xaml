@@ -4,71 +4,69 @@
              xmlns:local="clr-namespace:UnboundKeys.Wpf">
     <!-- Everything that used to hide behind a gesture on the overlay icon
          (the color picker was four quick right-clicks) or live as its own
-         tab (Profile), as plain visible controls, grouped Discord-settings
-         style under small headings. -->
+         tab (Profile), as plain visible controls. Each section folds under
+         its heading (FoldSection) and, closed, carries a one-line summary
+         of its state set from code — Fizzil: the page was getting long,
+         and a closed row that still reads "Red" loses nothing. -->
     <StackPanel>
-        <TextBlock Text="THEME" Style="{StaticResource SectionHeaderStyle}" Margin="4,4,0,2"/>
-        <StackPanel x:Name="Swatches" Orientation="Horizontal" Margin="4,0,0,8"/>
+        <local:FoldSection x:Name="ThemeFold" Title="THEME">
+            <StackPanel x:Name="Swatches" Orientation="Horizontal" Margin="4,2,0,8"/>
+        </local:FoldSection>
 
-        <Button x:Name="ProfilesHeader" Style="{StaticResource DisclosureHeaderStyle}" Margin="0,10,0,0">
-            <Grid>
+        <local:FoldSection x:Name="ProfilesFold" Title="PROFILES">
+            <StackPanel>
+                <TextBlock Text="A profile is a game: its colour, plus up to ten sub-profiles that each hold a complete set of mappings. Click a profile to show its sub-profiles, and a sub-profile to switch to it."
+                           FontSize="12" TextWrapping="Wrap" Margin="12,0,12,6" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                <StackPanel x:Name="ProfileList"/>
+                <local:NameKeyboard x:Name="NameGrid" Visibility="Collapsed" Margin="8,4,8,8"/>
+            </StackPanel>
+        </local:FoldSection>
+
+        <local:FoldSection x:Name="StartupFold" Title="STARTUP">
+            <StackPanel>
+                <Button x:Name="StartWithWindowsToggle" Content="Start with Windows" Style="{StaticResource RailToggleStyle}" Margin="4,0,4,0"/>
+                <TextBlock x:Name="StartupHint"
+                           FontSize="11" TextWrapping="Wrap" Margin="16,0,12,4" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                <Button x:Name="AutoStartPausedToggle" Content="Start with voice keys paused" Style="{StaticResource RailToggleStyle}" Margin="4,0,4,0"/>
+                <TextBlock Text="Only for that automatic start. Flip Listening on when you are ready to play; a launch by hand always comes up listening."
+                           FontSize="11" TextWrapping="Wrap" Margin="16,0,12,4" Foreground="{DynamicResource TextSecondaryBrush}"/>
+            </StackPanel>
+        </local:FoldSection>
+
+        <local:FoldSection x:Name="UpdatesFold" Title="UPDATES">
+            <local:UpdatePanel x:Name="Updates"/>
+        </local:FoldSection>
+
+        <local:FoldSection x:Name="ResetFold" Title="RESET">
+            <Grid Height="48">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="PROFILES" VerticalAlignment="Center"/>
-                <TextBlock x:Name="ProfilesSummary" Grid.Column="1" FontSize="12" FontWeight="Normal" Margin="12,0,0,0"
-                           VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
-                <TextBlock x:Name="ProfilesChevron" Grid.Column="2" FontFamily="Segoe MDL2 Assets" FontSize="12"
-                           VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                <TextBlock Text="Put every mapping in this profile back to its default. Click twice to confirm."
+                           FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" Margin="12,0,12,0"
+                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+                <Button x:Name="ResetAllButton" Grid.Column="1" Content="Reset All" Width="120" Height="36" FontSize="13"
+                        Margin="0,0,8,0" Style="{StaticResource ToggleFillButtonStyle}"/>
             </Grid>
-        </Button>
-        <StackPanel x:Name="ProfilesBody" Visibility="Collapsed">
-            <TextBlock Text="A profile is a game: its colour, plus up to ten sub-profiles that each hold a complete set of mappings. Click a profile to show its sub-profiles, and a sub-profile to switch to it."
-                       FontSize="12" TextWrapping="Wrap" Margin="12,0,12,6" Foreground="{DynamicResource TextSecondaryBrush}"/>
-            <StackPanel x:Name="ProfileList"/>
-            <local:NameKeyboard x:Name="NameGrid" Visibility="Collapsed" Margin="8,4,8,8"/>
-        </StackPanel>
+        </local:FoldSection>
 
-        <TextBlock Text="STARTUP" Style="{StaticResource SectionHeaderStyle}" Margin="4,16,0,2"/>
-        <Button x:Name="StartWithWindowsToggle" Content="Start with Windows" Style="{StaticResource RailToggleStyle}" Margin="4,0,4,0"/>
-        <TextBlock x:Name="StartupHint"
-                   FontSize="11" TextWrapping="Wrap" Margin="16,0,12,4" Foreground="{DynamicResource TextSecondaryBrush}"/>
-        <Button x:Name="AutoStartPausedToggle" Content="Start with voice keys paused" Style="{StaticResource RailToggleStyle}" Margin="4,0,4,0"/>
-        <TextBlock Text="Only for that automatic start. Flip Listening on when you are ready to play; a launch by hand always comes up listening."
-                   FontSize="11" TextWrapping="Wrap" Margin="16,0,12,4" Foreground="{DynamicResource TextSecondaryBrush}"/>
+        <local:FoldSection x:Name="QuitFold" Title="QUIT">
+            <Grid Height="48">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="Stops UnboundKeys completely, releasing anything held. Closing this window only hides it. Click twice to confirm."
+                           FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" Margin="12,0,12,0"
+                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+                <Button x:Name="QuitButton" Grid.Column="1" Content="Quit" Width="120" Height="36" FontSize="13"
+                        Margin="0,0,8,0" Style="{StaticResource ToggleFillButtonStyle}"/>
+            </Grid>
+        </local:FoldSection>
 
-        <TextBlock Text="UPDATES" Style="{StaticResource SectionHeaderStyle}" Margin="4,16,0,2"/>
-        <local:UpdatePanel x:Name="Updates"/>
-
-        <TextBlock Text="RESET" Style="{StaticResource SectionHeaderStyle}" Margin="4,16,0,2"/>
-        <Grid Height="48">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <TextBlock Text="Put every mapping in this profile back to its default. Click twice to confirm."
-                       FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" Margin="12,0,12,0"
-                       Foreground="{DynamicResource TextSecondaryBrush}"/>
-            <Button x:Name="ResetAllButton" Grid.Column="1" Content="Reset All" Width="120" Height="36" FontSize="13"
-                    Margin="0,0,8,0" Style="{StaticResource ToggleFillButtonStyle}"/>
-        </Grid>
-
-        <TextBlock Text="QUIT" Style="{StaticResource SectionHeaderStyle}" Margin="4,16,0,2"/>
-        <Grid Height="48">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <TextBlock Text="Stops UnboundKeys completely, releasing anything held. Closing this window only hides it. Click twice to confirm."
-                       FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" Margin="12,0,12,0"
-                       Foreground="{DynamicResource TextSecondaryBrush}"/>
-            <Button x:Name="QuitButton" Grid.Column="1" Content="Quit" Width="120" Height="36" FontSize="13"
-                    Margin="0,0,8,0" Style="{StaticResource ToggleFillButtonStyle}"/>
-        </Grid>
-
-        <TextBlock Text="ABOUT" Style="{StaticResource SectionHeaderStyle}" Margin="4,16,0,2"/>
-        <TextBlock x:Name="AboutText" FontSize="12" Margin="12,0,12,8" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}"/>
+        <local:FoldSection x:Name="AboutFold" Title="ABOUT">
+            <TextBlock x:Name="AboutText" FontSize="12" Margin="12,0,12,8" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}"/>
+        </local:FoldSection>
     </StackPanel>
 </UserControl>
