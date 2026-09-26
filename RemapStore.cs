@@ -136,6 +136,8 @@ internal sealed class RemapStore
             FarmRounds = old.FarmRounds,
             FarmPauseSeconds = old.FarmPauseSeconds,
             FarmSkin = old.FarmSkin,
+            FarmApproach = old.FarmApproach,
+            FarmApproachSeconds = old.FarmApproachSeconds,
         };
         Save();
     }
@@ -143,7 +145,7 @@ internal sealed class RemapStore
     // Experimental assistance: Farm nearby (see KeyBehavior.Farm). Kept
     // apart from SetBehavior so the editor's many behavior saves never
     // have to carry these along.
-    public void SetFarm(string id, bool farm, int rounds, double pauseSeconds, bool skin)
+    public void SetFarm(string id, bool farm, int rounds, double pauseSeconds, bool skin, bool approach, double approachSeconds)
     {
         if (!Behaviors.TryGetValue(id, out var behavior))
             Behaviors[id] = behavior = new KeyBehavior();
@@ -151,6 +153,8 @@ internal sealed class RemapStore
         behavior.FarmRounds = rounds;
         behavior.FarmPauseSeconds = pauseSeconds;
         behavior.FarmSkin = skin;
+        behavior.FarmApproach = approach;
+        behavior.FarmApproachSeconds = approachSeconds;
         Save();
     }
 

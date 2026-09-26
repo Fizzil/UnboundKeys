@@ -42,6 +42,8 @@ public partial class RemapCard
     private int _farmRounds;
     private double _farmPause;
     private bool _farmSkin;
+    private bool _farmApproach;
+    private double _farmApproachSeconds;
     // One gap per key (index 0 = Key 1): how long to wait after that key
     // before the next, 0 meaning the executor's default. Rebuilt to the
     // right length rather than trusting saved data blindly — same guard
@@ -73,6 +75,8 @@ public partial class RemapCard
         _farmRounds = behavior.FarmRounds;
         _farmPause = behavior.FarmPauseSeconds;
         _farmSkin = behavior.FarmSkin;
+        _farmApproach = behavior.FarmApproach;
+        _farmApproachSeconds = behavior.FarmApproachSeconds;
         _gameMode = Settings.LoadGameMode();
 
         int totalKeyCount = 1 + _source.ExtraWords[_id].Count;
@@ -599,10 +603,17 @@ public partial class RemapCard
         _farmOn = !_farmOn;
         if (_farmOn)
         {
+            // First time on for this mapping: the defaults, including the
+            // run to the target (Fizzil's own loop; a hunter switches it off).
             if (_farmRounds <= 0)
+            {
                 _farmRounds = DefaultFarmRounds;
+                _farmApproach = true;
+            }
             if (_farmPause <= 0)
                 _farmPause = DefaultFarmPauseSeconds;
+            if (_farmApproachSeconds <= 0)
+                _farmApproachSeconds = DefaultFarmApproachSeconds;
         }
         else
         {
@@ -625,6 +636,28 @@ public partial class RemapCard
         RefreshFarmRows(animate: false);
     }
 
+    private const double DefaultFarmApproachSeconds = 1.5;
+
+    private void FarmApproachButton_Click(object sender, RoutedEventArgs e)
+    {
+        _farmApproach = !_farmApproach;
+        if (_farmApproach && _farmApproachSeconds <= 0)
+            _farmApproachSeconds = DefaultFarmApproachSeconds;
+        SaveFarm();
+        RefreshFarmRows(animate: true);
+    }
+
+    private void FarmApproachPlusTenthButton_Click(object sender, RoutedEventArgs e) => SetFarmApproachSeconds(Math.Round(_farmApproachSeconds + 0.1, 1));
+    private void FarmApproachPlusOneButton_Click(object sender, RoutedEventArgs e) => SetFarmApproachSeconds(Math.Round(_farmApproachSeconds + 1.0, 1));
+    private void FarmApproachResetButton_Click(object sender, RoutedEventArgs e) => SetFarmApproachSeconds(DefaultFarmApproachSeconds);
+
+    private void SetFarmApproachSeconds(double seconds)
+    {
+        _farmApproachSeconds = Math.Max(0, seconds);
+        SaveFarm();
+        RefreshFarmRows(animate: false);
+    }
+
     private void SetFarmRounds(int rounds)
     {
         _farmRounds = Math.Clamp(rounds, 1, 20);
@@ -639,18 +672,21 @@ public partial class RemapCard
         RefreshFarmRows(animate: false);
     }
 
-    private void SaveFarm() => _source.SetFarm(_id, _farmOn, _farmRounds, _farmPause, _farmSkin);
+    private void SaveFarm() => _source.SetFarm(_id, _farmOn, _farmRounds, _farmPause, _farmSkin, _farmApproach, _farmApproachSeconds);
 
     private void RefreshFarmRows(bool animate)
     {
         FarmButton.Tag = _farmOn;
         FarmSkinButton.Tag = _farmSkin;
+        FarmApproachButton.Tag = _farmApproach;
+        FarmApproachText.Text = $"{_farmApproachSeconds.ToString("0.0", CultureInfo.InvariantCulture)} s";
         FarmRoundsText.Text = _farmRounds.ToString(CultureInfo.InvariantCulture);
         FarmPauseText.Text = $"{_farmPause.ToString("0.0", CultureInfo.InvariantCulture)} s";
         AssistFold.Summary = _farmOn ? "Farm nearby on" : "";
         FarmNote.Text = (GameTiming.InteractVk == 0 ? "Set Interact with target above, or the loop skips looting. " : "")
             + "While Farm nearby is on, Mode, Duration and Infinite don't apply: the loop runs until you trigger it again or say \"press stop\". Priority keys still cut in.";
         SetElementVisible(FarmPanel, _farmOn, animate);
+        SetElementVisible(FarmApproachPanel, _farmOn && _farmApproach, animate);
     }
 
     // The Help page lines for game mode, here as well, under a fold.
@@ -662,7 +698,7 @@ public partial class RemapCard
         AddInfoLine("Channelled ability", "Tick it on a priority key whose ability channels, and set how long the channel takes, usually two to three seconds. The repeat stays paused that long instead of one GCD.");
         AddInfoLine("Two priority keys in a row", "extend the pause; the second never cuts the first short.");
         AddInfoLine("Where it applies", "Any mapping can be a priority key: a spoken word, a mouse button, an on-screen key or a remapped real key. Game mode only shows these rows; the settings work even with it off.");
-        AddInfoLine("Experimental assistance", "Single-button farming with you at the wheel. Farm nearby targets the nearest enemy, runs this mapping's keys as the rotation for the set rounds, waits for the drop, loots (and skins if asked), then goes again until you trigger it again or say press stop. Set the game keys it presses once per sub-profile.");
+        AddInfoLine("Experimental assistance", "Single-button farming with you at the wheel. Farm nearby targets the nearest enemy, runs to it if asked (with the game's Click to Move), runs this mapping's keys as the rotation for the set rounds, waits for the drop, loots (and skins if asked), then goes again until you trigger it again or say press stop. Set the game keys it presses once per sub-profile.");
     }
 
     private void AddInfoLine(string lead, string explanation)
@@ -703,6 +739,8 @@ public partial class RemapCard
         _farmRounds = 0;
         _farmPause = 0.0;
         _farmSkin = false;
+        _farmApproach = false;
+        _farmApproachSeconds = 0.0;
 
         UpdateModeVisuals();
         InfiniteButton.Tag = _infiniteOn;

@@ -35,7 +35,7 @@ public partial class HelpPage : IDashboardPage
         AddLine("Infinite", "runs until you say the word or press the button again.");
         AddLine("Say or press it again", "to stop a Repeat or Hold early, Infinite or not.");
         AddLine("Game mode", "in the editor, for games with a global cooldown. Global cooldown: switch it on once per sub-profile (per class) and every infinite repeat waits one GCD between keys. Priority: a key that pauses the infinite repeat, waits for the GCD to finish, fires, pauses one more GCD (or a channel cast time), then resumes the repeat.");
-        AddLine("Experimental assistance", "under Game mode in the editor: single-button farming with you at the wheel. Farm nearby targets the nearest enemy, runs the mapping's keys as the rotation, waits for the drop, loots, and goes again until you trigger it again or say press stop. Set your game's Target and Interact keys there once per sub-profile.");
+        AddLine("Experimental assistance", "under Game mode in the editor: single-button farming with you at the wheel. Farm nearby targets the nearest enemy, runs to it if you ask (with the game's Click to Move), runs the mapping's keys as the rotation, waits for the drop, loots, and goes again until you trigger it again or say press stop. You steer; set your game's Target and Interact keys there once per sub-profile.");
 
         AddHeader("SAFETY NETS", topMargin: 6);
         AddLine($"\"press {VoiceEngine.StopWord}\"", "lets go of everything, whatever is mapped.");

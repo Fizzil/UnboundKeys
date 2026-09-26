@@ -56,4 +56,11 @@ public sealed class KeyBehavior
     public int FarmRounds { get; set; }
     public double FarmPauseSeconds { get; set; }
     public bool FarmSkin { get; set; }
+
+    // Run to the target first: an Interact right after Target (with the
+    // game's Click to Move on, that turns to the mob, runs into range and
+    // starts auto-attack), then FarmApproachSeconds for the run before the
+    // rotation starts. What a melee class needs; a hunter can leave it off.
+    public bool FarmApproach { get; set; }
+    public double FarmApproachSeconds { get; set; }
 }

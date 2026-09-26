@@ -123,23 +123,24 @@ bool Scenario(string name, double prioritySeconds, double expectedResumeGap, boo
 }
 
 // Farm nearby (see KeyExecutor.RunFarmLoop): one rotation key with a 1.0 s
-// gap, two rounds, a 1.0 s wait, loot and skin. One cycle is target at 0,
-// the rotation at 0.3 and 1.3, the wait, interact at 3.3 and 4.1, and the
-// next cycle's target at 4.9.
+// gap, two rounds, a 0.5 s run, a 1.0 s wait, loot and skin. One cycle is
+// target at 0, the run (interact) at 0.3, the rotation at 0.8 and 1.8, the
+// wait, interact at 3.8 and 4.6, then the next cycle's target at 5.4 and
+// run at 5.7.
 bool FarmScenario()
 {
-    Console.WriteLine("--- farm nearby: target, two rounds, wait, loot, skin ---");
+    Console.WriteLine("--- farm nearby: target, run, two rounds, wait, loot, skin ---");
     lock (events)
         events.Clear();
 
     GameTiming.GcdSeconds = 0;
     GameTiming.TargetVk = F15;
     GameTiming.InteractVk = F16;
-    var farm = new KeyBehavior { Farm = true, FarmRounds = 2, FarmPauseSeconds = 1.0, FarmSkin = true, UseCustomRepeatIntervals = true, RepeatGapSeconds = 1.0 };
+    var farm = new KeyBehavior { Farm = true, FarmRounds = 2, FarmPauseSeconds = 1.0, FarmSkin = true, FarmApproach = true, FarmApproachSeconds = 0.5, UseCustomRepeatIntervals = true, RepeatGapSeconds = 1.0 };
 
     clock.Restart();
     var task = Task.Run(() => KeyExecutor.Execute("three", repeatKeys, farm));
-    Thread.Sleep(5600);
+    Thread.Sleep(6000);
     KeyExecutor.ReleaseAll();
     task.Wait(2000);
     Thread.Sleep(300);
@@ -159,7 +160,7 @@ bool FarmScenario()
         ok &= condition;
     }
 
-    var expected = new (double T, ushort Vk)[] { (0.0, F15), (0.3, F13), (1.3, F13), (3.3, F16), (4.1, F16), (4.9, F15), (5.2, F13) };
+    var expected = new (double T, ushort Vk)[] { (0.0, F15), (0.3, F16), (0.8, F13), (1.8, F13), (3.8, F16), (4.6, F16), (5.4, F15), (5.7, F16) };
     Check(log.Count >= expected.Length, $"at least {expected.Length} keys were sent (got {log.Count})");
     double offset = log.Count > 0 ? log[0].T : 0; // the first key marks time zero
     for (int i = 0; i < expected.Length && i < log.Count; i++)

@@ -107,8 +107,8 @@ public static class KeyMap
     public static void SetBehavior(string word, bool repeat, bool hold, double durationSeconds, bool infinite, bool useCustomRepeatIntervals, List<double> repeatKeyIntervalsSeconds, double repeatGapSeconds, bool priority, double prioritySeconds) =>
         _store.SetBehavior(word, repeat, hold, durationSeconds, infinite, useCustomRepeatIntervals, repeatKeyIntervalsSeconds, repeatGapSeconds, priority, prioritySeconds);
 
-    public static void SetFarm(string id, bool farm, int rounds, double pauseSeconds, bool skin) =>
-        _store.SetFarm(id, farm, rounds, pauseSeconds, skin);
+    public static void SetFarm(string id, bool farm, int rounds, double pauseSeconds, bool skin, bool approach, double approachSeconds) =>
+        _store.SetFarm(id, farm, rounds, pauseSeconds, skin, approach, approachSeconds);
 
     // Called by the dashboard's card-level reset button: puts a word back to
     // its original key with no repeat/hold/duration set, and no extra keys.

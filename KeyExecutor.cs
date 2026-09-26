@@ -584,6 +584,11 @@ internal static class KeyExecutor
             if (!Press(target, FarmSettleMs))
                 return;
 
+            // Run to it (needs the game's Click to Move): Interact turns to the
+            // mob, runs into range and starts auto-attack; the wait is the run.
+            if (behavior.FarmApproach && interact != 0 && !Press(interact, (int)(behavior.FarmApproachSeconds * 1000)))
+                return;
+
             for (int round = 0; round < rounds; round++)
                 for (int i = 0; i < keys.Count; i++)
                 {
