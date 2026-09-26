@@ -141,7 +141,7 @@ public partial class VirtualKeyboardWindow
         var label = new TextBlock
         {
             Text = spec.Label,
-            FontSize = Math.Round((spec.LargeLabel ? 16 : 13) * _scale, 1),
+            FontSize = Font(spec.LargeLabel ? 16 : 13),
             HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
         };
@@ -356,7 +356,7 @@ public partial class VirtualKeyboardWindow
             var button = new Button
             {
                 Content = new TextBlock { Text = suggestion, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = System.Windows.HorizontalAlignment.Center },
-                FontSize = Math.Round(12 * _scale, 1),
+                FontSize = Font(12),
                 Margin = KeyMargin,
             };
             button.SetResourceReference(StyleProperty, "KeyCapStyle");
@@ -477,6 +477,12 @@ public partial class VirtualKeyboardWindow
 
     // The gap around a key: 2px at full size, never under 1.
     private Thickness KeyMargin => new(Math.Max(1, Math.Round(2 * _scale)));
+
+    // A label's size at this scale. Small (0.65) gets one size more than
+    // the straight scale gives: at 8.5 points its letters, digits and
+    // symbols were too small to read at a glance (Fizzil). Medium and
+    // Large scale straight.
+    private double Font(double fullSize) => Math.Round(fullSize * _scale + (_scale < 0.7 ? 1 : 0), 1);
 
     private void ToggleMiniMode()
     {
