@@ -69,11 +69,12 @@
             <!-- Game mode (Fizzil, after a WoW night): the timing a game
                  with a global cooldown needs. One app-wide switch, so it
                  stays on in every editor once a game is being set up. It
-                 reveals: a gap between repeated keys with the two GCD
-                 presets (Repeat only), the per-key custom gaps, and
-                 Priority — a mapping that pauses any running repeat,
-                 waits out its cooldown, fires, and holds the repeat for a
-                 time (see KeyExecutor's priority pause). -->
+                 reveals: the sub-profile's (class's) global cooldown, a gap
+                 for this mapping alone (Repeat only) with the per-key
+                 custom gaps, and Priority — a mapping that pauses any
+                 infinite repeat, waits out the GCD, fires, pauses one more
+                 GCD (or a channel's cast time), then lets it resume (see
+                 KeyExecutor's priority pause). -->
             <Button x:Name="GameModeButton" Click="GameModeButton_Click" Style="{StaticResource RailToggleStyle}" Height="48" Margin="4,0,4,0">
                 <StackPanel>
                     <TextBlock Text="Game mode"/>
@@ -82,6 +83,31 @@
             </Button>
             <StackPanel x:Name="GamePanel" Height="0" Visibility="Collapsed" ClipToBounds="True">
 
+                <!-- The class's GCD: one value for the whole sub-profile
+                     (GameTiming), so it shows the same in every editor. -->
+                <Grid Height="44">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Global cooldown" Style="{StaticResource RowLabelStyle}"/>
+                    <TextBlock x:Name="GcdText" Grid.Column="1" Style="{StaticResource ValueTextStyle}"/>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
+                        <Button Content="+0.1 s" Click="GcdPlusTenthButton_Click" Style="{StaticResource StepButtonStyle}"/>
+                        <Button Content="Reset" Click="GcdResetButton_Click" Style="{StaticResource StepButtonStyle}"/>
+                    </StackPanel>
+                </Grid>
+                <Border Style="{StaticResource SegmentGroupStyle}" Margin="12,0,8,4" HorizontalAlignment="Left">
+                    <UniformGrid Rows="1" Width="440">
+                        <Button x:Name="GcdMostButton" Content="Most classes · 1.5 s" Click="GcdMostButton_Click" Style="{StaticResource SegmentButtonStyle}"/>
+                        <Button x:Name="GcdFastButton" Content="Rogue, cat Druid, Monk · 1.0 s" Click="GcdFastButton_Click" Style="{StaticResource SegmentButtonStyle}"/>
+                    </UniformGrid>
+                </Border>
+                <TextBlock x:Name="GcdHint" Style="{StaticResource RowHintStyle}"/>
+
+                <!-- A gap for this mapping alone: only for Repeat, and only
+                     when it should differ from the class GCD. -->
                 <StackPanel x:Name="GapPanel" Height="0" Visibility="Collapsed" ClipToBounds="True">
                     <Grid Height="44">
                         <Grid.ColumnDefinitions>
@@ -92,13 +118,12 @@
                         <TextBlock Text="Gap between keys" Style="{StaticResource RowLabelStyle}"/>
                         <TextBlock x:Name="RepeatGapText" Grid.Column="1" Style="{StaticResource ValueTextStyle}"/>
                         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
-                            <Button Content="1.0 s" Click="GapOneButton_Click" Style="{StaticResource StepButtonStyle}"/>
-                            <Button Content="1.5 s" Click="GapOneAndHalfButton_Click" Style="{StaticResource StepButtonStyle}"/>
                             <Button Content="+0.1 s" Click="GapPlusTenthButton_Click" Style="{StaticResource StepButtonStyle}"/>
+                            <Button Content="+1 s" Click="GapPlusOneButton_Click" Style="{StaticResource StepButtonStyle}"/>
                             <Button Content="Reset" Click="GapResetButton_Click" Style="{StaticResource StepButtonStyle}"/>
                         </StackPanel>
                     </Grid>
-                    <TextBlock Text="Your global cooldown (GCD): 1.5 s for most WoW classes (a little less with haste), 1.0 s for Rogues, cat-form Druids and Monks."
+                    <TextBlock Text="Only when this mapping should wait a different time than the class GCD. Reset goes back to the GCD."
                                Style="{StaticResource RowHintStyle}"/>
 
                     <!-- Per-key gaps: only for Repeat with 2+ keys. The
@@ -119,26 +144,36 @@
                 <Button x:Name="PriorityButton" Click="PriorityButton_Click" Style="{StaticResource RailToggleStyle}" Height="48" Margin="4,0,4,0">
                     <StackPanel>
                         <TextBlock Text="Priority"/>
-                        <TextBlock Text="Pauses an infinite repeat, waits for the GCD, fires, stays paused for the time below, then resumes" Style="{StaticResource InlineHintStyle}"/>
+                        <TextBlock Text="Pauses an infinite repeat, waits for the GCD, fires, pauses one more GCD, then resumes" Style="{StaticResource InlineHintStyle}"/>
                     </StackPanel>
                 </Button>
                 <StackPanel x:Name="PriorityPanel" Height="0" Visibility="Collapsed" ClipToBounds="True">
-                    <Grid Height="44">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="Pause the repeat for" Style="{StaticResource RowLabelStyle}"/>
-                        <TextBlock x:Name="PriorityText" Grid.Column="1" Style="{StaticResource ValueTextStyle}"/>
-                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
-                            <Button Content="+0.1 s" Click="PriorityPlusTenthButton_Click" Style="{StaticResource StepButtonStyle}"/>
-                            <Button Content="+1 s" Click="PriorityPlusOneButton_Click" Style="{StaticResource StepButtonStyle}"/>
-                            <Button Content="Reset" Click="PriorityResetButton_Click" Style="{StaticResource StepButtonStyle}"/>
+                    <!-- A channel needs its cast time, not one GCD: the switch
+                         reveals the pause time only when it applies (Fizzil). -->
+                    <Button x:Name="ChannelButton" Click="ChannelButton_Click" Style="{StaticResource RailToggleStyle}" Height="48" Margin="20,0,4,0">
+                        <StackPanel>
+                            <TextBlock Text="Channelled ability"/>
+                            <TextBlock Text="Keeps the repeat paused for the cast time below instead of one GCD" Style="{StaticResource InlineHintStyle}"/>
                         </StackPanel>
-                    </Grid>
-                    <TextBlock Text="Reset pauses the infinite repeat for one GCD. Change the pause time for a channelled ability, usually two to three seconds."
-                               Style="{StaticResource RowHintStyle}"/>
+                    </Button>
+                    <StackPanel x:Name="ChannelPanel" Height="0" Visibility="Collapsed" ClipToBounds="True">
+                        <Grid Height="44">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Pause the repeat for" Style="{StaticResource RowLabelStyle}" Margin="28,0,0,0"/>
+                            <TextBlock x:Name="PriorityText" Grid.Column="1" Style="{StaticResource ValueTextStyle}"/>
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
+                                <Button Content="+0.1 s" Click="PriorityPlusTenthButton_Click" Style="{StaticResource StepButtonStyle}"/>
+                                <Button Content="+1 s" Click="PriorityPlusOneButton_Click" Style="{StaticResource StepButtonStyle}"/>
+                                <Button Content="Reset" Click="PriorityResetButton_Click" Style="{StaticResource StepButtonStyle}"/>
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock Text="How long the channel takes, usually two to three seconds. Reset goes back to 2.5 s."
+                                   Style="{StaticResource RowHintStyle}" Margin="28,0,12,8"/>
+                    </StackPanel>
                 </StackPanel>
 
                 <!-- The explanations, where the switches are (Fizzil): a fold

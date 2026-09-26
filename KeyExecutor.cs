@@ -45,6 +45,9 @@ internal static class KeyExecutor
         }
         if (behavior.RepeatGapSeconds > 0)
             return (int)(behavior.RepeatGapSeconds * 1000);
+        // The sub-profile (class) global cooldown, when one is set.
+        if (GameTiming.GcdSeconds > 0)
+            return (int)(GameTiming.GcdSeconds * 1000);
         return RepeatIntervalMs;
     }
 

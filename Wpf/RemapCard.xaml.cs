@@ -90,6 +90,9 @@ public partial class RemapCard
         SetElementVisible(GamePanel, _gameMode, animate: false);
         SetElementVisible(GapPanel, _repeatOn, animate: false);
         SetElementVisible(PriorityPanel, _priorityOn, animate: false);
+        ChannelButton.Tag = _prioritySeconds > 0;
+        SetElementVisible(ChannelPanel, _prioritySeconds > 0, animate: false);
+        RefreshGcdRows();
         AddGameInfo();
     }
 
@@ -422,6 +425,7 @@ public partial class RemapCard
     private string GapText(double seconds) =>
         seconds > 0 ? $"{seconds.ToString("0.0", CultureInfo.InvariantCulture)} s"
         : _repeatGap > 0 ? $"gap ({_repeatGap.ToString("0.0", CultureInfo.InvariantCulture)} s)"
+        : GameTiming.GcdSeconds > 0 ? $"class GCD ({GameTiming.GcdSeconds.ToString("0.0", CultureInfo.InvariantCulture)} s)"
         : "default (0.1 s)";
 
     private void SetGap(int index, double seconds)
@@ -463,9 +467,35 @@ public partial class RemapCard
         SetElementVisible(GamePanel, _gameMode, animate: true);
     }
 
-    private void GapOneButton_Click(object sender, RoutedEventArgs e) => SetRepeatGap(1.0);
-    private void GapOneAndHalfButton_Click(object sender, RoutedEventArgs e) => SetRepeatGap(1.5);
+    // The class GCD belongs to the sub-profile, not this mapping (see
+    // GameTiming), so every editor shows and edits the same value.
+    private void GcdMostButton_Click(object sender, RoutedEventArgs e) => SetGcd(1.5);
+    private void GcdFastButton_Click(object sender, RoutedEventArgs e) => SetGcd(1.0);
+    private void GcdPlusTenthButton_Click(object sender, RoutedEventArgs e) => SetGcd(Math.Round(GameTiming.GcdSeconds + 0.1, 1));
+    private void GcdResetButton_Click(object sender, RoutedEventArgs e) => SetGcd(0.0);
+
+    private void SetGcd(double seconds)
+    {
+        GameTiming.Set(seconds);
+        RefreshGcdRows();
+        UpdateGapText();
+        RebuildKeyIntervalRows(); // their "default" wording follows the GCD
+    }
+
+    private void RefreshGcdRows()
+    {
+        double gcd = GameTiming.GcdSeconds;
+        GcdText.Text = gcd > 0 ? $"{gcd.ToString("0.0", CultureInfo.InvariantCulture)} s" : "not set (0.1 s)";
+        GcdMostButton.Tag = Math.Abs(gcd - 1.5) < 0.001;
+        GcdFastButton.Tag = Math.Abs(gcd - 1.0) < 0.001;
+        string game = KeyMap.ActiveProfile;
+        bool several = Settings.LoadSubProfileNames(game).Count > 1;
+        string owner = several ? $"the {Settings.LoadActiveSubProfile(game)} sub-profile" : $"the {game} profile";
+        GcdHint.Text = $"Set once for {owner}: every infinite repeat in it waits this long between keys. Pick your class, or step it down a little if haste makes abilities queue up.";
+    }
+
     private void GapPlusTenthButton_Click(object sender, RoutedEventArgs e) => SetRepeatGap(Math.Round(_repeatGap + 0.1, 1));
+    private void GapPlusOneButton_Click(object sender, RoutedEventArgs e) => SetRepeatGap(Math.Round(_repeatGap + 1.0, 1));
     private void GapResetButton_Click(object sender, RoutedEventArgs e) => SetRepeatGap(0.0);
 
     private void SetRepeatGap(double seconds)
@@ -476,6 +506,7 @@ public partial class RemapCard
         SaveBehavior();
     }
 
+    // 0 = this mapping follows the class GCD (or the usual 0.1 s if none).
     private void UpdateGapText() => RepeatGapText.Text = GapText(_repeatGap);
 
     private void PriorityButton_Click(object sender, RoutedEventArgs e)
@@ -486,27 +517,38 @@ public partial class RemapCard
         SaveBehavior();
     }
 
+    // A channel = a pause time of its own; off = one GCD (PrioritySeconds 0).
+    private const double DefaultChannelSeconds = 2.5;
+
+    private void ChannelButton_Click(object sender, RoutedEventArgs e)
+    {
+        bool on = _prioritySeconds <= 0;
+        SetPrioritySeconds(on ? DefaultChannelSeconds : 0.0);
+        SetElementVisible(ChannelPanel, on, animate: true);
+    }
+
     private void PriorityPlusTenthButton_Click(object sender, RoutedEventArgs e) => SetPrioritySeconds(Math.Round(_prioritySeconds + 0.1, 1));
     private void PriorityPlusOneButton_Click(object sender, RoutedEventArgs e) => SetPrioritySeconds(Math.Round(_prioritySeconds + 1.0, 1));
-    private void PriorityResetButton_Click(object sender, RoutedEventArgs e) => SetPrioritySeconds(0.0);
+    private void PriorityResetButton_Click(object sender, RoutedEventArgs e) => SetPrioritySeconds(DefaultChannelSeconds);
 
     private void SetPrioritySeconds(double seconds)
     {
         _prioritySeconds = seconds;
+        ChannelButton.Tag = _prioritySeconds > 0;
         UpdatePriorityText();
         SaveBehavior();
     }
 
-    // 0 means one global cooldown (see KeyBehavior.PrioritySeconds).
     private void UpdatePriorityText() =>
         PriorityText.Text = _prioritySeconds <= 0 ? "one GCD" : $"{_prioritySeconds.ToString("0.0", CultureInfo.InvariantCulture)} s";
 
     // The Help page lines for game mode, here as well, under a fold.
     private void AddGameInfo()
     {
-        AddInfoLine("Gap between keys", "How long an infinite repeat waits after each key. Set it to your global cooldown (GCD): 1.5 s for most WoW classes (a little less with haste), 1.0 s for Rogues, cat-form Druids and Monks.");
-        AddInfoLine("Priority", "A priority key can interrupt an infinite repeat. Press it and the repeat pauses, the app waits for the current GCD to finish, your key fires, the repeat stays paused for the time set below, then it resumes where it left off.");
-        AddInfoLine("Pause the repeat for", "Reset pauses the infinite repeat for one GCD. Change the pause time for a channelled ability, usually two to three seconds.");
+        AddInfoLine("Global cooldown", "Set it once per sub-profile, so per class: pick your class and every infinite repeat in that sub-profile waits one GCD between keys. 1.5 s for most WoW classes (a little less with haste), 1.0 s for Rogues, cat-form Druids and Monks.");
+        AddInfoLine("Gap between keys", "A gap for this mapping only, when it should wait a different time than the class GCD.");
+        AddInfoLine("Priority", "A priority key can interrupt an infinite repeat. Press it and the repeat pauses, the app waits for the current GCD to finish, your key fires, the repeat pauses one more GCD, then it resumes where it left off.");
+        AddInfoLine("Channelled ability", "Tick it on a priority key whose ability channels, and set how long the channel takes, usually two to three seconds. The repeat stays paused that long instead of one GCD.");
         AddInfoLine("Two priority keys in a row", "extend the pause; the second never cuts the first short.");
         AddInfoLine("Where it applies", "Any mapping can be a priority key: a spoken word, a mouse button, an on-screen key or a remapped real key. Game mode only shows these rows; the settings work even with it off.");
     }
@@ -557,6 +599,8 @@ public partial class RemapCard
         UpdatePriorityText();
         SetElementVisible(GapPanel, _repeatOn, animate: true);
         SetElementVisible(PriorityPanel, false, animate: true);
+        ChannelButton.Tag = false;
+        SetElementVisible(ChannelPanel, false, animate: true);
         ResetAllButton.Visibility = Visibility.Collapsed;
     }
 

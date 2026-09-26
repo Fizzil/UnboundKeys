@@ -43,18 +43,21 @@ bool allPassed = true;
 
 allPassed &= Scenario("priority with a 2.0 s hold", prioritySeconds: 2.0, expectedResumeGap: 2.0);
 allPassed &= Scenario("priority with the default hold (one gap)", prioritySeconds: 0.0, expectedResumeGap: 1.0);
+allPassed &= Scenario("class GCD with no per-mapping gap", prioritySeconds: 0.0, expectedResumeGap: 1.0, useClassGcd: true);
 
 Console.WriteLine(allPassed ? "ALL PASSED" : "FAILED");
 return allPassed ? 0 : 1;
 
-bool Scenario(string name, double prioritySeconds, double expectedResumeGap)
+bool Scenario(string name, double prioritySeconds, double expectedResumeGap, bool useClassGcd = false)
 {
     const double gap = 1.0;
     Console.WriteLine($"--- {name} ---");
     lock (events)
         events.Clear();
 
-    var repeat = new KeyBehavior { Repeat = true, Infinite = true, RepeatGapSeconds = gap };
+    // The gap comes from the mapping, or from the sub-profile class GCD (GameTiming).
+    GameTiming.GcdSeconds = useClassGcd ? gap : 0;
+    var repeat = new KeyBehavior { Repeat = true, Infinite = true, RepeatGapSeconds = useClassGcd ? 0 : gap };
     var priority = new KeyBehavior { Priority = true, PrioritySeconds = prioritySeconds };
 
     clock.Restart();

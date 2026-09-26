@@ -34,7 +34,7 @@ public partial class HelpPage : IDashboardPage
         AddLine("Hold", "keeps them pressed for the duration. With several keys it holds them all together, as a combo.");
         AddLine("Infinite", "runs until you say the word or press the button again.");
         AddLine("Say or press it again", "to stop a Repeat or Hold early, Infinite or not.");
-        AddLine("Game mode", "in the editor, for games with a global cooldown. Gap between keys: how long an infinite repeat waits after each key, set to your cooldown (1.5 s or 1.0 s). Priority: a key that pauses the infinite repeat, waits for the GCD to finish, fires, stays paused for the time you set, then resumes the repeat.");
+        AddLine("Game mode", "in the editor, for games with a global cooldown. Global cooldown: set once per sub-profile (per class), and every infinite repeat waits one GCD between keys. Priority: a key that pauses the infinite repeat, waits for the GCD to finish, fires, pauses one more GCD (or a channel cast time), then resumes the repeat.");
 
         AddHeader("SAFETY NETS", topMargin: 6);
         AddLine($"\"press {VoiceEngine.StopWord}\"", "lets go of everything, whatever is mapped.");

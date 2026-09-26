@@ -125,6 +125,9 @@ static class Program
         tray.Clicked += dashboard.ToggleVisible;
         dashboard.QuitRequested += () => app.Shutdown();
 
+        // The active sub-profile global cooldown, before anything can fire.
+        GameTiming.Reload();
+
         voice.Start();
         mouse.Start();
         physical.Start();

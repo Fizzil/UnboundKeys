@@ -83,6 +83,11 @@ internal static class Settings
         public Dictionary<string, List<ushort>> VirtualExtraKeys { get; set; } = new();
         public Dictionary<string, KeyBehavior> VirtualBehaviors { get; set; } = new();
 
+        // Game mode: this sub-profile (class) global cooldown, in seconds;
+        // 0 = not set. Every infinite repeat in it waits this long between
+        // keys unless the mapping sets its own gap (see GameTiming).
+        public double GcdSeconds { get; set; }
+
         // A JSON round trip is the one deep copy this file needs (a new
         // sub-profile starts as a copy of the active one).
         public MappingSet Clone() =>
@@ -503,6 +508,13 @@ internal static class Settings
 
     public static Dictionary<string, KeyBehavior> LoadVirtualBehaviors(string profile, Dictionary<string, KeyBehavior> defaults) =>
         LoadField(profile, defaults, d => d.VirtualBehaviors);
+
+    // The active sub-profile global cooldown (see GameTiming).
+    public static double LoadGcdSeconds(string profile) =>
+        Resolve(Read(), profile)?.GcdSeconds ?? 0;
+
+    public static void SaveGcdSeconds(string profile, double seconds) =>
+        SaveFields(profile, d => d.GcdSeconds = seconds);
 
     // The theme belongs to the game, not the sub-profile: switching class
     // keeps the game's colour.
