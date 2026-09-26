@@ -254,23 +254,16 @@ public partial class DashboardShell
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(32) });
 
-            var button = new Button { Content = profile, Tag = isActive, Height = 40, Margin = new Thickness(0, 1, 0, 1) };
+            var button = new Button { Content = FlyoutLabel(profile, isActive), Tag = isActive, Height = 40, Margin = new Thickness(0, 1, 0, 1) };
             button.SetResourceReference(StyleProperty, "NavRailButtonStyle");
-            button.Click += (_, _) =>
-            {
-                CloseProfileFlyout();
-                SwitchToProfile(profile);
-            };
+            // The name opens or closes the sub-profiles, like Settings; a
+            // sub-profile is what switches.
+            button.Click += (_, _) => ToggleFlyoutProfile(profile);
             row.Children.Add(button);
 
             var chevron = new Button { Width = 32, Height = 32, Content = FlyoutChevron(open) };
             chevron.SetResourceReference(StyleProperty, "SecondaryButtonStyle");
-            chevron.Click += (_, _) =>
-            {
-                if (!_flyoutExpanded.Remove(profile))
-                    _flyoutExpanded.Add(profile);
-                RebuildFlyout();
-            };
+            chevron.Click += (_, _) => ToggleFlyoutProfile(profile);
             Grid.SetColumn(chevron, 1);
             row.Children.Add(chevron);
             FlyoutList.Children.Add(row);
@@ -281,7 +274,7 @@ public partial class DashboardShell
             foreach (var subName in Settings.LoadSubProfileNames(profile))
             {
                 string sub = subName;
-                var subButton = new Button { Content = sub, Tag = isActive && sub == currentSub, Height = 36, FontSize = 13, Margin = new Thickness(20, 1, 32, 1) };
+                var subButton = new Button { Content = FlyoutLabel(sub, isActive && sub == currentSub), Tag = isActive && sub == currentSub, Height = 36, FontSize = 13, Margin = new Thickness(20, 1, 32, 1) };
                 subButton.SetResourceReference(StyleProperty, "NavRailButtonStyle");
                 subButton.Click += (_, _) =>
                 {
@@ -303,6 +296,27 @@ public partial class DashboardShell
         manage.SetResourceReference(StyleProperty, "SecondaryButtonStyle");
         manage.Click += (_, _) => ShowSection(DashboardSection.Settings);
         FlyoutList.Children.Add(manage);
+    }
+
+    private void ToggleFlyoutProfile(string profile)
+    {
+        if (!_flyoutExpanded.Remove(profile))
+            _flyoutExpanded.Add(profile);
+        RebuildFlyout();
+    }
+
+    // The name, plus a small Active beside the one in use.
+    private static StackPanel FlyoutLabel(string name, bool active)
+    {
+        var content = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal };
+        content.Children.Add(new TextBlock { Text = name, VerticalAlignment = VerticalAlignment.Center });
+        if (active)
+        {
+            var marker = new TextBlock { Text = "Active", FontSize = 11, Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+            marker.SetResourceReference(TextBlock.ForegroundProperty, "TextSecondaryBrush");
+            content.Children.Add(marker);
+        }
+        return content;
     }
 
     private static TextBlock FlyoutChevron(bool open)
