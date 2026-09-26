@@ -19,7 +19,7 @@
     <ApplicationHighDpiMode>SystemAware</ApplicationHighDpiMode>
     <StartupObject>UnboundKeys.Program</StartupObject>
     <Company>Built by Fizzil^.^</Company>
-    <Version>4.0.1</Version>
+    <Version>4.1.0</Version>
     <!-- The exe's own filename carries the version (UnboundKeys-v1.0.0.exe),
          staying in sync automatically on every future bump. RootNamespace
          is pinned separately so embedded resource lookups (Assets\skull.*)

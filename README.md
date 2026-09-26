@@ -10,9 +10,9 @@ Remap mouse buttons, spoken words and an on-screen keyboard to keyboard keys, wi
   <img src="Assets/screenshots/UBK-Voice.png" width="32%" alt="The Voice page: the always-available commands and the ten spoken words as a keypad" />
 </p>
 <p float="left">
-  <img src="Assets/screenshots/UBK-Editor.png" width="32%" alt="A mapping's editor: its keys, Tap / Repeat / Hold, duration and Infinite" />
-  <img src="Assets/screenshots/UBK-Settings.png" width="32%" alt="Settings: theme swatches, profiles, Reset All and Quit" />
-  <img src="Assets/screenshots/UBK-Help.png" width="32%" alt="The Help page: the manual in one page" />
+  <img src="Assets/screenshots/UBK-Editor.png" width="32%" alt="A mapping editor: its keys, Tap / Repeat / Hold, duration, Infinite and the Game mode switches" />
+  <img src="Assets/screenshots/UBK-Settings.png" width="32%" alt="Settings: seven fold-away sections, each summarising its state while closed" />
+  <img src="Assets/screenshots/UBK-Help.png" width="32%" alt="The Help page: the manual in one page, one fold per topic" />
 </p>
 
 <img src="Assets/screenshots/UBK-Keyboard.png" width="100%" alt="The on-screen keyboard, with word suggestions above the keys and Menu, Fade, Mini and the drag grip in its top-right corner" />
@@ -24,6 +24,7 @@ Remap mouse buttons, spoken words and an on-screen keyboard to keyboard keys, wi
 - **Mouse keys** — remap Right Click, Middle Click, Mouse 4/5 and Wheel Up/Down the same way. Left Click is never remapped, so you can always click.
 - **On-screen keyboard** — a full keyboard you type on with the mouse: sticky Shift/Ctrl/Alt/Win for combos, hold a key to repeat it, a strip of word suggestions above the keys that learns the words you use, a collapsible Mini strip, and Fade and Menu keys. Its letter and number keys can be remapped too, and remapping one also catches that key on a real keyboard.
 - **Profiles** — up to ten, one per game, each with its own color theme and up to ten sub-profiles for classes or loadouts, switched from the dashboard. New ones are named with the mouse; no typing needed anywhere in the app.
+- **Game mode** — for games with a global cooldown: switch on a class cooldown per sub-profile so a repeating rotation fires one ability per GCD, and mark priority keys that pause the rotation, fire, and let it resume, with a longer pause for channelled abilities.
 - **Built for a mouse** — everything works with left-click alone (no right-click, no scroll wheel, no keyboard), so it keeps working even when those are remapped, and the dashboard never takes focus away from your game.
 - **Safety nets** — say "press stop", or click the on-screen keyboard's Caps twice quickly, to release anything held or repeating. "Press menu" brings the dashboard back and "press fade" lifts Fade, both hands-free.
 - **Runs fully offline** — speech recognition ([Vosk](https://alphacephei.com/vosk/)) and word suggestions happen entirely on your machine. Nothing is sent anywhere. The one exception is Settings → Check for updates, which asks GitHub for the newest release only when you click it.
