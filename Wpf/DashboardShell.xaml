@@ -66,7 +66,10 @@
                     BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
                 <StackPanel>
                     <TextBlock Text="SWITCH PROFILE" Style="{StaticResource SectionHeaderStyle}" Margin="10,4,0,4"/>
-                    <StackPanel x:Name="FlyoutList"/>
+                    <ScrollViewer VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled" MaxHeight="440"
+                                  themes:EdgeAutoScrollBehavior.Enable="True">
+                        <StackPanel x:Name="FlyoutList"/>
+                    </ScrollViewer>
                 </StackPanel>
             </Border>
         </Grid>

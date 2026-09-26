@@ -216,6 +216,12 @@ public partial class DashboardShell
 
     // Rebuilt on every open — profiles are few and can change from the
     // Settings page in between.
+    // Which profiles in the flyout show their sub-profiles: the active one
+    // by itself whenever it changes, the rest as clicked (Fizzil: a quick
+    // swap to another game and class in one go).
+    private readonly HashSet<string> _flyoutExpanded = new(StringComparer.OrdinalIgnoreCase);
+    private string? _flyoutLastActive;
+
     private void ToggleProfileFlyout()
     {
         if (FlyoutLayer.Visibility == Visibility.Visible)
@@ -223,12 +229,31 @@ public partial class DashboardShell
             CloseProfileFlyout();
             return;
         }
+        RebuildFlyout();
+        FlyoutLayer.Visibility = Visibility.Visible;
+        Rail.SetProfileFlyoutOpen(true);
+    }
+
+    private void RebuildFlyout()
+    {
+        string activeGame = KeyMap.ActiveProfile;
+        if (_flyoutLastActive != activeGame)
+        {
+            _flyoutExpanded.Add(activeGame);
+            _flyoutLastActive = activeGame;
+        }
 
         FlyoutList.Children.Clear();
         foreach (var name in Settings.LoadProfileNames())
         {
             string profile = name;
-            bool isActive = profile == KeyMap.ActiveProfile;
+            bool isActive = profile == activeGame;
+            bool open = _flyoutExpanded.Contains(profile);
+
+            var row = new Grid();
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(32) });
+
             var button = new Button { Content = profile, Tag = isActive, Height = 40, Margin = new Thickness(0, 1, 0, 1) };
             button.SetResourceReference(StyleProperty, "NavRailButtonStyle");
             button.Click += (_, _) =>
@@ -236,20 +261,27 @@ public partial class DashboardShell
                 CloseProfileFlyout();
                 SwitchToProfile(profile);
             };
-            FlyoutList.Children.Add(button);
-            if (!isActive)
-                continue;
+            row.Children.Add(button);
 
-            // The active profile sub-profiles, indented beneath it (only
-            // when there is more than one to choose from).
-            var subs = Settings.LoadSubProfileNames(profile);
-            if (subs.Count <= 1)
+            var chevron = new Button { Width = 32, Height = 32, Content = FlyoutChevron(open) };
+            chevron.SetResourceReference(StyleProperty, "SecondaryButtonStyle");
+            chevron.Click += (_, _) =>
+            {
+                if (!_flyoutExpanded.Remove(profile))
+                    _flyoutExpanded.Add(profile);
+                RebuildFlyout();
+            };
+            Grid.SetColumn(chevron, 1);
+            row.Children.Add(chevron);
+            FlyoutList.Children.Add(row);
+
+            if (!open)
                 continue;
-            string activeSub = Settings.LoadActiveSubProfile(profile);
-            foreach (var subName in subs)
+            string currentSub = Settings.LoadActiveSubProfile(profile);
+            foreach (var subName in Settings.LoadSubProfileNames(profile))
             {
                 string sub = subName;
-                var subButton = new Button { Content = sub, Tag = sub == activeSub, Height = 36, FontSize = 13, Margin = new Thickness(20, 1, 0, 1) };
+                var subButton = new Button { Content = sub, Tag = isActive && sub == currentSub, Height = 36, FontSize = 13, Margin = new Thickness(20, 1, 32, 1) };
                 subButton.SetResourceReference(StyleProperty, "NavRailButtonStyle");
                 subButton.Click += (_, _) =>
                 {
@@ -271,9 +303,20 @@ public partial class DashboardShell
         manage.SetResourceReference(StyleProperty, "SecondaryButtonStyle");
         manage.Click += (_, _) => ShowSection(DashboardSection.Settings);
         FlyoutList.Children.Add(manage);
+    }
 
-        FlyoutLayer.Visibility = Visibility.Visible;
-        Rail.SetProfileFlyoutOpen(true);
+    private static TextBlock FlyoutChevron(bool open)
+    {
+        var chevron = new TextBlock
+        {
+            Text = ((char)(open ? 0xE70D : 0xE76C)).ToString(),
+            FontFamily = new System.Windows.Media.FontFamily("Segoe MDL2 Assets"),
+            FontSize = 10,
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        chevron.SetResourceReference(TextBlock.ForegroundProperty, "TextSecondaryBrush");
+        return chevron;
     }
 
     private void CloseProfileFlyout()
