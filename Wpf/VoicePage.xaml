@@ -2,9 +2,9 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:UnboundKeys.Wpf">
-    <!-- The picture on the left, one row per spoken word on the right —
-         1 to 10 top-to-bottom, in reading order. Hovering a row shows its
-         key on the drawn key; clicking it opens that word's editor. -->
+    <!-- The picture on the left, the ten words as a keypad on the right
+         with the always-available commands beneath. Hovering a tile
+         lights the waves; clicking it opens that word editor. -->
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto"/>

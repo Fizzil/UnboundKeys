@@ -5,11 +5,10 @@
          (Assets/voice-profile.png, 516×457) painted in the text color
          through a mask made from it at load time (see the code-behind),
          so the strokes sit straight on the dark background and re-color
-         with the theme. Sound waves from her mouth, and below, a key
-         being pressed whose label follows the hovered row, so the picture
-         reads "say this, and this gets pressed". -->
+         with the theme. Sound waves from her mouth come up to full
+         strength while a tile is hovered. -->
     <Viewbox Stretch="Uniform">
-        <Canvas Width="260" Height="250">
+        <Canvas Width="260" Height="195">
 
             <Rectangle Canvas.Left="0" Canvas.Top="8" Width="200" Height="177"
                        Fill="{DynamicResource TextPrimaryBrush}" Opacity="0.92">
@@ -23,15 +22,6 @@
                   Stroke="{DynamicResource AccentBrush}" StrokeThickness="2.5" Opacity="0.45"
                   StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
 
-            <!-- the key: one cap, with its underside showing as a soft
-                 lip below rather than a second outlined box -->
-            <Rectangle Canvas.Left="176" Canvas.Top="200" Width="54" Height="44" RadiusX="6" RadiusY="6"
-                       Fill="{DynamicResource HoverBrush}"/>
-            <Rectangle Canvas.Left="176" Canvas.Top="196" Width="54" Height="44" RadiusX="6" RadiusY="6"
-                       Fill="{DynamicResource ElevatedBrush}" Stroke="{DynamicResource CardBorderBrush}" StrokeThickness="1"/>
-            <TextBlock x:Name="KeyLabel" Canvas.Left="176" Canvas.Top="196" Width="54" Height="44" Padding="4,13,4,0"
-                       TextAlignment="Center" TextTrimming="CharacterEllipsis" FontSize="12" FontWeight="SemiBold"
-                       Foreground="{DynamicResource TextPrimaryBrush}"/>
         </Canvas>
     </Viewbox>
 </UserControl>

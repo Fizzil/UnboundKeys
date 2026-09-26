@@ -23,15 +23,12 @@ public partial class VoiceDiagram
         ProfileMask.ImageSource = _mask ??= LoadMask();
     }
 
-    // What the drawn key says — the hovered row's mapping.
-    public void SetKey(string text) => KeyLabel.Text = text;
 
-    // Lit while a row is hovered: the waves come up to full strength and
-    // the key's label takes the accent, as if it's being pressed right now.
+    // Lit while a tile is hovered: the waves come up to full strength, as
+    // if she is speaking right now.
     public void SetSpeaking(bool speaking)
     {
         Waves.Opacity = speaking ? 1.0 : 0.45;
-        KeyLabel.SetResourceReference(TextBlock.ForegroundProperty, speaking ? "AccentBrush" : "TextPrimaryBrush");
     }
 
     // Dark ink → opaque, white paper → transparent. Anything lighter than

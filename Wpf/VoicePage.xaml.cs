@@ -26,12 +26,8 @@ public partial class VoicePage : IDashboardPage
     {
         InitializeComponent();
 
-        AddHeader("ALWAYS AVAILABLE", topMargin: 4);
-        AddCommandLine($"\"press {VoiceEngine.StopWord}\"", "releases every key being held or repeated");
-        AddCommandLine($"\"press {VoiceEngine.MenuWord}\"", "brings this dashboard back");
-        AddCommandLine($"\"press {VoiceEngine.FadeWord}\"", "turns Fade on or off");
 
-        AddHeader("SAY \"PRESS\" AND A NUMBER", topMargin: 16);
+        AddHeader("SAY \"PRESS\" AND A NUMBER", topMargin: 4);
         var hint = new TextBlock
         {
             Text = "Each tile shows the key that number sends. Click one to change it.",
@@ -69,8 +65,13 @@ public partial class VoicePage : IDashboardPage
             Rows.Children.Add(lastRow);
         }
 
+        // Beneath the keypad (Fizzil): the words you say come first.
+        AddHeader("ALWAYS AVAILABLE", topMargin: 16);
+        AddCommandLine($"\"press {VoiceEngine.StopWord}\"", "releases every key being held or repeated");
+        AddCommandLine($"\"press {VoiceEngine.MenuWord}\"", "brings this dashboard back");
+        AddCommandLine($"\"press {VoiceEngine.FadeWord}\"", "turns Fade on or off");
+
         Refresh();
-        Diagram.SetKey(MappingRow.PrimaryOf(KeyMapSource.Instance, KeyMap.RemappableWords[0]));
     }
 
     private Button BuildTile(string word)
@@ -102,7 +103,6 @@ public partial class VoicePage : IDashboardPage
         tile.Click += (_, _) => EditRequested?.Invoke(KeyMapSource.Instance, word, spoken);
         tile.MouseEnter += (_, _) =>
         {
-            Diagram.SetKey(MappingRow.PrimaryOf(KeyMapSource.Instance, word));
             Diagram.SetSpeaking(true);
         };
         tile.MouseLeave += (_, _) => Diagram.SetSpeaking(false);
@@ -128,7 +128,6 @@ public partial class VoicePage : IDashboardPage
             mapping.Text = MappingRow.ValueOf(KeyMapSource.Instance, word);
             mapping.SetResourceReference(TextBlock.ForegroundProperty, customized ? "AccentBrush" : "TextSecondaryBrush");
         }
-        Diagram.SetKey(MappingRow.PrimaryOf(KeyMapSource.Instance, KeyMap.RemappableWords[0]));
     }
 
     private void AddHeader(string text, double topMargin)
