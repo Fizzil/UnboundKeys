@@ -83,9 +83,9 @@ Because Infinite holds and repeats can run indefinitely, UnboundKeys is built so
 
 A profile is a game. Each one has its own colour theme and up to ten **sub-profiles** (a class, a loadout, a character), and each sub-profile is a complete set of mappings: the ten words, the six mouse buttons, the keyboard keys. Switching sub-profiles swaps everything over at once; switching profiles also brings the colour with it, and lands on whichever sub-profile that game was last on. Up to ten profiles.
 
-- Switch from the **profile chip** in the bottom-left corner of the dashboard: the flyout lists the profiles and, under the active one, its sub-profiles. Or from Settings (click the PROFILES heading there to open the list).
+- Switch from the **profile chip** in the bottom-left corner of the dashboard: the flyout lists the profiles and, under the active one, its sub-profiles. Or from Settings: click the PROFILES heading to open the list, click a profile to show its sub-profiles, and click a sub-profile to switch to it, even one under another profile.
 - **Add Profile** (in Settings) creates a fresh game named "Profile 1", "Profile 2"... with one sub-profile, Default: the words at their default keys and the mouse buttons unmapped.
-- **Add sub-profile**, under the active profile in Settings, starts as a copy of the sub-profile you are on, so a second class only needs the few keys that differ changed. It becomes active straight away.
+- **Add sub-profile**, under a profile in Settings, starts as a copy of the sub-profile that profile is on, so a second class only needs the few keys that differ changed. It becomes active straight away.
 - **Rename** opens an on-screen letter grid: spell the name with the mouse, then **Done**. Names are capitalized for you. Profiles and sub-profiles rename the same way.
 - The **✕** deletes a profile or a sub-profile: click it once to arm, then again. Deleting the active profile switches you to Default; deleting the active sub-profile moves you to the first remaining one. A profile always keeps at least one sub-profile.
 - **Default** always exists and cannot be renamed or deleted.

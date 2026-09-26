@@ -183,15 +183,20 @@ public partial class DashboardShell
         Rail.SetProfileName(game, several ? Settings.LoadActiveSubProfile(game) : "");
     }
 
-    // A sub-profile switch is a reload of the same profile: Settings now
-    // resolves the name to the new sub-profile, so the stores are switched
-    // to the same name and pick it up. The theme stays, it belongs to the
-    // profile.
-    private void SwitchToSubProfile(string sub)
+    // A switch to (profile, sub-profile). Another profile: point it at that
+    // sub-profile first, then the normal profile switch loads it, theme
+    // included. The same profile: Settings now resolves the name to the new
+    // sub-profile, so the stores are switched to the same name and pick it
+    // up; the theme stays, it belongs to the profile.
+    private void SwitchToSubProfile(string game, string sub)
     {
-        string game = KeyMap.ActiveProfile;
         if (!Settings.SetActiveSubProfile(game, sub))
             return;
+        if (game != KeyMap.ActiveProfile)
+        {
+            SwitchToProfile(game);
+            return;
+        }
         KeyMap.SwitchProfile(game);
         MouseMap.SwitchProfile(game);
         VirtualKeyMap.SwitchProfile(game);
@@ -249,7 +254,7 @@ public partial class DashboardShell
                 subButton.Click += (_, _) =>
                 {
                     CloseProfileFlyout();
-                    SwitchToSubProfile(sub);
+                    SwitchToSubProfile(profile, sub);
                 };
                 FlyoutList.Children.Add(subButton);
             }
