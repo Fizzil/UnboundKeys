@@ -57,7 +57,7 @@ bool Scenario(string name, double prioritySeconds, double expectedResumeGap, boo
 
     // The gap comes from the mapping, or from the sub-profile class GCD (GameTiming).
     GameTiming.GcdSeconds = useClassGcd ? gap : 0;
-    var repeat = new KeyBehavior { Repeat = true, Infinite = true, RepeatGapSeconds = useClassGcd ? 0 : gap };
+    var repeat = new KeyBehavior { Repeat = true, Infinite = true, UseCustomRepeatIntervals = !useClassGcd, RepeatGapSeconds = useClassGcd ? 0 : gap };
     var priority = new KeyBehavior { Priority = true, PrioritySeconds = prioritySeconds };
 
     clock.Restart();

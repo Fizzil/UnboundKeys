@@ -69,11 +69,11 @@
             <!-- Game mode (Fizzil, after a WoW night): the timing a game
                  with a global cooldown needs. One app-wide switch, so it
                  stays on in every editor once a game is being set up. It
-                 reveals: the sub-profile's (class's) global cooldown, a gap
-                 for this mapping alone (Repeat only) with the per-key
-                 custom gaps, and Priority — a mapping that pauses any
-                 infinite repeat, waits out the GCD, fires, pauses one more
-                 GCD (or a channel's cast time), then lets it resume (see
+                 reveals three switches: the sub-profile's (class's) global
+                 cooldown, custom gaps for this mapping alone (Repeat only),
+                 and Priority — a mapping that pauses any infinite repeat,
+                 waits out the GCD, fires, pauses one more GCD (or a
+                 channel's cast time), then lets it resume (see
                  KeyExecutor's priority pause). -->
             <Button x:Name="GameModeButton" Click="GameModeButton_Click" Style="{StaticResource RailToggleStyle}" Height="48" Margin="4,0,4,0">
                 <StackPanel>
@@ -84,59 +84,66 @@
             <StackPanel x:Name="GamePanel" Height="0" Visibility="Collapsed" ClipToBounds="True">
 
                 <!-- The class's GCD: one value for the whole sub-profile
-                     (GameTiming), so it shows the same in every editor. -->
-                <Grid Height="44">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="Global cooldown" Style="{StaticResource RowLabelStyle}"/>
-                    <TextBlock x:Name="GcdText" Grid.Column="1" Style="{StaticResource ValueTextStyle}"/>
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
-                        <Button Content="+0.1 s" Click="GcdPlusTenthButton_Click" Style="{StaticResource StepButtonStyle}"/>
-                        <Button Content="Reset" Click="GcdResetButton_Click" Style="{StaticResource StepButtonStyle}"/>
+                     (GameTiming), so it shows the same in every editor.
+                     Off = none applied; on = pick a class, or step the
+                     number for haste. -->
+                <Button x:Name="GcdButton" Click="GcdButton_Click" Style="{StaticResource RailToggleStyle}" Height="48" Margin="4,0,4,0">
+                    <StackPanel>
+                        <TextBlock Text="Global cooldown"/>
+                        <TextBlock x:Name="GcdHint" Text="One GCD between the keys of every infinite repeat in this sub-profile" Style="{StaticResource InlineHintStyle}"/>
                     </StackPanel>
-                </Grid>
-                <Border Style="{StaticResource SegmentGroupStyle}" Margin="12,0,8,4" HorizontalAlignment="Left">
-                    <UniformGrid Rows="1" Width="440">
-                        <Button x:Name="GcdMostButton" Content="Most classes · 1.5 s" Click="GcdMostButton_Click" Style="{StaticResource SegmentButtonStyle}"/>
-                        <Button x:Name="GcdFastButton" Content="Rogue, cat Druid, Monk · 1.0 s" Click="GcdFastButton_Click" Style="{StaticResource SegmentButtonStyle}"/>
-                    </UniformGrid>
-                </Border>
-                <TextBlock x:Name="GcdHint" Style="{StaticResource RowHintStyle}"/>
-
-                <!-- A gap for this mapping alone: only for Repeat, and only
-                     when it should differ from the class GCD. -->
-                <StackPanel x:Name="GapPanel" Height="0" Visibility="Collapsed" ClipToBounds="True">
+                </Button>
+                <StackPanel x:Name="GcdPanel" Height="0" Visibility="Collapsed" ClipToBounds="True">
+                    <Border Style="{StaticResource SegmentGroupStyle}" Margin="28,2,8,4" HorizontalAlignment="Left">
+                        <UniformGrid Rows="1" Width="424">
+                            <Button x:Name="GcdMostButton" Content="Most classes · 1.5 s" Click="GcdMostButton_Click" Style="{StaticResource SegmentButtonStyle}"/>
+                            <Button x:Name="GcdFastButton" Content="Rogue, cat Druid, Monk · 1.0 s" Click="GcdFastButton_Click" Style="{StaticResource SegmentButtonStyle}"/>
+                        </UniformGrid>
+                    </Border>
                     <Grid Height="44">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="Gap between keys" Style="{StaticResource RowLabelStyle}"/>
-                        <TextBlock x:Name="RepeatGapText" Grid.Column="1" Style="{StaticResource ValueTextStyle}"/>
+                        <TextBlock Text="Custom" Style="{StaticResource RowLabelStyle}" Margin="28,0,0,0"/>
+                        <TextBlock x:Name="GcdText" Grid.Column="1" Style="{StaticResource ValueTextStyle}"/>
                         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
-                            <Button Content="+0.1 s" Click="GapPlusTenthButton_Click" Style="{StaticResource StepButtonStyle}"/>
-                            <Button Content="+1 s" Click="GapPlusOneButton_Click" Style="{StaticResource StepButtonStyle}"/>
-                            <Button Content="Reset" Click="GapResetButton_Click" Style="{StaticResource StepButtonStyle}"/>
+                            <Button Content="−0.1 s" Click="GcdMinusTenthButton_Click" Style="{StaticResource StepButtonStyle}"/>
+                            <Button Content="+0.1 s" Click="GcdPlusTenthButton_Click" Style="{StaticResource StepButtonStyle}"/>
                         </StackPanel>
                     </Grid>
-                    <TextBlock Text="Only when this mapping should wait a different time than the class GCD. Reset goes back to the GCD."
-                               Style="{StaticResource RowHintStyle}"/>
+                    <TextBlock x:Name="GcdOwnerHint" Style="{StaticResource RowHintStyle}" Margin="28,0,12,8"/>
+                </StackPanel>
 
-                    <!-- Per-key gaps: only for Repeat with 2+ keys. The
-                         switch reveals one row per key (built in code,
-                         since the count varies), each with its own
-                         buttons. A key left at 0 uses the gap above. -->
-                    <StackPanel x:Name="GapsPanel" Height="0" Visibility="Collapsed" ClipToBounds="True">
-                        <Button x:Name="RepeatIntervalButton" Click="RepeatIntervalButton_Click" Style="{StaticResource RailToggleStyle}" Height="48" Margin="4,0,4,0">
-                            <StackPanel>
-                                <TextBlock Text="Custom gaps between keys"/>
-                                <TextBlock Text="Wait a different time after each key before the next" Style="{StaticResource InlineHintStyle}"/>
+                <!-- Custom gaps: this mapping waits its own time instead of
+                     the class GCD — one gap for all its keys, and a row per
+                     key when it has several (built in code, since the
+                     count varies). Only for Repeat. -->
+                <StackPanel x:Name="GapsPanel" Height="0" Visibility="Collapsed" ClipToBounds="True">
+                    <Button x:Name="RepeatIntervalButton" Click="RepeatIntervalButton_Click" Style="{StaticResource RailToggleStyle}" Height="48" Margin="4,0,4,0">
+                        <StackPanel>
+                            <TextBlock Text="Custom gaps between keys"/>
+                            <TextBlock Text="Its own gap for this mapping instead of the class GCD, per key if you want" Style="{StaticResource InlineHintStyle}"/>
+                        </StackPanel>
+                    </Button>
+                    <StackPanel x:Name="CustomGapRows" Height="0" Visibility="Collapsed" ClipToBounds="True">
+                        <Grid Height="44">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Gap between keys" Style="{StaticResource RowLabelStyle}" Margin="28,0,0,0"/>
+                            <TextBlock x:Name="RepeatGapText" Grid.Column="1" Style="{StaticResource ValueTextStyle}"/>
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
+                                <Button Content="+0.1 s" Click="GapPlusTenthButton_Click" Style="{StaticResource StepButtonStyle}"/>
+                                <Button Content="+1 s" Click="GapPlusOneButton_Click" Style="{StaticResource StepButtonStyle}"/>
+                                <Button Content="Reset" Click="GapResetButton_Click" Style="{StaticResource StepButtonStyle}"/>
                             </StackPanel>
-                        </Button>
+                        </Grid>
+                        <TextBlock Text="The wait after every key of this mapping. A key row below can still differ."
+                                   Style="{StaticResource RowHintStyle}" Margin="28,0,12,8"/>
                         <StackPanel x:Name="KeyIntervalRows" Height="0" Visibility="Collapsed" ClipToBounds="True"/>
                     </StackPanel>
                 </StackPanel>

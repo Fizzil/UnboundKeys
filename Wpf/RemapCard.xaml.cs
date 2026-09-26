@@ -88,7 +88,7 @@ public partial class RemapCard
         UpdateGapText();
         UpdatePriorityText();
         SetElementVisible(GamePanel, _gameMode, animate: false);
-        SetElementVisible(GapPanel, _repeatOn, animate: false);
+        SetElementVisible(GcdPanel, GameTiming.GcdSeconds > 0, animate: false);
         SetElementVisible(PriorityPanel, _priorityOn, animate: false);
         ChannelButton.Tag = _prioritySeconds > 0;
         SetElementVisible(ChannelPanel, _prioritySeconds > 0, animate: false);
@@ -320,7 +320,6 @@ public partial class RemapCard
         UpdateModeVisuals();
         SetElementVisible(TimingPanel, _repeatOn || _holdOn, animate: true);
         UpdateRepeatIntervalVisibility(animate: true);
-        SetElementVisible(GapPanel, _repeatOn, animate: true);
         SaveBehavior();
     }
 
@@ -443,18 +442,19 @@ public partial class RemapCard
         return button;
     }
 
-    // Custom gaps only apply to Repeat with 2+ keys; if that stops being
-    // true the feature switches itself off — same guard as RemapCardTab's
-    // canCustomizeRepeatInterval (WinForms).
+    // Custom gaps only apply to Repeat; if that stops being true the
+    // feature switches itself off. The mapping-wide gap shows whenever it
+    // is on; a row per key only with two or more keys.
     private void UpdateRepeatIntervalVisibility(bool animate)
     {
-        bool canCustomize = _repeatOn && _source.ExtraWords[_id].Count >= 1;
+        bool canCustomize = _repeatOn;
         if (!canCustomize && _useCustomRepeatIntervals)
             _useCustomRepeatIntervals = false;
         RepeatIntervalButton.Tag = _useCustomRepeatIntervals;
 
         SetElementVisible(GapsPanel, canCustomize, animate);
-        SetElementVisible(KeyIntervalRows, canCustomize && _useCustomRepeatIntervals, animate);
+        SetElementVisible(CustomGapRows, canCustomize && _useCustomRepeatIntervals, animate);
+        SetElementVisible(KeyIntervalRows, canCustomize && _useCustomRepeatIntervals && _source.ExtraWords[_id].Count >= 1, animate);
     }
 
     // ---- Game mode ----
@@ -468,11 +468,19 @@ public partial class RemapCard
     }
 
     // The class GCD belongs to the sub-profile, not this mapping (see
-    // GameTiming), so every editor shows and edits the same value.
+    // GameTiming), so every editor shows and edits the same value. Off is
+    // 0 (none applied); switching on starts at the common 1.5 s.
+    private void GcdButton_Click(object sender, RoutedEventArgs e)
+    {
+        bool on = GameTiming.GcdSeconds <= 0;
+        SetGcd(on ? 1.5 : 0.0);
+        SetElementVisible(GcdPanel, on, animate: true);
+    }
+
     private void GcdMostButton_Click(object sender, RoutedEventArgs e) => SetGcd(1.5);
     private void GcdFastButton_Click(object sender, RoutedEventArgs e) => SetGcd(1.0);
+    private void GcdMinusTenthButton_Click(object sender, RoutedEventArgs e) => SetGcd(Math.Max(0.1, Math.Round(GameTiming.GcdSeconds - 0.1, 1)));
     private void GcdPlusTenthButton_Click(object sender, RoutedEventArgs e) => SetGcd(Math.Round(GameTiming.GcdSeconds + 0.1, 1));
-    private void GcdResetButton_Click(object sender, RoutedEventArgs e) => SetGcd(0.0);
 
     private void SetGcd(double seconds)
     {
@@ -485,13 +493,14 @@ public partial class RemapCard
     private void RefreshGcdRows()
     {
         double gcd = GameTiming.GcdSeconds;
-        GcdText.Text = gcd > 0 ? $"{gcd.ToString("0.0", CultureInfo.InvariantCulture)} s" : "not set (0.1 s)";
+        GcdButton.Tag = gcd > 0;
+        GcdText.Text = gcd > 0 ? $"{gcd.ToString("0.0", CultureInfo.InvariantCulture)} s" : "off";
         GcdMostButton.Tag = Math.Abs(gcd - 1.5) < 0.001;
         GcdFastButton.Tag = Math.Abs(gcd - 1.0) < 0.001;
         string game = KeyMap.ActiveProfile;
         bool several = Settings.LoadSubProfileNames(game).Count > 1;
         string owner = several ? $"the {Settings.LoadActiveSubProfile(game)} sub-profile" : $"the {game} profile";
-        GcdHint.Text = $"Set once for {owner}: every infinite repeat in it waits this long between keys. Pick your class, or step it down a little if haste makes abilities queue up.";
+        GcdOwnerHint.Text = $"Set once for {owner}: every infinite repeat in it waits this long between keys. Step it down a little if haste makes abilities queue up.";
     }
 
     private void GapPlusTenthButton_Click(object sender, RoutedEventArgs e) => SetRepeatGap(Math.Round(_repeatGap + 0.1, 1));
@@ -545,8 +554,8 @@ public partial class RemapCard
     // The Help page lines for game mode, here as well, under a fold.
     private void AddGameInfo()
     {
-        AddInfoLine("Global cooldown", "Set it once per sub-profile, so per class: pick your class and every infinite repeat in that sub-profile waits one GCD between keys. 1.5 s for most WoW classes (a little less with haste), 1.0 s for Rogues, cat-form Druids and Monks.");
-        AddInfoLine("Gap between keys", "A gap for this mapping only, when it should wait a different time than the class GCD.");
+        AddInfoLine("Global cooldown", "Switch it on and pick your class: every infinite repeat in this sub-profile then waits one GCD between keys. 1.5 s for most WoW classes, 1.0 s for Rogues, cat-form Druids and Monks; step it down a little if haste makes abilities queue up.");
+        AddInfoLine("Custom gaps between keys", "This mapping waits its own time instead of the class GCD: one gap for all its keys, and a different one after any key if you want.");
         AddInfoLine("Priority", "A priority key can interrupt an infinite repeat. Press it and the repeat pauses, the app waits for the current GCD to finish, your key fires, the repeat pauses one more GCD, then it resumes where it left off.");
         AddInfoLine("Channelled ability", "Tick it on a priority key whose ability channels, and set how long the channel takes, usually two to three seconds. The repeat stays paused that long instead of one GCD.");
         AddInfoLine("Two priority keys in a row", "extend the pause; the second never cuts the first short.");
@@ -597,7 +606,6 @@ public partial class RemapCard
         PriorityButton.Tag = false;
         UpdateGapText();
         UpdatePriorityText();
-        SetElementVisible(GapPanel, _repeatOn, animate: true);
         SetElementVisible(PriorityPanel, false, animate: true);
         ChannelButton.Tag = false;
         SetElementVisible(ChannelPanel, false, animate: true);

@@ -30,11 +30,10 @@ public sealed class KeyBehavior
 
     // ---- Game mode (the RemapCard switch of that name) ----
 
-    // The gap after every key while Repeat is on, in seconds; 0 means the
-    // usual 0.1 s. Set it to the game global cooldown (1.5 s for most WoW
-    // classes, 1.0 s for Rogues, cat-form Druids and Monks) so a repeat
-    // fires one ability per cooldown instead of wasting presses. A per-key
-    // custom interval above still wins for its own key when set.
+    // Only while UseCustomRepeatIntervals is on: the gap after every key of
+    // this mapping, in seconds (a per-key interval above still wins for its
+    // own key). 0, or custom gaps off, means the sub-profile global cooldown
+    // (see GameTiming), or the usual 0.1 s if none is set.
     public double RepeatGapSeconds { get; set; }
 
     // A priority mapping pauses any running repeat: waits out the rest of
