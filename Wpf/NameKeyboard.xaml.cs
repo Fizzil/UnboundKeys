@@ -147,7 +147,8 @@ public partial class NameKeyboard
     }
 
     // The Keyboard page's outlined key, as a button: the outline sits on
-    // a ghost button that fills on hover.
+    // a ghost button that fills on hover, and clicks like the on-screen
+    // keyboard's keys do (KeyClick).
     private static Button BuildOutlinedKey(string label, out Border outline, out TextBlock text)
     {
         text = new TextBlock
@@ -177,6 +178,7 @@ public partial class NameKeyboard
             VerticalContentAlignment = VerticalAlignment.Stretch,
         };
         key.SetResourceReference(StyleProperty, "SecondaryButtonStyle");
+        key.PreviewMouseLeftButtonDown += (_, _) => KeyClick.Play();
         return key;
     }
 

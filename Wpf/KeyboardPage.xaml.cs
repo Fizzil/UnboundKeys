@@ -39,6 +39,13 @@ public partial class KeyboardPage : IDashboardPage
             KeyRows.Children.Add(BuildRow(row));
 
         ShowKeyboardToggle.Click += (_, _) => ShowKeyboardRequested?.Invoke();
+        KeyClickToggle.Tag = KeyClick.Enabled;
+        KeyClickToggle.Click += (_, _) =>
+        {
+            KeyClick.Enabled = !KeyClick.Enabled;
+            KeyClickToggle.Tag = KeyClick.Enabled;
+            KeyClick.Play(); // a sample of what was just switched on (silent when off)
+        };
         Refresh();
     }
 

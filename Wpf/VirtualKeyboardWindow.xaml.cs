@@ -26,6 +26,7 @@ namespace UnboundKeys.Wpf;
 public partial class VirtualKeyboardWindow
 {
     private const double RowHeight = 44;
+    private const double KeysWidth = 780; // the key area at full size; the grip sits beside it
     private const ushort VkCapital = 0x14;
     private const int RepeatInitialDelayMs = 450;
     private const int RepeatIntervalMs = 100; // matches KeyExecutor's own RepeatIntervalMs
@@ -55,6 +56,11 @@ public partial class VirtualKeyboardWindow
     private DateTime _lastCapsLockPanicTap = DateTime.MinValue;
 
     private bool _isMini;
+    // Keyboard size (Settings.KeyboardScale, 1.0 = full size). Heights,
+    // widths and fonts are built AT this scale rather than drawn through
+    // a transform: a transformed 1px edge or 13px glyph lands between
+    // pixels and blurs (Fizzil noticed, next to Windows' own keyboard).
+    private double _scale = 1.0;
     private readonly Action _onStickyChanged;
     private readonly Action _onFadeChanged;
 
@@ -76,14 +82,9 @@ public partial class VirtualKeyboardWindow
         InitializeComponent();
         _isMini = startMini;
 
-        foreach (var row in FullRows())
-            FullLayout.Children.Add(BuildRow(row));
-        MenuKeyHost.Content = BuildKey(MenuKey);
-        FadeKeyHost.Content = BuildKey(FadeKey);
-        MiniKeyHost.Content = BuildKey(MiniKey);
-        MiniLayout.Children.Add(BuildRow(MiniRow()));
+        _scale = Settings.LoadKeyboardScale();
+        BuildLayouts();
         ApplyMiniMode();
-        ApplyScale(Settings.LoadKeyboardScale());
 
         _capsLockOn = System.Windows.Input.Keyboard.IsKeyToggled(System.Windows.Input.Key.CapsLock);
 
@@ -121,7 +122,7 @@ public partial class VirtualKeyboardWindow
 
     private Grid BuildRow(KeySpec[] specs)
     {
-        var row = new Grid { Height = RowHeight };
+        var row = new Grid { Height = Math.Round(RowHeight * _scale) };
         foreach (var spec in specs)
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(spec.Width, GridUnitType.Star) });
 
@@ -140,7 +141,7 @@ public partial class VirtualKeyboardWindow
         var label = new TextBlock
         {
             Text = spec.Label,
-            FontSize = spec.LargeLabel ? 16 : 13,
+            FontSize = Math.Round((spec.LargeLabel ? 16 : 13) * _scale, 1),
             HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
         };
@@ -153,7 +154,7 @@ public partial class VirtualKeyboardWindow
         content.Children.Add(wash);
         content.Children.Add(label);
 
-        var button = new Button { Content = content };
+        var button = new Button { Content = content, Margin = KeyMargin };
         button.SetResourceReference(StyleProperty, "KeyCapStyle");
         WireKey(button, spec);
 
@@ -267,6 +268,7 @@ public partial class VirtualKeyboardWindow
 
         button.PreviewMouseLeftButtonDown += (_, _) =>
         {
+            KeyClick.Play();
             pressed = true;
             button.Tag = true;
 
@@ -354,9 +356,11 @@ public partial class VirtualKeyboardWindow
             var button = new Button
             {
                 Content = new TextBlock { Text = suggestion, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = System.Windows.HorizontalAlignment.Center },
-                FontSize = 12,
+                FontSize = Math.Round(12 * _scale, 1),
+                Margin = KeyMargin,
             };
             button.SetResourceReference(StyleProperty, "KeyCapStyle");
+            button.PreviewMouseLeftButtonDown += (_, _) => KeyClick.Play();
             button.Click += (_, _) => CompleteWith(suggestion);
             SuggestionRow.Children.Add(button);
         }
@@ -428,15 +432,51 @@ public partial class VirtualKeyboardWindow
             button.Tag = FadeMode.IsOn;
     }
 
-    // The whole keyboard drawn at a fraction of its designed size — a
-    // LayoutTransform, so the window (SizeToContent) shrinks with it and
-    // the text stays crisp. Small ≈ the Windows on-screen keyboard's own
-    // footprint. Re-checked against the screen edges once it has resized.
+    // Keyboard size, live: every key rebuilt at the new scale (see _scale),
+    // and the window (SizeToContent) follows. Small is about the Windows
+    // on-screen keyboard's own footprint. Re-checked against the screen
+    // edges once it has resized.
     public void ApplyScale(double scale)
     {
-        Root.LayoutTransform = new System.Windows.Media.ScaleTransform(scale, scale);
+        if (Math.Abs(scale - _scale) < 0.001)
+            return;
+        _scale = scale;
+        BuildLayouts();
+        RefreshStickyHighlights();
+        RefreshCapsLockHighlight();
+        RefreshCustomizedIndicators();
+        RefreshSuggestions();
+        ApplyFade();
         Dispatcher.InvokeAsync(KeepOnScreen, DispatcherPriority.Loaded);
     }
+
+    // Every key, built fresh at the current scale: the rows under the
+    // suggestion strip, the three corner keys, and the Mini strip. The
+    // lists that track keys by role are rebuilt with them.
+    private void BuildLayouts()
+    {
+        _stickyButtons.Clear();
+        _remappableWashes.Clear();
+        _letterLabels.Clear();
+        _shiftableLabels.Clear();
+        _capsLockButtons.Clear();
+        _fadeButtons.Clear();
+
+        KeysColumn.Width = new GridLength(Math.Round(KeysWidth * _scale));
+        SuggestionStrip.Height = Math.Round(RowHeight * _scale);
+        while (FullLayout.Children.Count > 1) // the strip stays; the old rows go
+            FullLayout.Children.RemoveAt(FullLayout.Children.Count - 1);
+        foreach (var row in FullRows())
+            FullLayout.Children.Add(BuildRow(row));
+        MenuKeyHost.Content = BuildKey(MenuKey);
+        FadeKeyHost.Content = BuildKey(FadeKey);
+        MiniKeyHost.Content = BuildKey(MiniKey);
+        MiniLayout.Children.Clear();
+        MiniLayout.Children.Add(BuildRow(MiniRow()));
+    }
+
+    // The gap around a key: 2px at full size, never under 1.
+    private Thickness KeyMargin => new(Math.Max(1, Math.Round(2 * _scale)));
 
     private void ToggleMiniMode()
     {
@@ -476,8 +516,8 @@ public partial class VirtualKeyboardWindow
     // the dashboard if that fits, else along the bottom of the work area.
     public void PlaceNear(Window? anchor)
     {
-        double width = ApproxWidth;
-        double height = _isMini ? ApproxMiniHeight : ApproxFullHeight;
+        double width = ApproxWidth * _scale;
+        double height = (_isMini ? ApproxMiniHeight : ApproxFullHeight) * _scale;
         var (savedLeft, savedTop, _) = Settings.LoadKeyboardPlacement();
 
         if (savedLeft is double left && savedTop is double top)

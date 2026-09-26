@@ -6,13 +6,22 @@
         Width="720" Height="540"
         WindowStyle="None" ResizeMode="NoResize" Topmost="True" AllowsTransparency="True"
         Background="{DynamicResource BackgroundBrush}"
-        WindowStartupLocation="CenterScreen">
+        WindowStartupLocation="CenterScreen"
+        UseLayoutRounding="True" SnapsToDevicePixels="True"
+        TextOptions.TextFormattingMode="Display" RenderOptions.ClearTypeHint="Enabled">
     <!-- The dashboard window: fixed size, no chrome, always on top, never
          takes focus — so it can sit over a game and be clicked without
          the game losing the keyboard. Dragging, minimize and close all
          come from the shell's own header; "close" hides it (the app
          lives on in the tray — see Program.cs), and it comes back from
          the tray icon or by saying "press menu". AllowsTransparency is
-         what lets Fade dim the whole window through Window.Opacity. -->
-    <Grid x:Name="Root"/>
+         what lets Fade dim the whole window through Window.Opacity.
+
+         The last line of attributes is for crisp text: a window with
+         AllowsTransparency is a layered window, which Windows will not
+         draw ClearType on unless told the text sits on an opaque surface
+         (ClearTypeHint — the whole window is). Display-mode text and
+         layout rounding then keep glyphs and 1px edges on whole pixels,
+         which matters at a 125% display scale. -->
+    <Grid x:Name="Root" RenderOptions.ClearTypeHint="Enabled"/>
 </uk:NoActivateWindow>

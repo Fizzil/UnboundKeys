@@ -18,6 +18,13 @@
         <TextBlock Text="Drag it by the handle on its right edge. Mini collapses it to a single strip, Maxi brings it back, Fade dims it along with this dashboard, and Menu shows or hides the dashboard."
                    FontSize="11" TextWrapping="Wrap" Margin="16,0,12,4" Foreground="{DynamicResource TextSecondaryBrush}"/>
 
+        <!-- The click each key makes (see KeyClick), on the on-screen
+             keyboard and the rename keyboard alike. -->
+        <Button x:Name="KeyClickToggle" Content="Key click sound"
+                Style="{StaticResource RailToggleStyle}" Margin="4,4,4,0"/>
+        <TextBlock Text="A soft click from every key on the on-screen keyboard and the rename keyboard."
+                   FontSize="11" TextWrapping="Wrap" Margin="16,0,12,4" Foreground="{DynamicResource TextSecondaryBrush}"/>
+
         <!-- Small is about the footprint of Windows' own on-screen
              keyboard (the one this replaces); Large is the full-size
              layout. Applied live to an open keyboard. -->

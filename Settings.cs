@@ -170,6 +170,10 @@ internal static class Settings
         // keyboard, the one it replaces (Fizzil's ask).
         public double KeyboardScale { get; set; } = 0.65;
 
+        // The click each key of the on-screen keyboard and the rename
+        // keyboard makes (see KeyClick). On unless switched off.
+        public bool KeyClickSound { get; set; } = true;
+
         // Where the dashboard window was last left — null until it has
         // been moved, in which case it opens centered.
         public double? DashboardLeft { get; set; }
@@ -439,6 +443,15 @@ internal static class Settings
     {
         var saved = Read();
         saved.KeyboardScale = scale;
+        Write(saved);
+    }
+
+    public static bool LoadKeyClickSound() => Read().KeyClickSound;
+
+    public static void SaveKeyClickSound(bool on)
+    {
+        var saved = Read();
+        saved.KeyClickSound = on;
         Write(saved);
     }
 

@@ -5,7 +5,9 @@
         Title="UnboundKeys keyboard"
         WindowStyle="None" ResizeMode="NoResize" Topmost="True" ShowInTaskbar="False"
         AllowsTransparency="True" Background="Transparent"
-        SizeToContent="WidthAndHeight" WindowStartupLocation="Manual">
+        SizeToContent="WidthAndHeight" WindowStartupLocation="Manual"
+        UseLayoutRounding="True" SnapsToDevicePixels="True"
+        TextOptions.TextFormattingMode="Display" RenderOptions.ClearTypeHint="Enabled">
     <!-- The on-screen keyboard: its own always-on-top window that never
          takes focus (NoActivateWindow), so every key goes to whatever the
          game is. A grip strip down the RIGHT edge drags it — a tall target
@@ -13,12 +15,20 @@
          expanding and moving all happen in one corner without the mouse
          travelling (Fizzil's ergonomics call). The rows are built in code
          from KeyboardLayout. AllowsTransparency for Fade's dimming and
-         the rounded corners. -->
+         the rounded corners.
+
+         Crisp text, next to Windows' own keyboard (Fizzil noticed the
+         difference): a window with AllowsTransparency is a layered window,
+         and Windows won't draw ClearType on one unless told the text sits
+         on an opaque surface (ClearTypeHint — the key area is). Display-
+         mode text and layout rounding then snap glyphs and edges to whole
+         pixels, which matters at a 125% display scale; the keyboard size
+         is built into the layout for the same reason (see ApplyScale). -->
     <Border x:Name="Root" Background="{DynamicResource BackgroundBrush}" BorderBrush="{DynamicResource CardBorderBrush}"
-            BorderThickness="1" CornerRadius="8">
+            BorderThickness="1" CornerRadius="8" RenderOptions.ClearTypeHint="Enabled">
         <Grid>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="780"/>
+                <ColumnDefinition x:Name="KeysColumn" Width="780"/>
                 <ColumnDefinition Width="18"/>
             </Grid.ColumnDefinitions>
 
@@ -37,8 +47,8 @@
                      collapsed strip, so they sit in exactly the same spot
                      in both layouts (see KeyboardLayout.MenuKey/FadeKey/MiniKey).
                      Only for the full layout: the Mini strip has no
-                     letters to type with. -->
-                <Grid Height="44">
+                     letters to type with. The key rows follow it in code. -->
+                <Grid x:Name="SuggestionStrip" Height="44">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="14*"/>
                         <ColumnDefinition Width="*"/>

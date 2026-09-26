@@ -62,6 +62,7 @@ The **Keyboard** page shows a map of the keyboard: the lit keys — the digits a
 - **Mini** collapses it to a single strip of the essential keys; **Maxi** brings it back. **Fade** dims it along with the dashboard. **Menu** shows the dashboard, or hides it again, no microphone or taskbar needed. Those keys and the drag grip on the right edge sit in the same corner in both layouts, so nothing moves out from under your mouse.
 - Drag it by the grip on its right edge. It remembers its position and its Mini state.
 - **Keyboard size** (on the Keyboard page) is Small, Medium or Large; Small is about the size of Windows' own on-screen keyboard.
+- **Key click sound** (on the Keyboard page) gives every key of the on-screen keyboard and the rename keyboard a soft click; switch it off there to type silently.
 
 ## Fade
 
