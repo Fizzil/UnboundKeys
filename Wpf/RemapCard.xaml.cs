@@ -90,6 +90,7 @@ public partial class RemapCard
         SetElementVisible(GamePanel, _gameMode, animate: false);
         SetElementVisible(GapPanel, _repeatOn, animate: false);
         SetElementVisible(PriorityPanel, _priorityOn, animate: false);
+        AddGameInfo();
     }
 
     // Every "Key N: X" string IRemapSource builds follows the same
@@ -499,6 +500,27 @@ public partial class RemapCard
     // 0 means "one gap of the running repeat" (see KeyBehavior.PrioritySeconds).
     private void UpdatePriorityText() =>
         PriorityText.Text = _prioritySeconds <= 0 ? "one gap" : $"{_prioritySeconds.ToString("0.0", CultureInfo.InvariantCulture)} s";
+
+    // The Help page lines for game mode, here as well, under a fold.
+    private void AddGameInfo()
+    {
+        AddInfoLine("Gap between keys", "is how long Repeat waits after each key. The game takes one ability per global cooldown, so match it: 1.5 s for most WoW classes (a little less with haste), 1.0 s for Rogues, cat-form Druids and Monks.");
+        AddInfoLine("Priority", "marks a mapping that may interrupt. Pressing it pauses any running repeat, waits until the last repeat key is a full gap old (the cooldown is over), fires, then holds the repeat for the time set below it.");
+        AddInfoLine("Hold the repeat for", "Reset means one gap, right for an instant ability. A channelled ability needs its cast time, usually two or three seconds.");
+        AddInfoLine("Two priority keys in a row", "extend the hold; the second never cuts the first short.");
+        AddInfoLine("Where it applies", "to any mapping: a spoken word, a mouse button or an on-screen key. Game mode only shows these rows; the values apply even with it off.");
+    }
+
+    private void AddInfoLine(string lead, string explanation)
+    {
+        var line = new TextBlock { FontSize = 12, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(12, 3, 12, 3) };
+        var leadRun = new System.Windows.Documents.Run(lead);
+        leadRun.SetResourceReference(System.Windows.Documents.TextElement.ForegroundProperty, "TextPrimaryBrush");
+        line.Inlines.Add(leadRun);
+        line.Inlines.Add(new System.Windows.Documents.Run("  " + explanation));
+        line.SetResourceReference(TextBlock.ForegroundProperty, "TextSecondaryBrush");
+        GameInfoLines.Children.Add(line);
+    }
 
     // ---- Save / Reset ----
 
