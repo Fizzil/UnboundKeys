@@ -36,15 +36,6 @@ public partial class RemapCard
     private double _repeatGap;
     private bool _priorityOn;
     private double _prioritySeconds;
-    // Experimental assistance (see the XAML comment): Farm nearby and its
-    // rounds, pause and skin.
-    private bool _farmOn;
-    private int _farmRounds;
-    private double _farmPause;
-    private bool _farmSkin;
-    private bool _farmApproach;
-    private double _farmApproachSeconds;
-    private double _farmLoot;
     // One gap per key (index 0 = Key 1): how long to wait after that key
     // before the next, 0 meaning the executor's default. Rebuilt to the
     // right length rather than trusting saved data blindly — same guard
@@ -72,13 +63,6 @@ public partial class RemapCard
         _repeatGap = behavior.RepeatGapSeconds;
         _priorityOn = behavior.Priority;
         _prioritySeconds = behavior.PrioritySeconds;
-        _farmOn = behavior.Farm;
-        _farmRounds = behavior.FarmRounds;
-        _farmPause = behavior.FarmPauseSeconds;
-        _farmSkin = behavior.FarmSkin;
-        _farmApproach = behavior.FarmApproach;
-        _farmApproachSeconds = behavior.FarmApproachSeconds;
-        _farmLoot = behavior.FarmLootSeconds;
         _gameMode = Settings.LoadGameMode();
 
         int totalKeyCount = 1 + _source.ExtraWords[_id].Count;
@@ -109,8 +93,6 @@ public partial class RemapCard
         ChannelButton.Tag = _prioritySeconds > 0;
         SetElementVisible(ChannelPanel, _prioritySeconds > 0, animate: false);
         RefreshGcdRows();
-        RebuildGameKeyRows();
-        RefreshFarmRows(animate: false);
         AddGameInfo();
     }
 
@@ -192,7 +174,7 @@ public partial class RemapCard
     // beneath it. onDelete adds the two-click Remove — only extra keys pass
     // it, since Key 1 can't be removed; Key 1 gets a same-width spacer
     // instead so every row's chip lines up.
-    private void AddKeyRow(string fullLabel, Action<KeyCatalog.Entry> onSelect, Action? onDelete, System.Windows.Controls.Panel? host = null)
+    private void AddKeyRow(string fullLabel, Action<KeyCatalog.Entry> onSelect, Action? onDelete)
     {
         var (label, value) = SplitKeyLabel(fullLabel);
 
@@ -265,9 +247,8 @@ public partial class RemapCard
             grid.Children.Add(spacer);
         }
 
-        var into = host ?? KeyGroup; // the mapping's keys, or a Game keys row (RebuildGameKeyRows)
-        into.Children.Add(grid);
-        into.Children.Add(categoryList);
+        KeyGroup.Children.Add(grid);
+        KeyGroup.Children.Add(categoryList);
 
         PopulateCategoryList(categoryList, onSelect);
     }
@@ -574,138 +555,6 @@ public partial class RemapCard
     private void UpdatePriorityText() =>
         PriorityText.Text = _prioritySeconds <= 0 ? "one GCD" : $"{_prioritySeconds.ToString("0.0", CultureInfo.InvariantCulture)} s";
 
-    // ---- Experimental assistance: Farm nearby ----
-
-    private const int DefaultFarmRounds = 3;
-    private const double DefaultFarmPauseSeconds = 2.0;
-
-    // The sub-profile's game keys, each with the same picker as the
-    // mapping's own keys. Rebuilt after a pick, like the key rows.
-    private void RebuildGameKeyRows()
-    {
-        GameKeyRows.Children.Clear();
-        string targetName = KeyCatalog.DisplayNameFor(GameTiming.EffectiveTargetVk);
-        string lootName = GameTiming.InteractVk != 0 ? KeyCatalog.DisplayNameFor(GameTiming.InteractVk) : "Not set";
-        AddKeyRow($"Target nearest enemy: {targetName}", entry =>
-        {
-            GameTiming.SetGameKeys(entry.VkCode, GameTiming.InteractVk);
-            RebuildGameKeyRows();
-            RefreshFarmRows(animate: false);
-        }, onDelete: null, host: GameKeyRows);
-        AddKeyRow($"Loot click or key: {lootName}", entry =>
-        {
-            GameTiming.SetGameKeys(GameTiming.TargetVk, entry.VkCode);
-            RebuildGameKeyRows();
-            RefreshFarmRows(animate: false);
-        }, onDelete: null, host: GameKeyRows);
-    }
-
-    private void FarmButton_Click(object sender, RoutedEventArgs e)
-    {
-        _farmOn = !_farmOn;
-        if (_farmOn)
-        {
-            // First time on for this mapping: the defaults, including the
-            // run to the target (Fizzil's own loop; a hunter switches it off).
-            if (_farmRounds <= 0)
-            {
-                _farmRounds = DefaultFarmRounds;
-                _farmApproach = true;
-            }
-            if (_farmPause <= 0)
-                _farmPause = DefaultFarmPauseSeconds;
-            if (_farmApproachSeconds <= 0)
-                _farmApproachSeconds = DefaultFarmApproachSeconds;
-            if (_farmLoot <= 0)
-                _farmLoot = DefaultFarmLootSeconds;
-        }
-        else
-        {
-            KeyExecutor.ForceRelease(_id); // a loop still running ends with the switch
-        }
-        SaveFarm();
-        RefreshFarmRows(animate: true);
-    }
-
-    private void FarmRoundsMinusButton_Click(object sender, RoutedEventArgs e) => SetFarmRounds(_farmRounds - 1);
-    private void FarmRoundsPlusButton_Click(object sender, RoutedEventArgs e) => SetFarmRounds(_farmRounds + 1);
-    private void FarmPausePlusTenthButton_Click(object sender, RoutedEventArgs e) => SetFarmPause(Math.Round(_farmPause + 0.1, 1));
-    private void FarmPausePlusOneButton_Click(object sender, RoutedEventArgs e) => SetFarmPause(Math.Round(_farmPause + 1.0, 1));
-    private void FarmPauseResetButton_Click(object sender, RoutedEventArgs e) => SetFarmPause(DefaultFarmPauseSeconds);
-
-    private void FarmSkinButton_Click(object sender, RoutedEventArgs e)
-    {
-        _farmSkin = !_farmSkin;
-        SaveFarm();
-        RefreshFarmRows(animate: false);
-    }
-
-    private const double DefaultFarmApproachSeconds = 1.5;
-    private const double DefaultFarmLootSeconds = 2.0;
-
-    private void FarmLootPlusTenthButton_Click(object sender, RoutedEventArgs e) => SetFarmLoot(Math.Round(_farmLoot + 0.1, 1));
-    private void FarmLootPlusOneButton_Click(object sender, RoutedEventArgs e) => SetFarmLoot(Math.Round(_farmLoot + 1.0, 1));
-    private void FarmLootResetButton_Click(object sender, RoutedEventArgs e) => SetFarmLoot(DefaultFarmLootSeconds);
-
-    private void SetFarmLoot(double seconds)
-    {
-        _farmLoot = Math.Max(0, seconds);
-        SaveFarm();
-        RefreshFarmRows(animate: false);
-    }
-
-    private void FarmApproachButton_Click(object sender, RoutedEventArgs e)
-    {
-        _farmApproach = !_farmApproach;
-        if (_farmApproach && _farmApproachSeconds <= 0)
-            _farmApproachSeconds = DefaultFarmApproachSeconds;
-        SaveFarm();
-        RefreshFarmRows(animate: true);
-    }
-
-    private void FarmApproachPlusTenthButton_Click(object sender, RoutedEventArgs e) => SetFarmApproachSeconds(Math.Round(_farmApproachSeconds + 0.1, 1));
-    private void FarmApproachPlusOneButton_Click(object sender, RoutedEventArgs e) => SetFarmApproachSeconds(Math.Round(_farmApproachSeconds + 1.0, 1));
-    private void FarmApproachResetButton_Click(object sender, RoutedEventArgs e) => SetFarmApproachSeconds(DefaultFarmApproachSeconds);
-
-    private void SetFarmApproachSeconds(double seconds)
-    {
-        _farmApproachSeconds = Math.Max(0, seconds);
-        SaveFarm();
-        RefreshFarmRows(animate: false);
-    }
-
-    private void SetFarmRounds(int rounds)
-    {
-        _farmRounds = Math.Clamp(rounds, 1, 20);
-        SaveFarm();
-        RefreshFarmRows(animate: false);
-    }
-
-    private void SetFarmPause(double seconds)
-    {
-        _farmPause = Math.Max(0, seconds);
-        SaveFarm();
-        RefreshFarmRows(animate: false);
-    }
-
-    private void SaveFarm() => _source.SetFarm(_id, _farmOn, _farmRounds, _farmPause, _farmSkin, _farmApproach, _farmApproachSeconds, _farmLoot);
-
-    private void RefreshFarmRows(bool animate)
-    {
-        FarmButton.Tag = _farmOn;
-        FarmSkinButton.Tag = _farmSkin;
-        FarmApproachButton.Tag = _farmApproach;
-        FarmApproachText.Text = $"{_farmApproachSeconds.ToString("0.0", CultureInfo.InvariantCulture)} s";
-        FarmLootText.Text = $"{(_farmLoot > 0 ? _farmLoot : 0.8).ToString("0.0", CultureInfo.InvariantCulture)} s";
-        FarmRoundsText.Text = _farmRounds.ToString(CultureInfo.InvariantCulture);
-        FarmPauseText.Text = $"{_farmPause.ToString("0.0", CultureInfo.InvariantCulture)} s";
-        AssistFold.Summary = _farmOn ? "Farm nearby on" : "";
-        FarmNote.Text = (GameTiming.InteractVk == 0 ? "Set the loot click above, or the loop skips looting. " : "")
-            + "While Farm nearby is on, Mode, Duration and Infinite don't apply: the loop runs until you trigger it again or say \"press stop\". Priority keys still cut in.";
-        SetElementVisible(FarmPanel, _farmOn, animate);
-        SetElementVisible(FarmApproachPanel, _farmOn && _farmApproach, animate);
-    }
-
     // The Help page lines for game mode, here as well, under a fold.
     private void AddGameInfo()
     {
@@ -715,7 +564,6 @@ public partial class RemapCard
         AddInfoLine("Channelled ability", "Tick it on a priority key whose ability channels, and set how long the channel takes, usually two to three seconds. The repeat stays paused that long instead of one GCD.");
         AddInfoLine("Two priority keys in a row", "extend the pause; the second never cuts the first short.");
         AddInfoLine("Where it applies", "Any mapping can be a priority key: a spoken word, a mouse button, an on-screen key or a remapped real key. Game mode only shows these rows; the settings work even with it off.");
-        AddInfoLine("Experimental assistance", "Single-button farming with you at the wheel. Farm nearby targets the nearest enemy, runs to it if asked, runs this mapping's keys as the rotation for the set rounds, waits for the drop, loots (and skins if asked), then goes again until you trigger it again or say press stop. Set the target key and the loot click once per sub-profile: Right Click, with the game's Click to Move on, runs you to whatever your cursor is on.");
     }
 
     private void AddInfoLine(string lead, string explanation)
@@ -752,13 +600,6 @@ public partial class RemapCard
         _repeatGap = 0.0;
         _priorityOn = false;
         _prioritySeconds = 0.0;
-        _farmOn = false;
-        _farmRounds = 0;
-        _farmPause = 0.0;
-        _farmSkin = false;
-        _farmApproach = false;
-        _farmApproachSeconds = 0.0;
-        _farmLoot = 0.0;
 
         UpdateModeVisuals();
         InfiniteButton.Tag = _infiniteOn;
@@ -772,7 +613,6 @@ public partial class RemapCard
         SetElementVisible(PriorityPanel, false, animate: true);
         ChannelButton.Tag = false;
         SetElementVisible(ChannelPanel, false, animate: true);
-        RefreshFarmRows(animate: true);
         ResetAllButton.Visibility = Visibility.Collapsed;
     }
 

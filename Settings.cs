@@ -88,13 +88,6 @@ internal static class Settings
         // keys unless the mapping sets its own gap (see GameTiming).
         public double GcdSeconds { get; set; }
 
-        // Experimental assistance (see KeyExecutor.RunFarmLoop): this
-        // sub-profile's game keybinds, as virtual-key codes. TargetVk 0 =
-        // Tab, the game's default; InteractVk 0 = not set, so a farm loop
-        // skips its loot steps.
-        public ushort TargetVk { get; set; }
-        public ushort InteractVk { get; set; }
-
         // A JSON round trip is the one deep copy this file needs (a new
         // sub-profile starts as a copy of the active one).
         public MappingSet Clone() =>
@@ -535,19 +528,6 @@ internal static class Settings
 
     public static void SaveGcdSeconds(string profile, double seconds) =>
         SaveFields(profile, d => d.GcdSeconds = seconds);
-
-    public static (ushort TargetVk, ushort InteractVk) LoadGameKeys(string profile)
-    {
-        var set = Resolve(Read(), profile);
-        return (set?.TargetVk ?? (ushort)0, set?.InteractVk ?? (ushort)0);
-    }
-
-    public static void SaveGameKeys(string profile, ushort targetVk, ushort interactVk) =>
-        SaveFields(profile, d =>
-        {
-            d.TargetVk = targetVk;
-            d.InteractVk = interactVk;
-        });
 
     // The theme belongs to the game, not the sub-profile: switching class
     // keeps the game's colour.

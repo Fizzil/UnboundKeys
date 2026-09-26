@@ -119,7 +119,6 @@ internal sealed class RemapStore
 
     public void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool useCustomRepeatIntervals, List<double> repeatKeyIntervalsSeconds, double repeatGapSeconds, bool priority, double prioritySeconds)
     {
-        var old = Behaviors.TryGetValue(id, out var existing) ? existing : new KeyBehavior();
         Behaviors[id] = new KeyBehavior
         {
             Repeat = repeat,
@@ -131,32 +130,7 @@ internal sealed class RemapStore
             RepeatGapSeconds = repeatGapSeconds,
             Priority = priority,
             PrioritySeconds = prioritySeconds,
-            // Farm nearby is set apart (SetFarm) and survives any change above.
-            Farm = old.Farm,
-            FarmRounds = old.FarmRounds,
-            FarmPauseSeconds = old.FarmPauseSeconds,
-            FarmSkin = old.FarmSkin,
-            FarmApproach = old.FarmApproach,
-            FarmApproachSeconds = old.FarmApproachSeconds,
-            FarmLootSeconds = old.FarmLootSeconds,
         };
-        Save();
-    }
-
-    // Experimental assistance: Farm nearby (see KeyBehavior.Farm). Kept
-    // apart from SetBehavior so the editor's many behavior saves never
-    // have to carry these along.
-    public void SetFarm(string id, bool farm, int rounds, double pauseSeconds, bool skin, bool approach, double approachSeconds, double lootSeconds)
-    {
-        if (!Behaviors.TryGetValue(id, out var behavior))
-            Behaviors[id] = behavior = new KeyBehavior();
-        behavior.Farm = farm;
-        behavior.FarmRounds = rounds;
-        behavior.FarmPauseSeconds = pauseSeconds;
-        behavior.FarmSkin = skin;
-        behavior.FarmApproach = approach;
-        behavior.FarmApproachSeconds = approachSeconds;
-        behavior.FarmLootSeconds = lootSeconds;
         Save();
     }
 

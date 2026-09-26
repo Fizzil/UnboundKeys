@@ -221,7 +221,7 @@ internal static class KeyExecutor
         if (behavior.Priority)
             PauseRepeatsForPriority(behavior, _stopSignal.Token);
 
-        if (behavior.Infinite || behavior.Farm)
+        if (behavior.Infinite)
         {
             ExecuteInfinite(word, keys, behavior);
             return;
@@ -431,7 +431,7 @@ internal static class KeyExecutor
 
     private static void ExecuteInfinite(string word, IReadOnlyList<(ushort Vk, bool Extended)> keys, KeyBehavior behavior)
     {
-        bool repeatMode = behavior.Farm || (behavior.Repeat && !behavior.Hold);
+        bool repeatMode = behavior.Repeat && !behavior.Hold;
         bool starting;
         string? bumpedWord = null;
         IReadOnlyList<(ushort Vk, bool Extended)>? bumpedHoldKeys = null;
@@ -515,11 +515,6 @@ internal static class KeyExecutor
             Interlocked.Increment(ref _runningRepeats);
             try
             {
-                if (behavior.Farm)
-                {
-                    RunFarmLoop(word, keys, behavior, token);
-                    return; // the finally below still lets go of the running-repeat count
-                }
                 while (IsEngaged(word) && !token.IsCancellationRequested)
                 {
                     WaitOutPause(token);
@@ -540,75 +535,6 @@ internal static class KeyExecutor
         else
         {
             PressAllDown(keys);
-        }
-    }
-
-    // ---- Experimental assistance: Farm nearby (see KeyBehavior.Farm) ----
-    //
-    // Single-button farming with the player at the wheel, the way the
-    // game's own Assisted Combat button does a rotation. One cycle: target
-    // the nearest enemy, run the rotation (this mapping's keys in order,
-    // each waiting its own gap, the class GCD by default) for the set
-    // number of rounds, wait for the mob to drop, interact to loot,
-    // interact once more to skin if asked, then go again. It runs in the
-    // infinite-repeat slot, so the trigger again, "press stop", a bumping
-    // repeat or focus leaving the game all end it, and a priority key
-    // pauses it like any repeat. Nothing here reads the screen: the game's
-    // own soft targeting and Auto Loot do the aiming.
-    private const int FarmSettleMs = 300; // after Target: a beat for the game to pick the mob
-    private const int FarmLootMs = 800;   // after a loot click, unless the mapping sets its run time
-
-    private static void RunFarmLoop(string word, IReadOnlyList<(ushort Vk, bool Extended)> keys, KeyBehavior behavior, CancellationToken token)
-    {
-        ushort target = GameTiming.EffectiveTargetVk;
-        ushort interact = GameTiming.InteractVk;
-        int rounds = Math.Max(1, behavior.FarmRounds);
-        int lootMs = behavior.FarmLootSeconds > 0 ? (int)(behavior.FarmLootSeconds * 1000) : FarmLootMs;
-
-        bool Running() => IsEngaged(word) && !token.IsCancellationRequested;
-
-        // One game key: waits out any priority pause first, like the
-        // rotation keys do, and reports whether the loop should go on.
-        bool Press(ushort vk, int gapMs)
-        {
-            WaitOutPause(token);
-            if (!Running())
-                return false;
-            NativeInput.TapKey(vk, KeyMap.IsExtendedKey(vk));
-            NoteRepeatKey(gapMs);
-            InterruptibleSleep(gapMs, token);
-            return true;
-        }
-
-        while (Running())
-        {
-            if (!Press(target, FarmSettleMs))
-                return;
-
-            // Run to it (needs the game's Click to Move): Interact turns to the
-            // mob, runs into range and starts auto-attack; the wait is the run.
-            if (behavior.FarmApproach && interact != 0 && !Press(interact, (int)(behavior.FarmApproachSeconds * 1000)))
-                return;
-
-            for (int round = 0; round < rounds; round++)
-                for (int i = 0; i < keys.Count; i++)
-                {
-                    WaitOutPause(token);
-                    if (!Running())
-                        return;
-                    TapKeySequentially(keys, i);
-                    int gapMs = GapMsAfterKey(behavior, i, keys.Count);
-                    NoteRepeatKey(gapMs);
-                    InterruptibleSleep(gapMs, token);
-                }
-
-            InterruptibleSleep((int)(behavior.FarmPauseSeconds * 1000), token);
-            if (interact == 0)
-                continue;
-            if (!Press(interact, lootMs))
-                return;
-            if (behavior.FarmSkin && !Press(interact, lootMs))
-                return;
         }
     }
 
