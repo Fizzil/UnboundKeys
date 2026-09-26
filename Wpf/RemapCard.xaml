@@ -98,7 +98,7 @@
                             <Button Content="Reset" Click="GapResetButton_Click" Style="{StaticResource StepButtonStyle}"/>
                         </StackPanel>
                     </Grid>
-                    <TextBlock Text="Match the global cooldown: 1.5 s for most WoW classes (a little less with haste), 1.0 s for Rogues, cat-form Druids and Monks."
+                    <TextBlock Text="Your global cooldown: 1.5 s for most WoW classes (a little less with haste), 1.0 s for Rogues, cat-form Druids and Monks."
                                Style="{StaticResource RowHintStyle}"/>
 
                     <!-- Per-key gaps: only for Repeat with 2+ keys. The
@@ -119,7 +119,7 @@
                 <Button x:Name="PriorityButton" Click="PriorityButton_Click" Style="{StaticResource RailToggleStyle}" Height="48" Margin="4,0,4,0">
                     <StackPanel>
                         <TextBlock Text="Priority"/>
-                        <TextBlock Text="Pauses a running repeat, waits out its cooldown, fires, then holds the repeat" Style="{StaticResource InlineHintStyle}"/>
+                        <TextBlock Text="Pauses an infinite repeat, waits for the global cooldown, fires, then keeps the repeat paused" Style="{StaticResource InlineHintStyle}"/>
                     </StackPanel>
                 </Button>
                 <StackPanel x:Name="PriorityPanel" Height="0" Visibility="Collapsed" ClipToBounds="True">
@@ -129,7 +129,7 @@
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="Hold the repeat for" Style="{StaticResource RowLabelStyle}"/>
+                        <TextBlock Text="Pause the repeat for" Style="{StaticResource RowLabelStyle}"/>
                         <TextBlock x:Name="PriorityText" Grid.Column="1" Style="{StaticResource ValueTextStyle}"/>
                         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
                             <Button Content="+0.1 s" Click="PriorityPlusTenthButton_Click" Style="{StaticResource StepButtonStyle}"/>
@@ -137,7 +137,7 @@
                             <Button Content="Reset" Click="PriorityResetButton_Click" Style="{StaticResource StepButtonStyle}"/>
                         </StackPanel>
                     </Grid>
-                    <TextBlock Text="Reset means one gap of the running repeat, right for an instant ability. A channelled ability wants two or three seconds."
+                    <TextBlock Text="Reset means one global cooldown, right for an instant ability. A channelled ability needs its cast time, usually two or three seconds."
                                Style="{StaticResource RowHintStyle}"/>
                 </StackPanel>
 
