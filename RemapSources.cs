@@ -15,7 +15,7 @@ internal interface IRemapSource
     void AddExtraKey(string id, ushort vkCode);
     void SetExtraKey(string id, int index, ushort vkCode);
     void RemoveExtraKey(string id, int index);
-    void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool useCustomRepeatIntervals, List<double> repeatKeyIntervalsSeconds);
+    void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool useCustomRepeatIntervals, List<double> repeatKeyIntervalsSeconds, double repeatGapSeconds, bool priority, double prioritySeconds);
     void ResetToDefault(string id);
 
     // "Key 1: X" for a word (always has a real key); "Key 1: Not Mapped"
@@ -41,8 +41,8 @@ internal sealed class KeyMapSource : IRemapSource
     public void AddExtraKey(string id, ushort vkCode) => KeyMap.AddExtraKey(id, vkCode);
     public void SetExtraKey(string id, int index, ushort vkCode) => KeyMap.SetExtraKey(id, index, vkCode);
     public void RemoveExtraKey(string id, int index) => KeyMap.RemoveExtraKey(id, index);
-    public void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool useCustomRepeatIntervals, List<double> repeatKeyIntervalsSeconds) =>
-        KeyMap.SetBehavior(id, repeat, hold, durationSeconds, infinite, useCustomRepeatIntervals, repeatKeyIntervalsSeconds);
+    public void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool useCustomRepeatIntervals, List<double> repeatKeyIntervalsSeconds, double repeatGapSeconds, bool priority, double prioritySeconds) =>
+        KeyMap.SetBehavior(id, repeat, hold, durationSeconds, infinite, useCustomRepeatIntervals, repeatKeyIntervalsSeconds, repeatGapSeconds, priority, prioritySeconds);
     public void ResetToDefault(string id) => KeyMap.ResetToDefault(id);
 
     public string KeyLabelFor(string id) => $"Key 1: {KeyCatalog.DisplayNameFor(KeyMap.Words[id])}";
@@ -62,8 +62,8 @@ internal sealed class MouseMapSource : IRemapSource
     public void AddExtraKey(string id, ushort vkCode) => MouseMap.AddExtraKey(id, vkCode);
     public void SetExtraKey(string id, int index, ushort vkCode) => MouseMap.SetExtraKey(id, index, vkCode);
     public void RemoveExtraKey(string id, int index) => MouseMap.RemoveExtraKey(id, index);
-    public void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool useCustomRepeatIntervals, List<double> repeatKeyIntervalsSeconds) =>
-        MouseMap.SetBehavior(id, repeat, hold, durationSeconds, infinite, useCustomRepeatIntervals, repeatKeyIntervalsSeconds);
+    public void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool useCustomRepeatIntervals, List<double> repeatKeyIntervalsSeconds, double repeatGapSeconds, bool priority, double prioritySeconds) =>
+        MouseMap.SetBehavior(id, repeat, hold, durationSeconds, infinite, useCustomRepeatIntervals, repeatKeyIntervalsSeconds, repeatGapSeconds, priority, prioritySeconds);
     public void ResetToDefault(string id) => MouseMap.ResetToDefault(id);
 
     public string KeyLabelFor(string id) =>
@@ -84,8 +84,8 @@ internal sealed class VirtualKeyMapSource : IRemapSource
     public void AddExtraKey(string id, ushort vkCode) => VirtualKeyMap.AddExtraKey(id, vkCode);
     public void SetExtraKey(string id, int index, ushort vkCode) => VirtualKeyMap.SetExtraKey(id, index, vkCode);
     public void RemoveExtraKey(string id, int index) => VirtualKeyMap.RemoveExtraKey(id, index);
-    public void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool useCustomRepeatIntervals, List<double> repeatKeyIntervalsSeconds) =>
-        VirtualKeyMap.SetBehavior(id, repeat, hold, durationSeconds, infinite, useCustomRepeatIntervals, repeatKeyIntervalsSeconds);
+    public void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool useCustomRepeatIntervals, List<double> repeatKeyIntervalsSeconds, double repeatGapSeconds, bool priority, double prioritySeconds) =>
+        VirtualKeyMap.SetBehavior(id, repeat, hold, durationSeconds, infinite, useCustomRepeatIntervals, repeatKeyIntervalsSeconds, repeatGapSeconds, priority, prioritySeconds);
     public void ResetToDefault(string id) => VirtualKeyMap.ResetToDefault(id);
 
     public string KeyLabelFor(string id) => $"Key 1: {KeyCatalog.DisplayNameFor(VirtualKeyMap.Words[id])}";

@@ -43,6 +43,8 @@ internal static class KeyExecutor
                     return (int)(seconds * 1000);
             }
         }
+        if (behavior.RepeatGapSeconds > 0)
+            return (int)(behavior.RepeatGapSeconds * 1000);
         return RepeatIntervalMs;
     }
 
@@ -154,8 +156,67 @@ internal static class KeyExecutor
         NativeInput.KeyUp(key.Vk, key.Extended);
     }
 
+    // ---- Priority pauses (see KeyBehavior.Priority) ----
+    //
+    // Every repeat loop (timed or infinite) waits out _pauseUntil before
+    // each key, and notes when it last fired and with what gap. A priority
+    // mapping arriving while any repeat runs sets _pauseUntil so the loops
+    // stop at once, waits for the game cooldown left over from that last
+    // repeat key, fires (the normal Execute path does that), and keeps the
+    // loops paused for its own time after that. A second priority press
+    // during a pause extends it rather than cutting it short.
+    private static readonly object _pauseLock = new();
+    private static DateTime _pauseUntil = DateTime.MinValue;
+    private static DateTime _lastRepeatKeyAt = DateTime.MinValue;
+    private static int _lastRepeatGapMs = RepeatIntervalMs;
+    private static int _runningRepeats;
+
+    private static void NoteRepeatKey(int gapMs)
+    {
+        lock (_pauseLock)
+        {
+            _lastRepeatKeyAt = DateTime.UtcNow;
+            _lastRepeatGapMs = gapMs;
+        }
+    }
+
+    private static void WaitOutPause(CancellationToken token)
+    {
+        while (!token.IsCancellationRequested)
+        {
+            TimeSpan left;
+            lock (_pauseLock)
+                left = _pauseUntil - DateTime.UtcNow;
+            if (left <= TimeSpan.Zero)
+                return;
+            InterruptibleSleep((int)Math.Min(left.TotalMilliseconds, 50), token);
+        }
+    }
+
+    private static void PauseRepeatsForPriority(KeyBehavior behavior, CancellationToken token)
+    {
+        int waitMs;
+        lock (_pauseLock)
+        {
+            if (_runningRepeats == 0)
+                return;
+            var now = DateTime.UtcNow;
+            var cooldownEnds = _lastRepeatKeyAt.AddMilliseconds(_lastRepeatGapMs);
+            waitMs = (int)Math.Max(0, (cooldownEnds - now).TotalMilliseconds);
+            double pauseMs = behavior.PrioritySeconds > 0 ? behavior.PrioritySeconds * 1000 : _lastRepeatGapMs;
+            var until = now.AddMilliseconds(waitMs + pauseMs);
+            if (until > _pauseUntil)
+                _pauseUntil = until;
+        }
+        if (waitMs > 0)
+            InterruptibleSleep(waitMs, token);
+    }
+
     public static void Execute(string word, IReadOnlyList<(ushort Vk, bool Extended)> keys, KeyBehavior behavior)
     {
+        if (behavior.Priority)
+            PauseRepeatsForPriority(behavior, _stopSignal.Token);
+
         if (behavior.Infinite)
         {
             ExecuteInfinite(word, keys, behavior);
@@ -249,11 +310,24 @@ internal static class KeyExecutor
             {
                 var end = DateTime.UtcNow.AddSeconds(behavior.DurationSeconds);
                 int i = 0;
-                while (DateTime.UtcNow < end && !token.IsCancellationRequested)
+                Interlocked.Increment(ref _runningRepeats);
+                try
                 {
-                    TapKeySequentially(keys, i);
-                    InterruptibleSleep(GapMsAfterKey(behavior, i, keys.Count), token);
-                    i++;
+                    while (DateTime.UtcNow < end && !token.IsCancellationRequested)
+                    {
+                        WaitOutPause(token);
+                        if (token.IsCancellationRequested)
+                            break;
+                        TapKeySequentially(keys, i);
+                        int gapMs = GapMsAfterKey(behavior, i, keys.Count);
+                        NoteRepeatKey(gapMs);
+                        InterruptibleSleep(gapMs, token);
+                        i++;
+                    }
+                }
+                finally
+                {
+                    Interlocked.Decrement(ref _runningRepeats);
                 }
             }
         }
@@ -434,11 +508,24 @@ internal static class KeyExecutor
         {
             var token = _stopSignal.Token;
             int i = 0;
-            while (IsEngaged(word) && !token.IsCancellationRequested)
+            Interlocked.Increment(ref _runningRepeats);
+            try
             {
-                TapKeySequentially(keys, i);
-                InterruptibleSleep(GapMsAfterKey(behavior, i, keys.Count), token);
-                i++;
+                while (IsEngaged(word) && !token.IsCancellationRequested)
+                {
+                    WaitOutPause(token);
+                    if (!IsEngaged(word) || token.IsCancellationRequested)
+                        break;
+                    TapKeySequentially(keys, i);
+                    int gapMs = GapMsAfterKey(behavior, i, keys.Count);
+                    NoteRepeatKey(gapMs);
+                    InterruptibleSleep(gapMs, token);
+                    i++;
+                }
+            }
+            finally
+            {
+                Interlocked.Decrement(ref _runningRepeats);
             }
         }
         else

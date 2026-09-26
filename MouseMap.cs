@@ -108,8 +108,8 @@ public static class MouseMap
     public static void RemoveExtraKey(string id, int index) => _store.RemoveExtraKey(id, index);
     public static List<(ushort Vk, bool Extended)> GetAllKeys(string id) => _store.GetAllKeys(id);
 
-    public static void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool useCustomRepeatIntervals, List<double> repeatKeyIntervalsSeconds) =>
-        _store.SetBehavior(id, repeat, hold, durationSeconds, infinite, useCustomRepeatIntervals, repeatKeyIntervalsSeconds);
+    public static void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool useCustomRepeatIntervals, List<double> repeatKeyIntervalsSeconds, double repeatGapSeconds, bool priority, double prioritySeconds) =>
+        _store.SetBehavior(id, repeat, hold, durationSeconds, infinite, useCustomRepeatIntervals, repeatKeyIntervalsSeconds, repeatGapSeconds, priority, prioritySeconds);
 
     // Puts a button back to fully unmapped — no key, no extras, default
     // behavior, and (unlike a word's ResetToDefault) switched back off, so

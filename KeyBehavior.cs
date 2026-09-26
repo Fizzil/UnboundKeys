@@ -27,4 +27,21 @@ public sealed class KeyBehavior
     // for that particular key, same as when UseCustomRepeatIntervals is
     // off entirely.
     public List<double> RepeatKeyIntervalsSeconds { get; set; } = new();
+
+    // ---- Game mode (the RemapCard switch of that name) ----
+
+    // The gap after every key while Repeat is on, in seconds; 0 means the
+    // usual 0.1 s. Set it to the game global cooldown (1.5 s for most WoW
+    // classes, 1.0 s for Rogues, cat-form Druids and Monks) so a repeat
+    // fires one ability per cooldown instead of wasting presses. A per-key
+    // custom interval above still wins for its own key when set.
+    public double RepeatGapSeconds { get; set; }
+
+    // A priority mapping pauses any running repeat: waits out the rest of
+    // that repeat gap (the game cooldown), fires, then holds the repeat for
+    // PrioritySeconds before it carries on. 0 seconds means "one gap of the
+    // running repeat", the right pause for an instant ability; a channel
+    // wants two or three seconds.
+    public bool Priority { get; set; }
+    public double PrioritySeconds { get; set; }
 }

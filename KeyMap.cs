@@ -104,8 +104,8 @@ public static class KeyMap
     // Called by the dashboard when the user changes a word's Repeat/Hold/
     // Infinite checkboxes, its duration, or (for a 2+ key word) its
     // per-key repeat intervals.
-    public static void SetBehavior(string word, bool repeat, bool hold, double durationSeconds, bool infinite, bool useCustomRepeatIntervals, List<double> repeatKeyIntervalsSeconds) =>
-        _store.SetBehavior(word, repeat, hold, durationSeconds, infinite, useCustomRepeatIntervals, repeatKeyIntervalsSeconds);
+    public static void SetBehavior(string word, bool repeat, bool hold, double durationSeconds, bool infinite, bool useCustomRepeatIntervals, List<double> repeatKeyIntervalsSeconds, double repeatGapSeconds, bool priority, double prioritySeconds) =>
+        _store.SetBehavior(word, repeat, hold, durationSeconds, infinite, useCustomRepeatIntervals, repeatKeyIntervalsSeconds, repeatGapSeconds, priority, prioritySeconds);
 
     // Called by the dashboard's card-level reset button: puts a word back to
     // its original key with no repeat/hold/duration set, and no extra keys.

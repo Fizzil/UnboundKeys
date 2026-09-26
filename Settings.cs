@@ -176,6 +176,10 @@ internal static class Settings
         public bool StartWithWindows { get; set; }
         public bool AutoStartPaused { get; set; }
 
+        // The editor Game mode switch (see RemapCard): app-wide, so it stays
+        // on across every editor once a game is being set up.
+        public bool GameMode { get; set; }
+
         // Pre-profiles shape — only ever read, for one-time migration.
         public Dictionary<string, ushort>? KeyMap { get; set; }
         public Dictionary<string, KeyBehavior>? Behaviors { get; set; }
@@ -441,6 +445,15 @@ internal static class Settings
         var saved = Read();
         saved.StartWithWindows = startWithWindows;
         saved.AutoStartPaused = autoStartPaused;
+        Write(saved);
+    }
+
+    public static bool LoadGameMode() => Read().GameMode;
+
+    public static void SaveGameMode(bool on)
+    {
+        var saved = Read();
+        saved.GameMode = on;
         Write(saved);
     }
 

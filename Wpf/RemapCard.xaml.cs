@@ -30,6 +30,12 @@ public partial class RemapCard
     private double _duration;
     private bool _infiniteOn;
     private bool _useCustomRepeatIntervals;
+    // Game mode (see the XAML comment): the gap after every repeated key,
+    // and priority with its hold time, all in seconds (0 = the defaults).
+    private bool _gameMode;
+    private double _repeatGap;
+    private bool _priorityOn;
+    private double _prioritySeconds;
     // One gap per key (index 0 = Key 1): how long to wait after that key
     // before the next, 0 meaning the executor's default. Rebuilt to the
     // right length rather than trusting saved data blindly — same guard
@@ -54,6 +60,10 @@ public partial class RemapCard
         _duration = behavior.DurationSeconds;
         _infiniteOn = behavior.Infinite;
         _useCustomRepeatIntervals = behavior.UseCustomRepeatIntervals;
+        _repeatGap = behavior.RepeatGapSeconds;
+        _priorityOn = behavior.Priority;
+        _prioritySeconds = behavior.PrioritySeconds;
+        _gameMode = Settings.LoadGameMode();
 
         int totalKeyCount = 1 + _source.ExtraWords[_id].Count;
         _keyIntervalSeconds = behavior.RepeatKeyIntervalsSeconds.Count == totalKeyCount
@@ -73,6 +83,13 @@ public partial class RemapCard
         SetElementVisible(TimingPanel, _repeatOn || _holdOn, animate: false);
         RebuildKeyIntervalRows();
         UpdateRepeatIntervalVisibility(animate: false);
+        GameModeButton.Tag = _gameMode;
+        PriorityButton.Tag = _priorityOn;
+        UpdateGapText();
+        UpdatePriorityText();
+        SetElementVisible(GamePanel, _gameMode, animate: false);
+        SetElementVisible(GapPanel, _repeatOn, animate: false);
+        SetElementVisible(PriorityPanel, _priorityOn, animate: false);
     }
 
     // Every "Key N: X" string IRemapSource builds follows the same
@@ -299,6 +316,7 @@ public partial class RemapCard
         UpdateModeVisuals();
         SetElementVisible(TimingPanel, _repeatOn || _holdOn, animate: true);
         UpdateRepeatIntervalVisibility(animate: true);
+        SetElementVisible(GapPanel, _repeatOn, animate: true);
         SaveBehavior();
     }
 
@@ -400,8 +418,10 @@ public partial class RemapCard
 
     // 0 isn't "no gap" — it's "the executor's usual 0.1 s" (see
     // KeyExecutor.GapMsAfterKey), so say so instead of showing 0.0 s.
-    private static string GapText(double seconds) =>
-        seconds <= 0 ? "default (0.1 s)" : $"{seconds.ToString("0.0", CultureInfo.InvariantCulture)} s";
+    private string GapText(double seconds) =>
+        seconds > 0 ? $"{seconds.ToString("0.0", CultureInfo.InvariantCulture)} s"
+        : _repeatGap > 0 ? $"gap ({_repeatGap.ToString("0.0", CultureInfo.InvariantCulture)} s)"
+        : "default (0.1 s)";
 
     private void SetGap(int index, double seconds)
     {
@@ -432,11 +452,59 @@ public partial class RemapCard
         SetElementVisible(KeyIntervalRows, canCustomize && _useCustomRepeatIntervals, animate);
     }
 
+    // ---- Game mode ----
+
+    private void GameModeButton_Click(object sender, RoutedEventArgs e)
+    {
+        _gameMode = !_gameMode;
+        GameModeButton.Tag = _gameMode;
+        Settings.SaveGameMode(_gameMode);
+        SetElementVisible(GamePanel, _gameMode, animate: true);
+    }
+
+    private void GapOneButton_Click(object sender, RoutedEventArgs e) => SetRepeatGap(1.0);
+    private void GapOneAndHalfButton_Click(object sender, RoutedEventArgs e) => SetRepeatGap(1.5);
+    private void GapPlusTenthButton_Click(object sender, RoutedEventArgs e) => SetRepeatGap(Math.Round(_repeatGap + 0.1, 1));
+    private void GapResetButton_Click(object sender, RoutedEventArgs e) => SetRepeatGap(0.0);
+
+    private void SetRepeatGap(double seconds)
+    {
+        _repeatGap = seconds;
+        UpdateGapText();
+        RebuildKeyIntervalRows(); // their "default" wording follows the gap
+        SaveBehavior();
+    }
+
+    private void UpdateGapText() => RepeatGapText.Text = GapText(_repeatGap);
+
+    private void PriorityButton_Click(object sender, RoutedEventArgs e)
+    {
+        _priorityOn = !_priorityOn;
+        PriorityButton.Tag = _priorityOn;
+        SetElementVisible(PriorityPanel, _priorityOn, animate: true);
+        SaveBehavior();
+    }
+
+    private void PriorityPlusTenthButton_Click(object sender, RoutedEventArgs e) => SetPrioritySeconds(Math.Round(_prioritySeconds + 0.1, 1));
+    private void PriorityPlusOneButton_Click(object sender, RoutedEventArgs e) => SetPrioritySeconds(Math.Round(_prioritySeconds + 1.0, 1));
+    private void PriorityResetButton_Click(object sender, RoutedEventArgs e) => SetPrioritySeconds(0.0);
+
+    private void SetPrioritySeconds(double seconds)
+    {
+        _prioritySeconds = seconds;
+        UpdatePriorityText();
+        SaveBehavior();
+    }
+
+    // 0 means "one gap of the running repeat" (see KeyBehavior.PrioritySeconds).
+    private void UpdatePriorityText() =>
+        PriorityText.Text = _prioritySeconds <= 0 ? "one gap" : $"{_prioritySeconds.ToString("0.0", CultureInfo.InvariantCulture)} s";
+
     // ---- Save / Reset ----
 
     private void SaveBehavior() =>
         _source.SetBehavior(_id, _repeatOn, _holdOn, _duration, _infiniteOn,
-            _useCustomRepeatIntervals, _keyIntervalSeconds);
+            _useCustomRepeatIntervals, _keyIntervalSeconds, _repeatGap, _priorityOn, _prioritySeconds);
 
     // Resets everything about this mapping: the key(s), Mode, Infinite,
     // the duration, and every gap.
@@ -452,6 +520,9 @@ public partial class RemapCard
         _infiniteOn = behavior.Infinite;
         _keyIntervalSeconds = new List<double> { 0.0 }; // only the primary key remains after reset
         _useCustomRepeatIntervals = false;
+        _repeatGap = 0.0;
+        _priorityOn = false;
+        _prioritySeconds = 0.0;
 
         UpdateModeVisuals();
         InfiniteButton.Tag = _infiniteOn;
@@ -459,6 +530,11 @@ public partial class RemapCard
         SetElementVisible(TimingPanel, _repeatOn || _holdOn, animate: true);
         RebuildKeyIntervalRows();
         UpdateRepeatIntervalVisibility(animate: true);
+        PriorityButton.Tag = false;
+        UpdateGapText();
+        UpdatePriorityText();
+        SetElementVisible(GapPanel, _repeatOn, animate: true);
+        SetElementVisible(PriorityPanel, false, animate: true);
         ResetAllButton.Visibility = Visibility.Collapsed;
     }
 

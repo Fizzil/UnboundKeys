@@ -5,12 +5,12 @@
     <!-- The editor for one mapping, laid out as rows of "label on the
          left, control on the right" — Discord's settings-page shape —
          instead of the WinForms card's rows of small buttons. Keys first
-         (built in code: Key 1, up to two extras with a two-click Remove,
+         (built in code: Key 1, up to five extras with a two-click Remove,
          then "+ Add key"), then how the keys are sent: a Mode switch
          (Tap / Repeat / Hold), the Duration with +0.1 s / +1 s / Reset
-         and an Infinite switch while Repeat or Hold is on, custom per-key
-         gaps while Repeat has 2+ keys, and Reset at the bottom. Sections
-         that don't apply are collapsed and animate open when they do. -->
+         and an Infinite switch while Repeat or Hold is on, then Game mode
+         (see below), and Reset at the bottom. Sections that don't apply
+         are collapsed and animate open when they do. -->
     <Border BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1" CornerRadius="8">
         <StackPanel Margin="1,1,1,8">
 
@@ -65,18 +65,80 @@
                 </Button>
             </StackPanel>
 
-            <!-- Per-key gaps: only for Repeat with 2+ keys. The switch
-                 reveals one row per key (built in code, since the count
-                 varies), each with its own buttons — no "pick a key, then
-                 use the shared buttons" mode. -->
-            <StackPanel x:Name="GapsPanel" Height="0" Visibility="Collapsed" ClipToBounds="True">
-                <Button x:Name="RepeatIntervalButton" Click="RepeatIntervalButton_Click" Style="{StaticResource RailToggleStyle}" Height="48" Margin="4,0,4,0">
+            <!-- Game mode (Fizzil, after a WoW night): the timing a game
+                 with a global cooldown needs. One app-wide switch, so it
+                 stays on in every editor once a game is being set up. It
+                 reveals: a gap between repeated keys with the two GCD
+                 presets (Repeat only), the per-key custom gaps, and
+                 Priority — a mapping that pauses any running repeat,
+                 waits out its cooldown, fires, and holds the repeat for a
+                 time (see KeyExecutor's priority pause). -->
+            <Button x:Name="GameModeButton" Click="GameModeButton_Click" Style="{StaticResource RailToggleStyle}" Height="48" Margin="4,0,4,0">
+                <StackPanel>
+                    <TextBlock Text="Game mode"/>
+                    <TextBlock Text="Timing for games with a global cooldown, in every editor" Style="{StaticResource InlineHintStyle}"/>
+                </StackPanel>
+            </Button>
+            <StackPanel x:Name="GamePanel" Height="0" Visibility="Collapsed" ClipToBounds="True">
+
+                <StackPanel x:Name="GapPanel" Height="0" Visibility="Collapsed" ClipToBounds="True">
+                    <Grid Height="44">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Gap between keys" Style="{StaticResource RowLabelStyle}"/>
+                        <TextBlock x:Name="RepeatGapText" Grid.Column="1" Style="{StaticResource ValueTextStyle}"/>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
+                            <Button Content="1.0 s" Click="GapOneButton_Click" Style="{StaticResource StepButtonStyle}"/>
+                            <Button Content="1.5 s" Click="GapOneAndHalfButton_Click" Style="{StaticResource StepButtonStyle}"/>
+                            <Button Content="+0.1 s" Click="GapPlusTenthButton_Click" Style="{StaticResource StepButtonStyle}"/>
+                            <Button Content="Reset" Click="GapResetButton_Click" Style="{StaticResource StepButtonStyle}"/>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Text="Match the global cooldown: 1.5 s for most WoW classes (a little less with haste), 1.0 s for Rogues, cat-form Druids and Monks."
+                               Style="{StaticResource RowHintStyle}"/>
+
+                    <!-- Per-key gaps: only for Repeat with 2+ keys. The
+                         switch reveals one row per key (built in code,
+                         since the count varies), each with its own
+                         buttons. A key left at 0 uses the gap above. -->
+                    <StackPanel x:Name="GapsPanel" Height="0" Visibility="Collapsed" ClipToBounds="True">
+                        <Button x:Name="RepeatIntervalButton" Click="RepeatIntervalButton_Click" Style="{StaticResource RailToggleStyle}" Height="48" Margin="4,0,4,0">
+                            <StackPanel>
+                                <TextBlock Text="Custom gaps between keys"/>
+                                <TextBlock Text="Wait a different time after each key before the next" Style="{StaticResource InlineHintStyle}"/>
+                            </StackPanel>
+                        </Button>
+                        <StackPanel x:Name="KeyIntervalRows" Height="0" Visibility="Collapsed" ClipToBounds="True"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <Button x:Name="PriorityButton" Click="PriorityButton_Click" Style="{StaticResource RailToggleStyle}" Height="48" Margin="4,0,4,0">
                     <StackPanel>
-                        <TextBlock Text="Custom gaps between keys"/>
-                        <TextBlock Text="Wait a different time after each key before the next" Style="{StaticResource InlineHintStyle}"/>
+                        <TextBlock Text="Priority"/>
+                        <TextBlock Text="Pauses a running repeat, waits out its cooldown, fires, then holds the repeat" Style="{StaticResource InlineHintStyle}"/>
                     </StackPanel>
                 </Button>
-                <StackPanel x:Name="KeyIntervalRows" Height="0" Visibility="Collapsed" ClipToBounds="True"/>
+                <StackPanel x:Name="PriorityPanel" Height="0" Visibility="Collapsed" ClipToBounds="True">
+                    <Grid Height="44">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Hold the repeat for" Style="{StaticResource RowLabelStyle}"/>
+                        <TextBlock x:Name="PriorityText" Grid.Column="1" Style="{StaticResource ValueTextStyle}"/>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
+                            <Button Content="+0.1 s" Click="PriorityPlusTenthButton_Click" Style="{StaticResource StepButtonStyle}"/>
+                            <Button Content="+1 s" Click="PriorityPlusOneButton_Click" Style="{StaticResource StepButtonStyle}"/>
+                            <Button Content="Reset" Click="PriorityResetButton_Click" Style="{StaticResource StepButtonStyle}"/>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Text="Reset means one gap of the running repeat, right for an instant ability. A channelled ability wants two or three seconds."
+                               Style="{StaticResource RowHintStyle}"/>
+                </StackPanel>
             </StackPanel>
 
             <Border Height="6" Background="Transparent"/>
