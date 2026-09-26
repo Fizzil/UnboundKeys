@@ -61,6 +61,18 @@ public partial class SettingsPage : IDashboardPage
         // The new version is running; this one leaves the same way Quit does.
         Updates.Launched += () => QuitRequested?.Invoke();
 
+        StartupHint.Text = StartupHintText;
+        StartWithWindowsToggle.Tag = Settings.LoadStartWithWindows();
+        AutoStartPausedToggle.Tag = Settings.LoadAutoStartPaused();
+        AutoStartPausedToggle.IsEnabled = Settings.LoadStartWithWindows();
+        StartWithWindowsToggle.Click += (_, _) => ToggleStartWithWindows();
+        AutoStartPausedToggle.Click += (_, _) =>
+        {
+            bool paused = !(AutoStartPausedToggle.Tag is true);
+            AutoStartPausedToggle.Tag = paused;
+            Settings.SaveStartup(Settings.LoadStartWithWindows(), paused);
+        };
+
         var version = typeof(SettingsPage).Assembly.GetName().Version;
         string title = version == null
             ? "UnboundKeys — built by Fizzil"
@@ -68,6 +80,32 @@ public partial class SettingsPage : IDashboardPage
         AboutText.Text = title + "\nWord suggestions use the OpenSubtitles-based FrequencyWords list by Hermit Dave (CC BY-SA 4.0).";
 
         RebuildProfileList();
+    }
+
+    private const string StartupHintText =
+        "Starts UnboundKeys when you sign in, already running as administrator, so there is no permission prompt.";
+
+    // Flips the setting and the scheduled task together. If Task Scheduler
+    // refuses, the switch stays where it was and the hint says why.
+    private void ToggleStartWithWindows()
+    {
+        bool on = !(StartWithWindowsToggle.Tag is true);
+        try
+        {
+            if (on)
+                StartupTask.Register();
+            else
+                StartupTask.Unregister();
+        }
+        catch (Exception ex)
+        {
+            StartupHint.Text = "Could not change the startup task: " + ex.Message;
+            return;
+        }
+        StartWithWindowsToggle.Tag = on;
+        AutoStartPausedToggle.IsEnabled = on;
+        Settings.SaveStartup(on, Settings.LoadAutoStartPaused());
+        StartupHint.Text = StartupHintText;
     }
 
     public void Refresh()

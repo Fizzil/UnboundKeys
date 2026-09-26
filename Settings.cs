@@ -110,6 +110,12 @@ internal static class Settings
         public double? DashboardLeft { get; set; }
         public double? DashboardTop { get; set; }
 
+        // Settings > Startup: a scheduled task starts the app at sign-in
+        // (see StartupTask), and whether that automatic start comes up
+        // with the voice keys paused.
+        public bool StartWithWindows { get; set; }
+        public bool AutoStartPaused { get; set; }
+
         // Pre-profiles shape — only ever read, for one-time migration.
         public Dictionary<string, ushort>? KeyMap { get; set; }
         public Dictionary<string, KeyBehavior>? Behaviors { get; set; }
@@ -231,6 +237,17 @@ internal static class Settings
     {
         var saved = Read();
         saved.KeyboardScale = scale;
+        Write(saved);
+    }
+
+    public static bool LoadStartWithWindows() => Read().StartWithWindows;
+    public static bool LoadAutoStartPaused() => Read().AutoStartPaused;
+
+    public static void SaveStartup(bool startWithWindows, bool autoStartPaused)
+    {
+        var saved = Read();
+        saved.StartWithWindows = startWithWindows;
+        saved.AutoStartPaused = autoStartPaused;
         Write(saved);
     }
 

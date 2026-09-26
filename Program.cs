@@ -129,6 +129,17 @@ static class Program
         mouse.Start();
         physical.Start();
 
+        // Started by the sign-in task (see StartupTask) rather than a click:
+        // honour "start with voice keys paused". And whenever the setting is
+        // on, re-point the task at this copy, in case it moved or was
+        // updated since the task was made; the Settings switch reports
+        // failures, a launch must not.
+        bool autoStarted = Environment.GetCommandLineArgs().Contains(StartupTask.AutoStartArgument);
+        if (autoStarted && Settings.LoadAutoStartPaused())
+            ListeningMode.SetPaused(true);
+        if (Settings.LoadStartWithWindows())
+            Task.Run(() => { try { StartupTask.Register(); } catch { } });
+
         dashboard.Show();
         app.Run();
 
