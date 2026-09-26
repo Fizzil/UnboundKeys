@@ -205,7 +205,7 @@
                         <Button x:Name="FarmButton" Click="FarmButton_Click" Style="{StaticResource RailToggleStyle}" Height="48" Margin="4,0,4,0">
                             <StackPanel>
                                 <TextBlock Text="Farm nearby"/>
-                                <TextBlock Text="Target the nearest enemy, run this mapping's keys as the rotation, wait for the drop, loot, go again" Style="{StaticResource InlineHintStyle}"/>
+                                <TextBlock Text="Target the nearest enemy, run these keys as the rotation, wait, loot, go again" Style="{StaticResource InlineHintStyle}"/>
                             </StackPanel>
                         </Button>
                         <StackPanel x:Name="FarmPanel" Height="0" Visibility="Collapsed" ClipToBounds="True">
