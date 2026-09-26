@@ -7,10 +7,11 @@ namespace UnboundKeys;
 // owns only the actual keyboard-specific logic), for two unrelated jobs
 // that happen to share one hook:
 //
-// 1. The physical Caps Lock key's rapid double-tap panic button (see
-//    StopRequested) — releases everything (voice, mouse, and the virtual
-//    keyboard's sticky modifiers) the same way saying "press stop" does,
-//    for anyone with a real keyboard. Never suppressed — purely observed.
+// 1. The rapid double-tap of the physical Caps Lock key (see
+//    StopRequested): releases everything (voice, mouse, and the virtual
+//    keyboard sticky modifiers) the same way saying "press stop" does,
+//    and shows or hides the dashboard like the on-screen Menu key, for
+//    anyone with a real keyboard. Never suppressed, purely observed.
 //
 // 2. Mirroring the virtual on-screen keyboard's remappable digits/letters
 //    (see VirtualKeyCatalog) onto the real keyboard — but ONLY for a key

@@ -42,7 +42,7 @@ Grab the latest release from the [Releases page](https://github.com/Fizzil/Unbou
 
 - Windows SmartScreen will likely warn that it's from an unrecognized publisher (it's unsigned) — click **More info → Run anyway**.
 - Windows will ask for administrator permission every time it starts. UnboundKeys needs it so its key presses reach games that run elevated; click **Yes**.
-- The dashboard opens at launch. Closing it just hides it — UnboundKeys keeps running in the system tray (the skull icon by the clock). Click that icon, press Menu on the on-screen keyboard, or say "press menu", to bring the dashboard back; quit from its Settings page.
+- The dashboard opens at launch. Closing it just hides it — UnboundKeys keeps running in the system tray (the skull icon by the clock). Click that icon, press Menu on the on-screen keyboard, double-tap Caps Lock on a real keyboard, or say "press menu", to bring the dashboard back; quit from its Settings page.
 
 Requires Windows 10/11 (64-bit) and a microphone.
 

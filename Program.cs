@@ -80,13 +80,18 @@ static class Program
         };
 
         // Two rapid Caps Lock taps on a real keyboard: a panic button that
-        // works no matter what's mapped — same effect as saying "press
-        // stop" — and it lifts Fade too, for whenever the screen's too
-        // washed out to find the Fade switch.
+        // works no matter what is mapped (the same effect as saying "press
+        // stop"), and it lifts Fade too, for whenever the screen is too
+        // washed out to find the Fade switch. It also shows the dashboard,
+        // or hides it if it is showing, the same as the on-screen keyboard
+        // Menu key, so a real keyboard has an in-game route to the
+        // dashboard as well (Fizzil asked for this). The hook fires this on
+        // its own thread; the window lives on the dispatcher.
         physical.StopRequested += () =>
         {
             Task.Run(KeyExecutor.ReleaseAll);
             FadeMode.TurnOff();
+            app.Dispatcher.InvokeAsync(dashboard.ToggleVisible);
         };
         physical.VirtualKeyPressed += id =>
         {

@@ -33,7 +33,7 @@ public partial class HelpPage : IDashboardPage
 
         AddHeader("SAFETY NETS", topMargin: 16);
         AddLine($"\"press {VoiceEngine.StopWord}\"", "lets go of everything, whatever is mapped.");
-        AddLine("Caps, twice quickly", "on the on-screen keyboard releases everything and lifts Fade. A real Caps Lock key works the same way.");
+        AddLine("Caps, twice quickly", "on the on-screen keyboard releases everything and lifts Fade. A real Caps Lock key does the same and also shows or hides this dashboard.");
         AddLine("Switching windows", "releases everything too, so alt-tab or a new browser tab never leaves a key stuck.");
         AddLine("Left Click", "is never remapped, so you can always click.");
 
@@ -45,7 +45,7 @@ public partial class HelpPage : IDashboardPage
         AddLine("Remapping a key", "happens on the Keyboard page. A remapped key is caught on a real keyboard too.");
 
         AddHeader("GOOD TO KNOW", topMargin: 16);
-        AddLine("Closing this window", "hides it. UnboundKeys keeps running in the tray by the clock; click the icon there, press Menu on the on-screen keyboard, or say \"press menu\". Quit is in Settings.");
+        AddLine("Closing this window", "hides it. UnboundKeys keeps running in the tray by the clock; click the icon there, press Menu on the on-screen keyboard, double-tap Caps Lock on a real keyboard, or say \"press menu\". Quit is in Settings.");
         AddLine("The permission prompt", "appears because UnboundKeys runs as administrator, so its key presses reach games that run elevated.");
         AddLine("Profiles", "are complete sets of mappings, each with its own theme. Switch from the chip at the bottom left.");
         AddLine("Updates", "are checked only when you click Check for updates in Settings, and can be installed from there.");

@@ -9,7 +9,7 @@ Everything here works with the left mouse button alone: no right-clicks, no scro
 The dashboard is a fixed-size window with five pages down its left side — **Mouse**, **Keyboard**, **Voice**, **Settings** and **Help** — and, in the bottom-left corner, the current **profile**, a **Listening** switch and a **Fade** switch.
 
 - Drag it by its top strip (the app's name, or the page title). It remembers where you leave it.
-- The **—** and **✕** at the top right minimize and close it. Closing only hides it: UnboundKeys keeps running in the system tray (the skull icon by the clock). Click that icon, press **Menu** on the on-screen keyboard, or say **"press menu"**, to bring it back. If Windows has tucked the icon behind the little **^** arrow, drag it out onto the taskbar once.
+- The **—** and **✕** at the top right minimize and close it. Closing only hides it: UnboundKeys keeps running in the system tray (the skull icon by the clock). Click that icon, press **Menu** on the on-screen keyboard, double-tap Caps Lock on a real keyboard, or say **"press menu"**, to bring it back. If Windows has tucked the icon behind the little **^** arrow, drag it out onto the taskbar once.
 - It never takes keyboard focus, so a game underneath keeps receiving input while you click around in it.
 - **Quit** is at the bottom of Settings — two clicks, to avoid accidents.
 - **Help** is this manual in one page: the voice commands, the modes, the safety nets and the on-screen keyboard tricks.
@@ -75,7 +75,7 @@ The **Listening** switch pauses the voice keys only. With it off, nothing you sa
 Because Infinite holds and repeats can run indefinitely, UnboundKeys is built so a stuck key is never the only way out:
 
 - Voice keys, mouse keys and the on-screen keyboard each get their own slots: only one *word*, one *mouse button* and one *keyboard key* can be doing an infinite hold at a time (and likewise an infinite repeat) — starting a new one only bumps whichever of the same kind had that slot, never the other kinds. Infinite repeats of different kinds run side by side, each on its own timer, without queueing or blocking one another.
-- **"Press stop"**, two quick clicks of the on-screen keyboard's **Caps**, or a double-tap of a real **Caps Lock** key releases everything currently held or repeating, all at once, no matter what's mapped. Caps Lock's own on/off state ends up right back where it started, since two real toggles cancel out.
+- **"Press stop"**, two quick clicks of the on-screen keyboard's **Caps**, or a double-tap of a real **Caps Lock** key releases everything currently held or repeating, all at once, no matter what's mapped. The real Caps Lock double-tap also shows the dashboard, or hides it if it was showing. Caps Lock's own on/off state ends up right back where it started, since two real toggles cancel out.
 - Quitting UnboundKeys, or switching away from the game window (alt-tab, or switching browser tabs), releases everything automatically too. Pausing Listening releases whatever the voice keys were holding.
 - The on-screen keyboard's sticky modifiers are released whenever the keyboard closes, so a Shift or Ctrl can't be left held down.
 
