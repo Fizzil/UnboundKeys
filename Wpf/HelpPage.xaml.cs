@@ -47,7 +47,7 @@ public partial class HelpPage : IDashboardPage
         AddHeader("GOOD TO KNOW", topMargin: 16);
         AddLine("Closing this window", "hides it. UnboundKeys keeps running in the tray by the clock; click the icon there, press Menu on the on-screen keyboard, double-tap Caps Lock on a real keyboard, or say \"press menu\". Quit is in Settings.");
         AddLine("The permission prompt", "appears because UnboundKeys runs as administrator, so its key presses reach games that run elevated. Start with Windows, in Settings, starts it that way at sign-in with no prompt.");
-        AddLine("Profiles", "are complete sets of mappings, each with its own theme. Switch from the chip at the bottom left.");
+        AddLine("Profiles", "are games, each with a theme and up to ten sub-profiles for classes or loadouts. Switch either from the chip at the bottom left.");
         AddLine("Updates", "are checked only when you click Check for updates in Settings, and can be installed from there.");
         AddLine("Everything is saved", @"in %AppData%\UnboundKeys. The full manual is in the GitHub repository.");
     }

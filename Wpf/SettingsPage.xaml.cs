@@ -11,13 +11,16 @@ namespace UnboundKeys.Wpf;
 
 // The profile logic here is ProfilesTab.cs's (WinForms), minus the typed
 // name box: new profiles are auto-named and renamed through the
-// LetterGrid. Switching is delegated to the shell
-// (ProfileSelected) rather than done here, since the rail's profile
+// LetterGrid. A profile is a game; beneath the active one the list shows
+// its sub-profiles (a class, a loadout), which add, rename and delete the
+// same way. Switching is delegated to the shell (ProfileSelected,
+// SubProfileSelected) rather than done here, since the rail's profile
 // flyout switches too and one place must own the KeyMap → MouseMap →
 // VirtualKeyMap → ThemeMode order.
 public partial class SettingsPage : IDashboardPage
 {
     private const int MaxProfiles = 10;
+    private const int MaxSubProfiles = 10;
     private bool _profilesOpen;
 
     // The three presets' accent colors, same values as Theme.cs — kept
@@ -31,13 +34,20 @@ public partial class SettingsPage : IDashboardPage
     };
 
     private readonly Dictionary<string, Button> _swatches = new();
-    private string? _renaming;
+
+    // What the letter grid is renaming: a profile, or (when SubOf is set)
+    // one of that profile's sub-profiles.
+    private (string Name, string? SubOf)? _renaming;
 
     public event Action<string>? ProfileSelected;
+    public event Action<string>? SubProfileSelected;
     public event Action? ResetAllRequested;
     public event Action? QuitRequested;
 
     public string Title => "Settings";
+
+    private const string StartupHintText =
+        "Starts UnboundKeys when you sign in, already running as administrator, so there is no permission prompt.";
 
     public SettingsPage()
     {
@@ -85,44 +95,6 @@ public partial class SettingsPage : IDashboardPage
         RebuildProfileList();
     }
 
-    private const string StartupHintText =
-        "Starts UnboundKeys when you sign in, already running as administrator, so there is no permission prompt.";
-
-    // Flips the setting and the scheduled task together. If Task Scheduler
-    // refuses, the switch stays where it was and the hint says why.
-    private void ToggleStartWithWindows()
-    {
-        bool on = !(StartWithWindowsToggle.Tag is true);
-        try
-        {
-            if (on)
-                StartupTask.Register();
-            else
-                StartupTask.Unregister();
-        }
-        catch (Exception ex)
-        {
-            StartupHint.Text = "Could not change the startup task: " + ex.Message;
-            return;
-        }
-        StartWithWindowsToggle.Tag = on;
-        AutoStartPausedToggle.IsEnabled = on;
-        Settings.SaveStartup(on, Settings.LoadAutoStartPaused());
-        StartupHint.Text = StartupHintText;
-        ProfilesHeader.Click += (_, _) => SetProfilesOpen(!_profilesOpen);
-        SetProfilesOpen(false);
-    }
-
-    // The list folds away under its heading (Fizzil: it took too much
-    // room); closed, the heading carries a one-line summary instead.
-    private void SetProfilesOpen(bool open)
-    {
-        _profilesOpen = open;
-        ProfilesBody.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
-        ProfilesSummary.Visibility = open ? Visibility.Collapsed : Visibility.Visible;
-        ProfilesChevron.Text = ((char)(open ? 0xE70D : 0xE76C)).ToString();
-    }
-
     public void Refresh()
     {
         EndRename();
@@ -136,29 +108,61 @@ public partial class SettingsPage : IDashboardPage
             swatch.Tag = name == ThemeMode.Current;
     }
 
+    // The list folds away under its heading (Fizzil: it took too much
+    // room); closed, the heading carries a one-line summary instead.
+    private void SetProfilesOpen(bool open)
+    {
+        _profilesOpen = open;
+        ProfilesBody.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
+        ProfilesSummary.Visibility = open ? Visibility.Collapsed : Visibility.Visible;
+        ProfilesChevron.Text = ((char)(open ? 0xE70D : 0xE76C)).ToString();
+    }
+
+    // Every profile as a row; beneath the active one, its sub-profiles
+    // indented, then "+ Add sub-profile"; "+ Add Profile" at the end.
     private void RebuildProfileList()
     {
         ProfileList.Children.Clear();
 
+        string activeGame = KeyMap.ActiveProfile;
         var names = Settings.LoadProfileNames();
-        ProfilesSummary.Text = $"{names.Count} profile{(names.Count == 1 ? "" : "s")}, {KeyMap.ActiveProfile} active";
+        var subs = Settings.LoadSubProfileNames(activeGame);
+        string activeSub = Settings.LoadActiveSubProfile(activeGame);
+        ProfilesSummary.Text = subs.Count > 1
+            ? $"{names.Count} profile{Plural(names.Count)}, {activeGame} · {activeSub} active"
+            : $"{names.Count} profile{Plural(names.Count)}, {activeGame} active";
+
         foreach (var name in names)
-            ProfileList.Children.Add(BuildProfileRow(name, name == KeyMap.ActiveProfile));
+        {
+            bool active = name == activeGame;
+            ProfileList.Children.Add(BuildProfileRow(name, active));
+            if (!active)
+                continue;
+            foreach (var sub in subs)
+                ProfileList.Children.Add(BuildSubProfileRow(name, sub, sub == activeSub, deletable: subs.Count > 1));
+            if (subs.Count < MaxSubProfiles)
+                ProfileList.Children.Add(AddButton("+  Add sub-profile", leftMargin: 28, () => CreateSubProfile(name)));
+        }
 
         if (names.Count < MaxProfiles)
+            ProfileList.Children.Add(AddButton("+  Add Profile", leftMargin: 8, CreateProfile));
+    }
+
+    private static string Plural(int count) => count == 1 ? "" : "s";
+
+    private static Button AddButton(string text, double leftMargin, Action onClick)
+    {
+        var add = new Button
         {
-            var add = new Button
-            {
-                Content = "+  Add Profile",
-                Height = 40,
-                Margin = new Thickness(8, 4, 8, 0),
-                Padding = new Thickness(12, 0, 12, 0),
-                HorizontalAlignment = System.Windows.HorizontalAlignment.Left,
-            };
-            add.SetResourceReference(StyleProperty, "SecondaryButtonStyle");
-            add.Click += (_, _) => CreateProfile();
-            ProfileList.Children.Add(add);
-        }
+            Content = text,
+            Height = 40,
+            Margin = new Thickness(leftMargin, 4, 8, 0),
+            Padding = new Thickness(12, 0, 12, 0),
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Left,
+        };
+        add.SetResourceReference(StyleProperty, "SecondaryButtonStyle");
+        add.Click += (_, _) => onClick();
+        return add;
     }
 
     // The name as a rail-style row (pill + bright text on the active one),
@@ -166,19 +170,12 @@ public partial class SettingsPage : IDashboardPage
     // there to fall back to.
     private Grid BuildProfileRow(string name, bool active)
     {
-        var row = new Grid { Height = 48 };
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var row = ThreeColumnRow(height: 48, leftMargin: 0);
 
         var content = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal };
         content.Children.Add(new TextBlock { Text = name, VerticalAlignment = VerticalAlignment.Center });
         if (active)
-        {
-            var marker = new TextBlock { Text = "Active", FontSize = 11, Margin = new Thickness(10, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
-            marker.SetResourceReference(TextBlock.ForegroundProperty, "TextSecondaryBrush");
-            content.Children.Add(marker);
-        }
+            content.Children.Add(ActiveMarker());
 
         var nameButton = new Button { Content = content, Tag = active };
         nameButton.SetResourceReference(StyleProperty, "NavRailButtonStyle");
@@ -191,15 +188,8 @@ public partial class SettingsPage : IDashboardPage
 
         if (name != Settings.DefaultProfileName)
         {
-            var rename = new Button { Content = "Rename", Width = 80, Height = 36, Margin = new Thickness(0, 0, 4, 0) };
-            rename.SetResourceReference(StyleProperty, "SecondaryButtonStyle");
-            rename.Click += (_, _) => BeginRename(name);
-            Grid.SetColumn(rename, 1);
-            row.Children.Add(rename);
-
-            var delete = new Button();
-            delete.SetResourceReference(StyleProperty, "RemoveButtonStyle");
-            ConfirmDeleteBehavior.AttachTo(delete, () =>
+            row.Children.Add(RenameButton(() => BeginRename(name, subOf: null)));
+            row.Children.Add(DeleteButton(() =>
             {
                 bool wasActive = name == KeyMap.ActiveProfile;
                 Settings.DeleteProfile(name);
@@ -207,36 +197,106 @@ public partial class SettingsPage : IDashboardPage
                     ProfileSelected?.Invoke(Settings.DefaultProfileName);
                 else
                     RebuildProfileList();
-            });
-            Grid.SetColumn(delete, 2);
-            row.Children.Add(delete);
+            }));
         }
 
         return row;
     }
 
+    // A sub-profile of the active profile: indented, a little shorter, the
+    // same controls. Any sub-profile can be renamed; the last one cannot
+    // be deleted (a profile always keeps one).
+    private Grid BuildSubProfileRow(string game, string sub, bool active, bool deletable)
+    {
+        var row = ThreeColumnRow(height: 42, leftMargin: 20);
+
+        var content = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal };
+        content.Children.Add(new TextBlock { Text = sub, FontSize = 13, VerticalAlignment = VerticalAlignment.Center });
+        if (active)
+            content.Children.Add(ActiveMarker());
+
+        var nameButton = new Button { Content = content, Tag = active };
+        nameButton.SetResourceReference(StyleProperty, "NavRailButtonStyle");
+        nameButton.Click += (_, _) =>
+        {
+            if (!active)
+                SubProfileSelected?.Invoke(sub);
+        };
+        row.Children.Add(nameButton);
+
+        row.Children.Add(RenameButton(() => BeginRename(sub, subOf: game)));
+        if (deletable)
+        {
+            row.Children.Add(DeleteButton(() =>
+            {
+                if (!Settings.DeleteSubProfile(game, sub))
+                    return;
+                if (active)
+                    SubProfileSelected?.Invoke(Settings.LoadActiveSubProfile(game));
+                else
+                    RebuildProfileList();
+            }));
+        }
+
+        return row;
+    }
+
+    private static Grid ThreeColumnRow(double height, double leftMargin)
+    {
+        var row = new Grid { Height = height, Margin = new Thickness(leftMargin, 0, 0, 0) };
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        return row;
+    }
+
+    private static TextBlock ActiveMarker()
+    {
+        var marker = new TextBlock { Text = "Active", FontSize = 11, Margin = new Thickness(10, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+        marker.SetResourceReference(TextBlock.ForegroundProperty, "TextSecondaryBrush");
+        return marker;
+    }
+
+    private static Button RenameButton(Action onClick)
+    {
+        var rename = new Button { Content = "Rename", Width = 80, Height = 36, Margin = new Thickness(0, 0, 4, 0) };
+        rename.SetResourceReference(StyleProperty, "SecondaryButtonStyle");
+        rename.Click += (_, _) => onClick();
+        Grid.SetColumn(rename, 1);
+        return rename;
+    }
+
+    private static Button DeleteButton(Action onConfirmed)
+    {
+        var delete = new Button();
+        delete.SetResourceReference(StyleProperty, "RemoveButtonStyle");
+        ConfirmDeleteBehavior.AttachTo(delete, onConfirmed);
+        Grid.SetColumn(delete, 2);
+        return delete;
+    }
+
     // "Profile 1", "Profile 2", ... — the first number not already in use,
     // so deleting Profile 2 and adding again gives Profile 2 back rather
     // than skipping to 4. Rename is one click away for a real name.
-    private static string NextFreeName(List<string> names)
+    private static string NextFreeName(List<string> names, string prefix)
     {
         for (int n = 1; ; n++)
         {
-            string candidate = $"Profile {n}";
+            string candidate = $"{prefix} {n}";
             if (!names.Exists(existing => existing.Equals(candidate, StringComparison.OrdinalIgnoreCase)))
                 return candidate;
         }
     }
 
     // Same fresh-defaults seeding as ProfilesTab.cs's TryCreateProfile
-    // (WinForms): words at their natural keys, mouse buttons unmapped.
+    // (WinForms): words at their natural keys, mouse buttons unmapped. The
+    // new profile gets one sub-profile, Default, holding them.
     private void CreateProfile()
     {
         var names = Settings.LoadProfileNames();
-        ProfilesSummary.Text = $"{names.Count} profile{(names.Count == 1 ? "" : "s")}, {KeyMap.ActiveProfile} active";
         if (names.Count >= MaxProfiles)
             return;
-        string name = NextFreeName(names);
+        string name = NextFreeName(names, "Profile");
 
         var freshWords = new Dictionary<string, ushort>(KeyMap.DefaultWords, StringComparer.OrdinalIgnoreCase);
         var freshExtraWords = new Dictionary<string, List<ushort>>(StringComparer.OrdinalIgnoreCase);
@@ -266,37 +326,68 @@ public partial class SettingsPage : IDashboardPage
         RebuildProfileList();
     }
 
-    private static bool IsNameFree(string candidate, string? except)
+    // A copy of the sub-profile you are on (Fizzil's choice), and you land
+    // on it straight away, ready to change the few keys that differ.
+    private void CreateSubProfile(string game)
     {
-        foreach (var existing in Settings.LoadProfileNames())
+        var subs = Settings.LoadSubProfileNames(game);
+        if (subs.Count >= MaxSubProfiles)
+            return;
+        string name = NextFreeName(subs, "Sub-profile");
+        if (Settings.CreateSubProfile(game, name))
+            SubProfileSelected?.Invoke(name);
+    }
+
+    private static bool IsNameFree(string candidate, string except, string? subOf)
+    {
+        var names = subOf == null ? Settings.LoadProfileNames() : Settings.LoadSubProfileNames(subOf);
+        foreach (var existing in names)
             if (existing != except && existing.Equals(candidate, StringComparison.OrdinalIgnoreCase))
                 return false;
         return true;
     }
 
-    private void BeginRename(string name)
+    private void BeginRename(string name, string? subOf)
     {
-        _renaming = name;
+        _renaming = (name, subOf);
         ProfileList.Visibility = Visibility.Collapsed;
         NameGrid.Visibility = Visibility.Visible;
-        NameGrid.Begin(name, candidate => IsNameFree(candidate, except: name));
+        NameGrid.Begin(name, candidate => IsNameFree(candidate, except: name, subOf));
     }
 
     private void OnNameDone(string newName)
     {
-        string? oldName = _renaming;
+        var renaming = _renaming;
         EndRename();
-        if (oldName == null || !Settings.RenameProfile(oldName, newName))
+        if (renaming is not { } r)
             return;
+        string trimmed = newName.Trim();
 
-        // The active profile's name is what every save is keyed by (see
-        // Settings.RenameProfile), so the rename has to be followed by a
-        // real switch to the new name; any other profile just needs the
-        // list redrawn.
-        if (oldName == KeyMap.ActiveProfile)
-            ProfileSelected?.Invoke(newName.Trim());
+        if (r.SubOf == null)
+        {
+            if (!Settings.RenameProfile(r.Name, trimmed))
+                return;
+            // The active profile's name is what every save is keyed by (see
+            // Settings.RenameProfile), so the rename has to be followed by a
+            // real switch to the new name; any other profile just needs the
+            // list redrawn.
+            if (r.Name == KeyMap.ActiveProfile)
+                ProfileSelected?.Invoke(trimmed);
+            else
+                RebuildProfileList();
+        }
         else
-            RebuildProfileList();
+        {
+            bool wasActive = r.Name == Settings.LoadActiveSubProfile(r.SubOf);
+            if (!Settings.RenameSubProfile(r.SubOf, r.Name, trimmed))
+                return;
+            // A sub-profile's name is only ever shown, so a redraw would do;
+            // the switch is what also refreshes the rail chip.
+            if (wasActive)
+                SubProfileSelected?.Invoke(trimmed);
+            else
+                RebuildProfileList();
+        }
     }
 
     private void EndRename()
@@ -304,5 +395,28 @@ public partial class SettingsPage : IDashboardPage
         _renaming = null;
         NameGrid.Visibility = Visibility.Collapsed;
         ProfileList.Visibility = Visibility.Visible;
+    }
+
+    // Flips the setting and the scheduled task together. If Task Scheduler
+    // refuses, the switch stays where it was and the hint says why.
+    private void ToggleStartWithWindows()
+    {
+        bool on = !(StartWithWindowsToggle.Tag is true);
+        try
+        {
+            if (on)
+                StartupTask.Register();
+            else
+                StartupTask.Unregister();
+        }
+        catch (Exception ex)
+        {
+            StartupHint.Text = "Could not change the startup task: " + ex.Message;
+            return;
+        }
+        StartWithWindowsToggle.Tag = on;
+        AutoStartPausedToggle.IsEnabled = on;
+        Settings.SaveStartup(on, Settings.LoadAutoStartPaused());
+        StartupHint.Text = StartupHintText;
     }
 }

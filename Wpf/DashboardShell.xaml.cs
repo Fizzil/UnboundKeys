@@ -56,6 +56,7 @@ public partial class DashboardShell
         _pages[DashboardSection.Keyboard] = _keyboardPage;
         var settingsPage = new SettingsPage();
         settingsPage.ProfileSelected += SwitchToProfile;
+        settingsPage.SubProfileSelected += SwitchToSubProfile;
         settingsPage.ResetAllRequested += ResetAllMappings;
         settingsPage.QuitRequested += () => QuitRequested?.Invoke();
         _pages[DashboardSection.Settings] = settingsPage;
@@ -71,7 +72,7 @@ public partial class DashboardShell
         // raises Changed for both.
         ThemeMode.Changed += () => ThemeSwapper.Apply(ThemeMode.Current);
 
-        Rail.SetProfileName(KeyMap.ActiveProfile);
+        ShowProfileOnRail();
         Rail.SetListening(!ListeningMode.IsPaused);
         Rail.SetFade(FadeMode.IsOn);
         ShowSection(DashboardSection.Mouse);
@@ -169,7 +170,32 @@ public partial class DashboardShell
         MouseMap.SwitchProfile(name);
         VirtualKeyMap.SwitchProfile(name);
         ThemeMode.SwitchProfile(name);
-        Rail.SetProfileName(name);
+        ShowProfileOnRail();
+        ShowSection(_section);
+    }
+
+    // The rail chip: the profile, plus its sub-profile when it has more
+    // than one.
+    private void ShowProfileOnRail()
+    {
+        string game = KeyMap.ActiveProfile;
+        bool several = Settings.LoadSubProfileNames(game).Count > 1;
+        Rail.SetProfileName(game, several ? Settings.LoadActiveSubProfile(game) : "");
+    }
+
+    // A sub-profile switch is a reload of the same profile: Settings now
+    // resolves the name to the new sub-profile, so the stores are switched
+    // to the same name and pick it up. The theme stays, it belongs to the
+    // profile.
+    private void SwitchToSubProfile(string sub)
+    {
+        string game = KeyMap.ActiveProfile;
+        if (!Settings.SetActiveSubProfile(game, sub))
+            return;
+        KeyMap.SwitchProfile(game);
+        MouseMap.SwitchProfile(game);
+        VirtualKeyMap.SwitchProfile(game);
+        ShowProfileOnRail();
         ShowSection(_section);
     }
 
@@ -197,7 +223,8 @@ public partial class DashboardShell
         foreach (var name in Settings.LoadProfileNames())
         {
             string profile = name;
-            var button = new Button { Content = profile, Tag = profile == KeyMap.ActiveProfile, Height = 40, Margin = new Thickness(0, 1, 0, 1) };
+            bool isActive = profile == KeyMap.ActiveProfile;
+            var button = new Button { Content = profile, Tag = isActive, Height = 40, Margin = new Thickness(0, 1, 0, 1) };
             button.SetResourceReference(StyleProperty, "NavRailButtonStyle");
             button.Click += (_, _) =>
             {
@@ -205,6 +232,27 @@ public partial class DashboardShell
                 SwitchToProfile(profile);
             };
             FlyoutList.Children.Add(button);
+            if (!isActive)
+                continue;
+
+            // The active profile sub-profiles, indented beneath it (only
+            // when there is more than one to choose from).
+            var subs = Settings.LoadSubProfileNames(profile);
+            if (subs.Count <= 1)
+                continue;
+            string activeSub = Settings.LoadActiveSubProfile(profile);
+            foreach (var subName in subs)
+            {
+                string sub = subName;
+                var subButton = new Button { Content = sub, Tag = sub == activeSub, Height = 36, FontSize = 13, Margin = new Thickness(20, 1, 0, 1) };
+                subButton.SetResourceReference(StyleProperty, "NavRailButtonStyle");
+                subButton.Click += (_, _) =>
+                {
+                    CloseProfileFlyout();
+                    SwitchToSubProfile(sub);
+                };
+                FlyoutList.Children.Add(subButton);
+            }
         }
 
         var manage = new Button
