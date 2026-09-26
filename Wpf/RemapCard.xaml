@@ -98,7 +98,7 @@
                             <Button Content="Reset" Click="GapResetButton_Click" Style="{StaticResource StepButtonStyle}"/>
                         </StackPanel>
                     </Grid>
-                    <TextBlock Text="Your global cooldown: 1.5 s for most WoW classes (a little less with haste), 1.0 s for Rogues, cat-form Druids and Monks."
+                    <TextBlock Text="Your global cooldown (GCD): 1.5 s for most WoW classes (a little less with haste), 1.0 s for Rogues, cat-form Druids and Monks."
                                Style="{StaticResource RowHintStyle}"/>
 
                     <!-- Per-key gaps: only for Repeat with 2+ keys. The
@@ -137,7 +137,7 @@
                             <Button Content="Reset" Click="PriorityResetButton_Click" Style="{StaticResource StepButtonStyle}"/>
                         </StackPanel>
                     </Grid>
-                    <TextBlock Text="Reset means one global cooldown, right for an instant ability. A channelled ability needs its cast time, usually two or three seconds."
+                    <TextBlock Text="Reset pauses the infinite repeat for one GCD. Change the pause time for a channelled ability, usually two to three seconds."
                                Style="{StaticResource RowHintStyle}"/>
                 </StackPanel>
 
