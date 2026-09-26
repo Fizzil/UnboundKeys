@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- A timing harness, not a unit-test suite: it runs the real
+       KeyExecutor with a keyboard hook timing every key it sends, and
+       checks Game mode's gap, priority hand-off and resume against the
+       plan. Run it with dotnet run, project tests/UnboundKeys.Tests, Release
+       (nothing on the desktop reacts to the F13/F14 keys it sends). -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>UnboundKeys.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\UnboundKeys.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -39,6 +39,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The timing harness in tests/ drives KeyExecutor directly. -->
+    <InternalsVisibleTo Include="UnboundKeys.Tests" />
+    <!-- The harness has its own project; keep its sources out of this one. -->
+    <Compile Remove="tests/**" />
+    <None Remove="tests/**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- skull.ico is the window/taskbar icon (ApplicationIcon above) and
          the tray icon, which TrayIcon.cs loads from this resource. -->
     <EmbeddedResource Include="Assets\skull.ico" />
