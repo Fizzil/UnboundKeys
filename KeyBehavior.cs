@@ -43,4 +43,17 @@ public sealed class KeyBehavior
     // wants two or three seconds.
     public bool Priority { get; set; }
     public double PrioritySeconds { get; set; }
+
+    // ---- Experimental assistance: Farm nearby (see KeyExecutor.RunFarmLoop) ----
+
+    // Farm wraps this mapping's keys (the rotation) in a loop: target the
+    // nearest enemy, run the rotation FarmRounds times, wait
+    // FarmPauseSeconds for the mob to drop, interact to loot (and once more
+    // to skin, if FarmSkin), then go again until the trigger comes again or
+    // "press stop". The game keys come from the sub-profile (GameTiming).
+    // While on, Repeat/Hold/Infinite don't apply: it always runs until stopped.
+    public bool Farm { get; set; }
+    public int FarmRounds { get; set; }
+    public double FarmPauseSeconds { get; set; }
+    public bool FarmSkin { get; set; }
 }
