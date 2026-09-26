@@ -216,11 +216,10 @@ public partial class DashboardShell
 
     // Rebuilt on every open — profiles are few and can change from the
     // Settings page in between.
-    // Which profiles in the flyout show their sub-profiles: the active one
-    // by itself whenever it changes, the rest as clicked (Fizzil: a quick
-    // swap to another game and class in one go).
+    // Which profiles in the flyout show their sub-profiles: all closed each
+    // time it opens, so the profiles read at a glance (Fizzil), then as
+    // clicked while it stays open.
     private readonly HashSet<string> _flyoutExpanded = new(StringComparer.OrdinalIgnoreCase);
-    private string? _flyoutLastActive;
 
     private void ToggleProfileFlyout()
     {
@@ -229,6 +228,7 @@ public partial class DashboardShell
             CloseProfileFlyout();
             return;
         }
+        _flyoutExpanded.Clear();
         RebuildFlyout();
         FlyoutLayer.Visibility = Visibility.Visible;
         Rail.SetProfileFlyoutOpen(true);
@@ -237,11 +237,6 @@ public partial class DashboardShell
     private void RebuildFlyout()
     {
         string activeGame = KeyMap.ActiveProfile;
-        if (_flyoutLastActive != activeGame)
-        {
-            _flyoutExpanded.Add(activeGame);
-            _flyoutLastActive = activeGame;
-        }
 
         FlyoutList.Children.Clear();
         foreach (var name in Settings.LoadProfileNames())
