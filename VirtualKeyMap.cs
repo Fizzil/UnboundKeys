@@ -91,7 +91,7 @@ public static class VirtualKeyMap
     public static bool IsCustomized(string id) =>
         Words[id] != DefaultWords[id] ||
         ExtraWords[id].Count > 0 ||
-        Behaviors[id] is not { Repeat: false, Hold: false, Infinite: false };
+        Behaviors[id] is not { Repeat: false, Hold: false, Infinite: false, Priority: false };
 
     public static void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool useCustomRepeatIntervals, List<double> repeatKeyIntervalsSeconds, double repeatGapSeconds, bool priority, double prioritySeconds) =>
         _store.SetBehavior(id, repeat, hold, durationSeconds, infinite, useCustomRepeatIntervals, repeatKeyIntervalsSeconds, repeatGapSeconds, priority, prioritySeconds);
