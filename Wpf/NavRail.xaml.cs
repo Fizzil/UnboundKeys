@@ -41,17 +41,15 @@ public partial class NavRail
             button.Tag = s == section;
     }
 
-    // "WoW Midnight  Warlock": the profile, then its sub-profile in small
-    // grey (empty when the profile has only one, so nothing to tell apart).
+    // The profile, and beneath it its sub-profile in small grey (hidden
+    // when the profile has only one, so there is nothing to tell apart).
     public void SetProfileName(string profile, string sub)
     {
-        ProfileNameText.Inlines.Clear();
-        ProfileNameText.Inlines.Add(new System.Windows.Documents.Run(profile));
-        if (sub.Length == 0)
-            return;
-        var subRun = new System.Windows.Documents.Run("  " + sub) { FontSize = 11 };
-        subRun.SetResourceReference(System.Windows.Documents.TextElement.ForegroundProperty, "TextSecondaryBrush");
-        ProfileNameText.Inlines.Add(subRun);
+        ProfileNameText.Text = profile;
+        SubProfileText.Text = sub;
+        SubProfileText.Visibility = sub.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
+        // Room for the second line only when there is one.
+        ProfileChip.Height = sub.Length == 0 ? 44 : 58;
     }
     public void SetProfileFlyoutOpen(bool open) => ProfileChip.Tag = open;
     public void SetListening(bool listening) => ListeningToggle.Tag = listening;

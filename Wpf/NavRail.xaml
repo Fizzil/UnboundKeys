@@ -67,6 +67,7 @@
                     <StackPanel Grid.Column="0" VerticalAlignment="Center">
                         <TextBlock Text="PROFILE" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}"/>
                         <TextBlock x:Name="ProfileNameText" FontSize="13" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock x:Name="SubProfileText" FontSize="11" TextTrimming="CharacterEllipsis" Visibility="Collapsed" Foreground="{DynamicResource TextSecondaryBrush}"/>
                     </StackPanel>
                     <TextBlock Grid.Column="1" Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="12"
                                VerticalAlignment="Center" Margin="8,0,0,0" Foreground="{DynamicResource TextSecondaryBrush}"/>
