@@ -83,7 +83,7 @@ Because Infinite holds and repeats can run indefinitely, UnboundKeys is built so
 
 Each profile is a complete set of mappings — the ten words, the six mouse buttons, the keyboard's remappable keys — plus its color theme. Switching profiles swaps everything over at once. Up to ten profiles.
 
-- Switch from the **profile chip** in the dashboard's bottom-left corner, or from Settings.
+- Switch from the **profile chip** in the dashboard's bottom-left corner, or from Settings (click the PROFILES heading there to open the list).
 - **Add Profile** (in Settings) creates a fresh one, named "Profile 1", "Profile 2"… — new profiles start with the words at their default keys and the mouse buttons unmapped.
 - **Rename** opens an on-screen letter grid: spell the name with the mouse, then **Done**. Names are capitalized for you.
 - The **✕** deletes a profile — click it once to arm, then again. Deleting the active profile switches you to Default.
@@ -92,7 +92,7 @@ Each profile is a complete set of mappings — the ten words, the six mouse butt
 ## Settings
 
 - **Theme** — Red, Green or Blue; the choice is saved with the current profile.
-- **Profiles** — as above.
+- **Profiles** — as above; the heading folds the list away to save room, click it to open.
 - **Start with Windows** — starts UnboundKeys when you sign in, through a scheduled task that runs it as administrator without the permission prompt. **Start with voice keys paused** applies to that automatic start only: the app comes up with Listening off until you flip it on. The task is refreshed each time the app starts, so it keeps pointing at the copy you last ran, updates included.
 - **Check for updates** — asks Fizzil's GitHub for the newest release, only when you click it and confirm. If a newer version exists, the same card can download and install it: the new version unpacks into a folder beside the current one, starts, and this one quits. Profiles and mappings carry over; the old folder stays until you delete it.
 - **Reset All** — every mapping in the current profile back to its default (two clicks).

@@ -18,6 +18,7 @@ namespace UnboundKeys.Wpf;
 public partial class SettingsPage : IDashboardPage
 {
     private const int MaxProfiles = 10;
+    private bool _profilesOpen;
 
     // The three presets' accent colors, same values as Theme.cs — kept
     // here as plain colors because only the ACTIVE theme's AccentBrush
@@ -62,6 +63,8 @@ public partial class SettingsPage : IDashboardPage
         Updates.Launched += () => QuitRequested?.Invoke();
 
         StartupHint.Text = StartupHintText;
+        ProfilesHeader.Click += (_, _) => SetProfilesOpen(!_profilesOpen);
+        SetProfilesOpen(false);
         StartWithWindowsToggle.Tag = Settings.LoadStartWithWindows();
         AutoStartPausedToggle.Tag = Settings.LoadAutoStartPaused();
         AutoStartPausedToggle.IsEnabled = Settings.LoadStartWithWindows();
@@ -106,6 +109,18 @@ public partial class SettingsPage : IDashboardPage
         AutoStartPausedToggle.IsEnabled = on;
         Settings.SaveStartup(on, Settings.LoadAutoStartPaused());
         StartupHint.Text = StartupHintText;
+        ProfilesHeader.Click += (_, _) => SetProfilesOpen(!_profilesOpen);
+        SetProfilesOpen(false);
+    }
+
+    // The list folds away under its heading (Fizzil: it took too much
+    // room); closed, the heading carries a one-line summary instead.
+    private void SetProfilesOpen(bool open)
+    {
+        _profilesOpen = open;
+        ProfilesBody.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
+        ProfilesSummary.Visibility = open ? Visibility.Collapsed : Visibility.Visible;
+        ProfilesChevron.Text = ((char)(open ? 0xE70D : 0xE76C)).ToString();
     }
 
     public void Refresh()
@@ -126,6 +141,7 @@ public partial class SettingsPage : IDashboardPage
         ProfileList.Children.Clear();
 
         var names = Settings.LoadProfileNames();
+        ProfilesSummary.Text = $"{names.Count} profile{(names.Count == 1 ? "" : "s")}, {KeyMap.ActiveProfile} active";
         foreach (var name in names)
             ProfileList.Children.Add(BuildProfileRow(name, name == KeyMap.ActiveProfile));
 
@@ -217,6 +233,7 @@ public partial class SettingsPage : IDashboardPage
     private void CreateProfile()
     {
         var names = Settings.LoadProfileNames();
+        ProfilesSummary.Text = $"{names.Count} profile{(names.Count == 1 ? "" : "s")}, {KeyMap.ActiveProfile} active";
         if (names.Count >= MaxProfiles)
             return;
         string name = NextFreeName(names);

@@ -386,6 +386,19 @@
          from the group's own content. Muted, not full accent, since it's
          naming the group rather than acting as a command — same
          "muted = secondary" language as everywhere else in this file. -->
+    <!-- A section heading you can click to fold its section away (the
+         Settings PROFILES list, which took too much room): the heading
+         text plus a chevron on the right, lit like a ghost button on
+         hover. -->
+    <Style x:Key="DisclosureHeaderStyle" TargetType="Button" BasedOn="{StaticResource SecondaryButtonStyle}">
+        <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Height" Value="32"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="Padding" Value="4,0,8,0"/>
+    </Style>
+
     <Style x:Key="SectionHeaderStyle" TargetType="TextBlock">
         <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
         <Setter Property="FontFamily" Value="Segoe UI"/>
