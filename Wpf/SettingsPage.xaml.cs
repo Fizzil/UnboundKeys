@@ -58,6 +58,8 @@ public partial class SettingsPage : IDashboardPage
         NameGrid.Cancelled += EndRename;
         ConfirmDeleteBehavior.AttachTo(ResetAllButton, () => ResetAllRequested?.Invoke());
         ConfirmDeleteBehavior.AttachTo(QuitButton, () => QuitRequested?.Invoke());
+        // The new version is running; this one leaves the same way Quit does.
+        Updates.Launched += () => QuitRequested?.Invoke();
 
         var version = typeof(SettingsPage).Assembly.GetName().Version;
         string title = version == null

@@ -26,7 +26,7 @@ Remap mouse buttons, spoken words and an on-screen keyboard to keyboard keys, wi
 - **Profiles** — up to ten complete sets of mappings, each with its own color theme, switched from the dashboard. New ones are named with the mouse; no typing needed anywhere in the app.
 - **Built for a mouse** — everything works with left-click alone (no right-click, no scroll wheel, no keyboard), so it keeps working even when those are remapped, and the dashboard never takes focus away from your game.
 - **Safety nets** — say "press stop", or click the on-screen keyboard's Caps twice quickly, to release anything held or repeating. "Press menu" brings the dashboard back and "press fade" lifts Fade, both hands-free.
-- **Runs fully offline** — speech recognition ([Vosk](https://alphacephei.com/vosk/)) and word suggestions happen entirely on your machine. Nothing is sent anywhere.
+- **Runs fully offline** — speech recognition ([Vosk](https://alphacephei.com/vosk/)) and word suggestions happen entirely on your machine. Nothing is sent anywhere. The one exception is Settings → Check for updates, which asks GitHub for the newest release only when you click it.
 
 See [MANUAL.md](MANUAL.md) for the full details — every command, how each setting behaves, and what the dashboard does.
 

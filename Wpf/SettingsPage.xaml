@@ -16,6 +16,9 @@
         <StackPanel x:Name="ProfileList"/>
         <local:LetterGrid x:Name="NameGrid" Visibility="Collapsed" Margin="8,4,8,8"/>
 
+        <TextBlock Text="UPDATES" Style="{StaticResource SectionHeaderStyle}" Margin="4,16,0,2"/>
+        <local:UpdatePanel x:Name="Updates"/>
+
         <TextBlock Text="RESET" Style="{StaticResource SectionHeaderStyle}" Margin="4,16,0,2"/>
         <Grid Height="48">
             <Grid.ColumnDefinitions>

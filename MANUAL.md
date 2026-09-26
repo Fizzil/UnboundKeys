@@ -93,6 +93,7 @@ Each profile is a complete set of mappings — the ten words, the six mouse butt
 
 - **Theme** — Red, Green or Blue; the choice is saved with the current profile.
 - **Profiles** — as above.
+- **Check for updates** — asks Fizzil's GitHub for the newest release, only when you click it and confirm. If a newer version exists, the same card can download and install it: the new version unpacks into a folder beside the current one, starts, and this one quits. Profiles and mappings carry over; the old folder stays until you delete it.
 - **Reset All** — every mapping in the current profile back to its default (two clicks).
 - **Quit** — stops UnboundKeys completely (two clicks), releasing anything held.
 
