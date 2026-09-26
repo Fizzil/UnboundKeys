@@ -10,8 +10,8 @@ using Color = System.Windows.Media.Color;
 namespace UnboundKeys.Wpf;
 
 // The profile logic here is ProfilesTab.cs's (WinForms), minus the typed
-// name box: new profiles are auto-named and renamed through the
-// LetterGrid. A profile is a game; clicking its row opens or closes its
+// name box: new profiles are auto-named and renamed through the on-screen
+// NameKeyboard. A profile is a game; clicking its row opens or closes its
 // sub-profiles (a class, a loadout), which add, rename and delete the
 // same way, and clicking a sub-profile is what switches. Switching is
 // delegated to the shell (ProfileSelected, SubProfileSelected) rather

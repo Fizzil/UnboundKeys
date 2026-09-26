@@ -641,14 +641,6 @@
         </Setter>
     </Style>
 
-    <!-- One key of the on-screen letter grid (renaming a profile) — a
-         FlatButtonBase key at keyboard-like proportions: filled, big
-         text, small gaps, 44px tall so it's an easy mouse target. -->
-    <Style x:Key="LetterKeyStyle" TargetType="Button" BasedOn="{StaticResource FlatButtonBase}">
-        <Setter Property="Height" Value="44"/>
-        <Setter Property="Margin" Value="2"/>
-        <Setter Property="FontSize" Value="16"/>
-    </Style>
 
     <!-- The content area's page title ("Mouse", "Right Button", ...) and
          the rail's app name — HeadingBrush, a soft white (see

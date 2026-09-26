@@ -28,7 +28,7 @@
             <TextBlock Text="A profile is a game: its colour, plus up to ten sub-profiles that each hold a complete set of mappings. Click a profile to show its sub-profiles, and a sub-profile to switch to it."
                        FontSize="12" TextWrapping="Wrap" Margin="12,0,12,6" Foreground="{DynamicResource TextSecondaryBrush}"/>
             <StackPanel x:Name="ProfileList"/>
-            <local:LetterGrid x:Name="NameGrid" Visibility="Collapsed" Margin="8,4,8,8"/>
+            <local:NameKeyboard x:Name="NameGrid" Visibility="Collapsed" Margin="8,4,8,8"/>
         </StackPanel>
 
         <TextBlock Text="STARTUP" Style="{StaticResource SectionHeaderStyle}" Margin="4,16,0,2"/>
