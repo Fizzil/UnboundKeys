@@ -505,7 +505,7 @@ public partial class RemapCard
     private void AddGameInfo()
     {
         AddInfoLine("Gap between keys", "How long an infinite repeat waits after each key. Set it to your global cooldown (GCD): 1.5 s for most WoW classes (a little less with haste), 1.0 s for Rogues, cat-form Druids and Monks.");
-        AddInfoLine("Priority", "A priority key can interrupt an infinite repeat. Press it and the repeat pauses, the app waits for the current global cooldown to finish, your key fires, and the repeat stays paused for the time set below.");
+        AddInfoLine("Priority", "A priority key can interrupt an infinite repeat. Press it and the repeat pauses, the app waits for the current GCD to finish, your key fires, the repeat stays paused for the time set below, then it resumes where it left off.");
         AddInfoLine("Pause the repeat for", "Reset pauses the infinite repeat for one GCD. Change the pause time for a channelled ability, usually two to three seconds.");
         AddInfoLine("Two priority keys in a row", "extend the pause; the second never cuts the first short.");
         AddInfoLine("Where it applies", "Any mapping can be a priority key: a spoken word, a mouse button, an on-screen key or a remapped real key. Game mode only shows these rows; the settings work even with it off.");
