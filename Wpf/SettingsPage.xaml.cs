@@ -192,17 +192,22 @@ public partial class SettingsPage : IDashboardPage
         content.Children.Add(new TextBlock { Text = name, VerticalAlignment = VerticalAlignment.Center });
         if (active)
             content.Children.Add(ActiveMarker());
-        content.Children.Add(Chevron(open));
 
         var nameButton = new Button { Content = content, Tag = active };
         nameButton.SetResourceReference(StyleProperty, "NavRailButtonStyle");
         nameButton.Click += (_, _) =>
         {
-            if (!_expanded.Remove(name))
-                _expanded.Add(name);
-            RebuildProfileList();
+            ToggleExpanded(name);
         };
         row.Children.Add(nameButton);
+
+        // The chevron in its own column at the far right, so every profile
+        // row shows it in the same place; it toggles just like the name.
+        var chevronButton = new Button { Width = 36, Height = 36, Content = Chevron(open) };
+        chevronButton.SetResourceReference(StyleProperty, "SecondaryButtonStyle");
+        chevronButton.Click += (_, _) => ToggleExpanded(name);
+        Grid.SetColumn(chevronButton, 3);
+        row.Children.Add(chevronButton);
 
         if (name != Settings.DefaultProfileName)
         {
@@ -261,12 +266,22 @@ public partial class SettingsPage : IDashboardPage
         return row;
     }
 
+    private void ToggleExpanded(string name)
+    {
+        if (!_expanded.Remove(name))
+            _expanded.Add(name);
+        RebuildProfileList();
+    }
+
     private static Grid ThreeColumnRow(double height, double leftMargin)
     {
         var row = new Grid { Height = height, Margin = new Thickness(leftMargin, 0, 0, 0) };
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        // Column 3: the chevron on a profile row, an empty spacer on a
+        // sub-profile row, so Rename and the cross line up on both levels.
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
         return row;
     }
 
@@ -284,7 +299,7 @@ public partial class SettingsPage : IDashboardPage
             Text = ((char)(open ? 0xE70D : 0xE76C)).ToString(),
             FontFamily = new System.Windows.Media.FontFamily("Segoe MDL2 Assets"),
             FontSize = 10,
-            Margin = new Thickness(10, 1, 0, 0),
+            Margin = new Thickness(0, 1, 0, 0),
             VerticalAlignment = VerticalAlignment.Center,
         };
         chevron.SetResourceReference(TextBlock.ForegroundProperty, "TextSecondaryBrush");
