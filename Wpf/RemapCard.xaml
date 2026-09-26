@@ -199,7 +199,7 @@
                              code (see RebuildGameKeyRows), each with the key
                              picker beneath it like the mapping's own keys. -->
                         <StackPanel x:Name="GameKeyRows"/>
-                        <TextBlock Text="Your game's own keybinds. In WoW, Target Nearest Enemy is Tab, or bind a macro that targets what your mouse is over; bind Interact With Target in Options › Controls, and switch on Auto Loot and Click to Move."
+                        <TextBlock Text="Your game's own keys. In WoW, Target Nearest Enemy is Tab, or a macro key that targets what your mouse is over. For the loot click pick Right Click from the Mouse list: with Click to Move on it runs you to whatever your cursor is on, corpse or mob, and Auto Loot does the rest. The Interact With Target key only reaches a corpse you stand on, and a dead mob drops off target anyway."
                                    Style="{StaticResource RowHintStyle}" Margin="12,2,12,6"/>
 
                         <Button x:Name="FarmButton" Click="FarmButton_Click" Style="{StaticResource RailToggleStyle}" Height="48" Margin="4,0,4,0">
@@ -211,8 +211,8 @@
                         <StackPanel x:Name="FarmPanel" Height="0" Visibility="Collapsed" ClipToBounds="True">
                             <!-- The run (Fizzil's own loop: point at a mob, and
                                  the assist targets it, runs to it, kills it, loots
-                                 it): Interact right after Target, then time for
-                                 the run before the rotation. Melee needs it; a
+                                 it): the loot click right after Target, then time
+                                 for the run before the rotation. Melee needs it; a
                                  hunter can leave it off. -->
                             <Button x:Name="FarmApproachButton" Click="FarmApproachButton_Click" Style="{StaticResource RailToggleStyle}" Height="48" Margin="20,0,4,0">
                                 <StackPanel>
@@ -268,6 +268,27 @@
                                 </StackPanel>
                             </Grid>
                             <TextBlock Text="The pause after the last rotation key before looting. Reset goes back to 2.0 s."
+                                       Style="{StaticResource RowHintStyle}" Margin="28,0,12,8"/>
+                            <!-- The loot click runs you to the corpse (Click to
+                                 Move); this is that run, so the next Target
+                                 waits for it. Fizzil's test: Interact only
+                                 reaches a corpse you stand on, a right-click
+                                 runs you there. -->
+                            <Grid Height="44">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Time to reach the corpse" Style="{StaticResource RowLabelStyle}" Margin="28,0,0,0"/>
+                                <TextBlock x:Name="FarmLootText" Grid.Column="1" Style="{StaticResource ValueTextStyle}"/>
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
+                                    <Button Content="+0.1 s" Click="FarmLootPlusTenthButton_Click" Style="{StaticResource StepButtonStyle}"/>
+                                    <Button Content="+1 s" Click="FarmLootPlusOneButton_Click" Style="{StaticResource StepButtonStyle}"/>
+                                    <Button Content="Reset" Click="FarmLootResetButton_Click" Style="{StaticResource StepButtonStyle}"/>
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock Text="The run to the loot after each click, before the next target. Reset goes back to 2.0 s."
                                        Style="{StaticResource RowHintStyle}" Margin="28,0,12,8"/>
                             <Button x:Name="FarmSkinButton" Click="FarmSkinButton_Click" Style="{StaticResource RailToggleStyle}" Height="48" Margin="20,0,4,0">
                                 <StackPanel>

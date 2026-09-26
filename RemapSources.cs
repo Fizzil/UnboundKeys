@@ -16,7 +16,7 @@ internal interface IRemapSource
     void SetExtraKey(string id, int index, ushort vkCode);
     void RemoveExtraKey(string id, int index);
     void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool useCustomRepeatIntervals, List<double> repeatKeyIntervalsSeconds, double repeatGapSeconds, bool priority, double prioritySeconds);
-    void SetFarm(string id, bool farm, int rounds, double pauseSeconds, bool skin, bool approach, double approachSeconds);
+    void SetFarm(string id, bool farm, int rounds, double pauseSeconds, bool skin, bool approach, double approachSeconds, double lootSeconds);
     void ResetToDefault(string id);
 
     // "Key 1: X" for a word (always has a real key); "Key 1: Not Mapped"
@@ -44,7 +44,7 @@ internal sealed class KeyMapSource : IRemapSource
     public void RemoveExtraKey(string id, int index) => KeyMap.RemoveExtraKey(id, index);
     public void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool useCustomRepeatIntervals, List<double> repeatKeyIntervalsSeconds, double repeatGapSeconds, bool priority, double prioritySeconds) =>
         KeyMap.SetBehavior(id, repeat, hold, durationSeconds, infinite, useCustomRepeatIntervals, repeatKeyIntervalsSeconds, repeatGapSeconds, priority, prioritySeconds);
-    public void SetFarm(string id, bool farm, int rounds, double pauseSeconds, bool skin, bool approach, double approachSeconds) => KeyMap.SetFarm(id, farm, rounds, pauseSeconds, skin, approach, approachSeconds);
+    public void SetFarm(string id, bool farm, int rounds, double pauseSeconds, bool skin, bool approach, double approachSeconds, double lootSeconds) => KeyMap.SetFarm(id, farm, rounds, pauseSeconds, skin, approach, approachSeconds, lootSeconds);
     public void ResetToDefault(string id) => KeyMap.ResetToDefault(id);
 
     public string KeyLabelFor(string id) => $"Key 1: {KeyCatalog.DisplayNameFor(KeyMap.Words[id])}";
@@ -66,7 +66,7 @@ internal sealed class MouseMapSource : IRemapSource
     public void RemoveExtraKey(string id, int index) => MouseMap.RemoveExtraKey(id, index);
     public void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool useCustomRepeatIntervals, List<double> repeatKeyIntervalsSeconds, double repeatGapSeconds, bool priority, double prioritySeconds) =>
         MouseMap.SetBehavior(id, repeat, hold, durationSeconds, infinite, useCustomRepeatIntervals, repeatKeyIntervalsSeconds, repeatGapSeconds, priority, prioritySeconds);
-    public void SetFarm(string id, bool farm, int rounds, double pauseSeconds, bool skin, bool approach, double approachSeconds) => MouseMap.SetFarm(id, farm, rounds, pauseSeconds, skin, approach, approachSeconds);
+    public void SetFarm(string id, bool farm, int rounds, double pauseSeconds, bool skin, bool approach, double approachSeconds, double lootSeconds) => MouseMap.SetFarm(id, farm, rounds, pauseSeconds, skin, approach, approachSeconds, lootSeconds);
     public void ResetToDefault(string id) => MouseMap.ResetToDefault(id);
 
     public string KeyLabelFor(string id) =>
@@ -89,7 +89,7 @@ internal sealed class VirtualKeyMapSource : IRemapSource
     public void RemoveExtraKey(string id, int index) => VirtualKeyMap.RemoveExtraKey(id, index);
     public void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool useCustomRepeatIntervals, List<double> repeatKeyIntervalsSeconds, double repeatGapSeconds, bool priority, double prioritySeconds) =>
         VirtualKeyMap.SetBehavior(id, repeat, hold, durationSeconds, infinite, useCustomRepeatIntervals, repeatKeyIntervalsSeconds, repeatGapSeconds, priority, prioritySeconds);
-    public void SetFarm(string id, bool farm, int rounds, double pauseSeconds, bool skin, bool approach, double approachSeconds) => VirtualKeyMap.SetFarm(id, farm, rounds, pauseSeconds, skin, approach, approachSeconds);
+    public void SetFarm(string id, bool farm, int rounds, double pauseSeconds, bool skin, bool approach, double approachSeconds, double lootSeconds) => VirtualKeyMap.SetFarm(id, farm, rounds, pauseSeconds, skin, approach, approachSeconds, lootSeconds);
     public void ResetToDefault(string id) => VirtualKeyMap.ResetToDefault(id);
 
     public string KeyLabelFor(string id) => $"Key 1: {KeyCatalog.DisplayNameFor(VirtualKeyMap.Words[id])}";

@@ -556,13 +556,14 @@ internal static class KeyExecutor
     // pauses it like any repeat. Nothing here reads the screen: the game's
     // own soft targeting and Auto Loot do the aiming.
     private const int FarmSettleMs = 300; // after Target: a beat for the game to pick the mob
-    private const int FarmLootMs = 800;   // after Interact: the loot window's own time
+    private const int FarmLootMs = 800;   // after a loot click, unless the mapping sets its run time
 
     private static void RunFarmLoop(string word, IReadOnlyList<(ushort Vk, bool Extended)> keys, KeyBehavior behavior, CancellationToken token)
     {
         ushort target = GameTiming.EffectiveTargetVk;
         ushort interact = GameTiming.InteractVk;
         int rounds = Math.Max(1, behavior.FarmRounds);
+        int lootMs = behavior.FarmLootSeconds > 0 ? (int)(behavior.FarmLootSeconds * 1000) : FarmLootMs;
 
         bool Running() => IsEngaged(word) && !token.IsCancellationRequested;
 
@@ -604,9 +605,9 @@ internal static class KeyExecutor
             InterruptibleSleep((int)(behavior.FarmPauseSeconds * 1000), token);
             if (interact == 0)
                 continue;
-            if (!Press(interact, FarmLootMs))
+            if (!Press(interact, lootMs))
                 return;
-            if (behavior.FarmSkin && !Press(interact, FarmLootMs))
+            if (behavior.FarmSkin && !Press(interact, lootMs))
                 return;
         }
     }

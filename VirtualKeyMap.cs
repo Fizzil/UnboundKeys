@@ -96,8 +96,8 @@ public static class VirtualKeyMap
     public static void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool useCustomRepeatIntervals, List<double> repeatKeyIntervalsSeconds, double repeatGapSeconds, bool priority, double prioritySeconds) =>
         _store.SetBehavior(id, repeat, hold, durationSeconds, infinite, useCustomRepeatIntervals, repeatKeyIntervalsSeconds, repeatGapSeconds, priority, prioritySeconds);
 
-    public static void SetFarm(string id, bool farm, int rounds, double pauseSeconds, bool skin, bool approach, double approachSeconds) =>
-        _store.SetFarm(id, farm, rounds, pauseSeconds, skin, approach, approachSeconds);
+    public static void SetFarm(string id, bool farm, int rounds, double pauseSeconds, bool skin, bool approach, double approachSeconds, double lootSeconds) =>
+        _store.SetFarm(id, farm, rounds, pauseSeconds, skin, approach, approachSeconds, lootSeconds);
 
     // Puts a key back to its own natural key, no extras, default behavior.
     public static void ResetToDefault(string id) => _store.ResetToDefault(id);

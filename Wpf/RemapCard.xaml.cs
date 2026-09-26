@@ -44,6 +44,7 @@ public partial class RemapCard
     private bool _farmSkin;
     private bool _farmApproach;
     private double _farmApproachSeconds;
+    private double _farmLoot;
     // One gap per key (index 0 = Key 1): how long to wait after that key
     // before the next, 0 meaning the executor's default. Rebuilt to the
     // right length rather than trusting saved data blindly — same guard
@@ -77,6 +78,7 @@ public partial class RemapCard
         _farmSkin = behavior.FarmSkin;
         _farmApproach = behavior.FarmApproach;
         _farmApproachSeconds = behavior.FarmApproachSeconds;
+        _farmLoot = behavior.FarmLootSeconds;
         _gameMode = Settings.LoadGameMode();
 
         int totalKeyCount = 1 + _source.ExtraWords[_id].Count;
@@ -583,14 +585,14 @@ public partial class RemapCard
     {
         GameKeyRows.Children.Clear();
         string targetName = KeyCatalog.DisplayNameFor(GameTiming.EffectiveTargetVk);
-        string interactName = GameTiming.InteractVk != 0 ? KeyCatalog.DisplayNameFor(GameTiming.InteractVk) : "Not set";
+        string lootName = GameTiming.InteractVk != 0 ? KeyCatalog.DisplayNameFor(GameTiming.InteractVk) : "Not set";
         AddKeyRow($"Target nearest enemy: {targetName}", entry =>
         {
             GameTiming.SetGameKeys(entry.VkCode, GameTiming.InteractVk);
             RebuildGameKeyRows();
             RefreshFarmRows(animate: false);
         }, onDelete: null, host: GameKeyRows);
-        AddKeyRow($"Interact with target: {interactName}", entry =>
+        AddKeyRow($"Loot click or key: {lootName}", entry =>
         {
             GameTiming.SetGameKeys(GameTiming.TargetVk, entry.VkCode);
             RebuildGameKeyRows();
@@ -614,6 +616,8 @@ public partial class RemapCard
                 _farmPause = DefaultFarmPauseSeconds;
             if (_farmApproachSeconds <= 0)
                 _farmApproachSeconds = DefaultFarmApproachSeconds;
+            if (_farmLoot <= 0)
+                _farmLoot = DefaultFarmLootSeconds;
         }
         else
         {
@@ -637,6 +641,18 @@ public partial class RemapCard
     }
 
     private const double DefaultFarmApproachSeconds = 1.5;
+    private const double DefaultFarmLootSeconds = 2.0;
+
+    private void FarmLootPlusTenthButton_Click(object sender, RoutedEventArgs e) => SetFarmLoot(Math.Round(_farmLoot + 0.1, 1));
+    private void FarmLootPlusOneButton_Click(object sender, RoutedEventArgs e) => SetFarmLoot(Math.Round(_farmLoot + 1.0, 1));
+    private void FarmLootResetButton_Click(object sender, RoutedEventArgs e) => SetFarmLoot(DefaultFarmLootSeconds);
+
+    private void SetFarmLoot(double seconds)
+    {
+        _farmLoot = Math.Max(0, seconds);
+        SaveFarm();
+        RefreshFarmRows(animate: false);
+    }
 
     private void FarmApproachButton_Click(object sender, RoutedEventArgs e)
     {
@@ -672,7 +688,7 @@ public partial class RemapCard
         RefreshFarmRows(animate: false);
     }
 
-    private void SaveFarm() => _source.SetFarm(_id, _farmOn, _farmRounds, _farmPause, _farmSkin, _farmApproach, _farmApproachSeconds);
+    private void SaveFarm() => _source.SetFarm(_id, _farmOn, _farmRounds, _farmPause, _farmSkin, _farmApproach, _farmApproachSeconds, _farmLoot);
 
     private void RefreshFarmRows(bool animate)
     {
@@ -680,10 +696,11 @@ public partial class RemapCard
         FarmSkinButton.Tag = _farmSkin;
         FarmApproachButton.Tag = _farmApproach;
         FarmApproachText.Text = $"{_farmApproachSeconds.ToString("0.0", CultureInfo.InvariantCulture)} s";
+        FarmLootText.Text = $"{(_farmLoot > 0 ? _farmLoot : 0.8).ToString("0.0", CultureInfo.InvariantCulture)} s";
         FarmRoundsText.Text = _farmRounds.ToString(CultureInfo.InvariantCulture);
         FarmPauseText.Text = $"{_farmPause.ToString("0.0", CultureInfo.InvariantCulture)} s";
         AssistFold.Summary = _farmOn ? "Farm nearby on" : "";
-        FarmNote.Text = (GameTiming.InteractVk == 0 ? "Set Interact with target above, or the loop skips looting. " : "")
+        FarmNote.Text = (GameTiming.InteractVk == 0 ? "Set the loot click above, or the loop skips looting. " : "")
             + "While Farm nearby is on, Mode, Duration and Infinite don't apply: the loop runs until you trigger it again or say \"press stop\". Priority keys still cut in.";
         SetElementVisible(FarmPanel, _farmOn, animate);
         SetElementVisible(FarmApproachPanel, _farmOn && _farmApproach, animate);
@@ -698,7 +715,7 @@ public partial class RemapCard
         AddInfoLine("Channelled ability", "Tick it on a priority key whose ability channels, and set how long the channel takes, usually two to three seconds. The repeat stays paused that long instead of one GCD.");
         AddInfoLine("Two priority keys in a row", "extend the pause; the second never cuts the first short.");
         AddInfoLine("Where it applies", "Any mapping can be a priority key: a spoken word, a mouse button, an on-screen key or a remapped real key. Game mode only shows these rows; the settings work even with it off.");
-        AddInfoLine("Experimental assistance", "Single-button farming with you at the wheel. Farm nearby targets the nearest enemy, runs to it if asked (with the game's Click to Move), runs this mapping's keys as the rotation for the set rounds, waits for the drop, loots (and skins if asked), then goes again until you trigger it again or say press stop. Set the game keys it presses once per sub-profile.");
+        AddInfoLine("Experimental assistance", "Single-button farming with you at the wheel. Farm nearby targets the nearest enemy, runs to it if asked, runs this mapping's keys as the rotation for the set rounds, waits for the drop, loots (and skins if asked), then goes again until you trigger it again or say press stop. Set the target key and the loot click once per sub-profile: Right Click, with the game's Click to Move on, runs you to whatever your cursor is on.");
     }
 
     private void AddInfoLine(string lead, string explanation)
@@ -741,6 +758,7 @@ public partial class RemapCard
         _farmSkin = false;
         _farmApproach = false;
         _farmApproachSeconds = 0.0;
+        _farmLoot = 0.0;
 
         UpdateModeVisuals();
         InfiniteButton.Tag = _infiniteOn;

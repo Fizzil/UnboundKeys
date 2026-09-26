@@ -111,8 +111,8 @@ public static class MouseMap
     public static void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool useCustomRepeatIntervals, List<double> repeatKeyIntervalsSeconds, double repeatGapSeconds, bool priority, double prioritySeconds) =>
         _store.SetBehavior(id, repeat, hold, durationSeconds, infinite, useCustomRepeatIntervals, repeatKeyIntervalsSeconds, repeatGapSeconds, priority, prioritySeconds);
 
-    public static void SetFarm(string id, bool farm, int rounds, double pauseSeconds, bool skin, bool approach, double approachSeconds) =>
-        _store.SetFarm(id, farm, rounds, pauseSeconds, skin, approach, approachSeconds);
+    public static void SetFarm(string id, bool farm, int rounds, double pauseSeconds, bool skin, bool approach, double approachSeconds, double lootSeconds) =>
+        _store.SetFarm(id, farm, rounds, pauseSeconds, skin, approach, approachSeconds, lootSeconds);
 
     // Puts a button back to fully unmapped — no key, no extras, default
     // behavior, and (unlike a word's ResetToDefault) switched back off, so

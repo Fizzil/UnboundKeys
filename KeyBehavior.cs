@@ -63,4 +63,9 @@ public sealed class KeyBehavior
     // rotation starts. What a melee class needs; a hunter can leave it off.
     public bool FarmApproach { get; set; }
     public double FarmApproachSeconds { get; set; }
+
+    // The run to the loot after each loot click (a right-click runs you to
+    // the corpse with Click to Move on; Interact With Target reaches only a
+    // corpse you stand on), before the next target. 0 = the usual 0.8 s.
+    public double FarmLootSeconds { get; set; }
 }

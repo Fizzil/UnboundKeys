@@ -136,7 +136,7 @@ bool FarmScenario()
     GameTiming.GcdSeconds = 0;
     GameTiming.TargetVk = F15;
     GameTiming.InteractVk = F16;
-    var farm = new KeyBehavior { Farm = true, FarmRounds = 2, FarmPauseSeconds = 1.0, FarmSkin = true, FarmApproach = true, FarmApproachSeconds = 0.5, UseCustomRepeatIntervals = true, RepeatGapSeconds = 1.0 };
+    var farm = new KeyBehavior { Farm = true, FarmRounds = 2, FarmPauseSeconds = 1.0, FarmSkin = true, FarmApproach = true, FarmApproachSeconds = 0.5, FarmLootSeconds = 0.8, UseCustomRepeatIntervals = true, RepeatGapSeconds = 1.0 };
 
     clock.Restart();
     var task = Task.Run(() => KeyExecutor.Execute("three", repeatKeys, farm));
