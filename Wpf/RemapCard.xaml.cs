@@ -237,7 +237,11 @@ public partial class RemapCard
         {
             expanded = !expanded;
             valueButton.Tag = expanded;
-            AnimateHeight(categoryList, expanded, expanded ? categoryListHeight : 0);
+            // Once open, the whole picker comes on screen: near the bottom of
+            // a page its own bottom edge (the edge-hover scroll zone) could
+            // sit below the window with no way to reach it.
+            AnimateHeight(categoryList, expanded, expanded ? categoryListHeight : 0,
+                onExpanded: () => categoryList.BringIntoView());
         };
 
         if (onDelete != null)
@@ -826,7 +830,7 @@ public partial class RemapCard
     // which is a fixed height by design (see AddKeyRow's own comment).
     // Here the hold at the target height is wanted, so only the collapse
     // releases it.
-    private void AnimateHeight(FrameworkElement element, bool expand, double explicitTargetHeight)
+    private void AnimateHeight(FrameworkElement element, bool expand, double explicitTargetHeight, Action? onExpanded = null)
     {
         if (expand)
         {
@@ -835,6 +839,8 @@ public partial class RemapCard
             {
                 EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut },
             };
+            if (onExpanded != null)
+                anim.Completed += (_, _) => onExpanded();
             element.BeginAnimation(HeightProperty, anim);
         }
         else

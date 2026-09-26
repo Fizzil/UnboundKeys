@@ -48,8 +48,12 @@ internal static class EdgeAutoScrollBehavior
             // A page body and a key list inside it can both have this on;
             // only the innermost ScrollViewer under the mouse should react,
             // or hovering the key list's bottom edge would also drag the
-            // whole page along.
-            if (e.OriginalSource is DependencyObject origin && NearestScrollViewer(origin) != scroll)
+            // whole page along. Unless that inner list is cut off by this
+            // one's edge: then its own edge zone is off screen and nothing
+            // could ever scroll (Fizzil hit this with a picker opened near
+            // the bottom of a page), so this one keeps reacting until the
+            // inner list is fully in view.
+            if (e.OriginalSource is DependencyObject origin && NearestScrollViewer(origin) is ScrollViewer inner && inner != scroll && FullyInside(inner, scroll))
             {
                 direction = 0;
                 timer.Stop();
@@ -75,6 +79,15 @@ internal static class EdgeAutoScrollBehavior
             direction = 0;
             timer.Stop();
         };
+    }
+
+    // Whether every part of inner sits within outer's viewport.
+    private static bool FullyInside(ScrollViewer inner, ScrollViewer outer)
+    {
+        if (!inner.IsDescendantOf(outer))
+            return false;
+        double top = inner.TranslatePoint(new System.Windows.Point(0, 0), outer).Y;
+        return top >= -1 && top + inner.ActualHeight <= outer.ActualHeight + 1;
     }
 
     private static ScrollViewer? NearestScrollViewer(DependencyObject start)
