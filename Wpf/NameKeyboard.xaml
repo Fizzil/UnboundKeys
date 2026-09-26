@@ -11,20 +11,18 @@
          a game. -->
     <StackPanel>
         <Grid Height="44" Margin="2,0,2,6">
-            <Border CornerRadius="6" Background="{DynamicResource ElevatedBrush}"/>
-            <TextBlock x:Name="PlaceholderText" Text="Type a name with the keys below" FontSize="13"
-                       Margin="14,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
-            <TextBlock x:Name="PreviewText" Style="{StaticResource PageTitleStyle}" Margin="14,0,0,0"/>
-        </Grid>
-        <StackPanel x:Name="Rows"/>
-        <Grid Height="48" Margin="0,4,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            <Button x:Name="CancelButton" Grid.Column="1" Content="Cancel" Width="90" Height="44" Margin="10,2,0,2" Style="{StaticResource SecondaryButtonStyle}"/>
-            <Button x:Name="DoneButton" Grid.Column="2" Content="Done" Width="90" Height="44" Margin="6,2,2,2" Style="{StaticResource PrimaryButtonStyle}"/>
+            <Border CornerRadius="6" Background="{DynamicResource ElevatedBrush}"/>
+            <TextBlock x:Name="PlaceholderText" Text="Type a name with the keys below" FontSize="13"
+                       Margin="14,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+            <TextBlock x:Name="PreviewText" Style="{StaticResource PageTitleStyle}" Margin="14,0,0,0" VerticalAlignment="Center"/>
+            <Button x:Name="CancelButton" Grid.Column="1" Content="Cancel" Width="90" Height="40" Margin="10,0,0,0" Style="{StaticResource SecondaryButtonStyle}"/>
+            <Button x:Name="DoneButton" Grid.Column="2" Content="Done" Width="90" Height="40" Margin="6,0,0,0" Style="{StaticResource PrimaryButtonStyle}"/>
         </Grid>
+        <StackPanel x:Name="Rows"/>
     </StackPanel>
 </UserControl>

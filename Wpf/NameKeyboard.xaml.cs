@@ -90,7 +90,13 @@ public partial class NameKeyboard
 
     private Button BuildKey(string label)
     {
-        var key = new Button { Content = label, Height = 44 };
+        var key = new Button
+        {
+            Content = label,
+            Height = 44,
+            HorizontalContentAlignment = System.Windows.HorizontalAlignment.Center,
+            VerticalContentAlignment = VerticalAlignment.Center,
+        };
         key.SetResourceReference(StyleProperty, "KeyCapStyle");
         switch (label)
         {
