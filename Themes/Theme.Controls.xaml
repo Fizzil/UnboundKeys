@@ -849,7 +849,10 @@
         <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
         <Setter Property="FontFamily" Value="Segoe UI"/>
         <Setter Property="FontSize" Value="11"/>
-        <Setter Property="Margin" Value="0,2,0,0"/>
+        <Setter Property="Margin" Value="0,2,12,0"/>
+        <!-- A hint that outgrows its row trails off before the switch
+             instead of running under it (Fizzil caught one). -->
+        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
     </Style>
 
     <!-- A row's current value ("1.5 s"), read at a glance. -->

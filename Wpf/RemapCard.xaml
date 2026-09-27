@@ -188,7 +188,7 @@
                 <Button x:Name="PriorityButton" Click="PriorityButton_Click" Style="{StaticResource RailToggleStyle}" Height="48" Margin="4,0,4,0">
                     <StackPanel>
                         <TextBlock Text="Priority"/>
-                        <TextBlock Text="Pauses an infinite repeat, fires as soon as the cooldown allows, pauses one more gap, then resumes" Style="{StaticResource InlineHintStyle}"/>
+                        <TextBlock Text="Pauses an infinite repeat, fires as soon as it can, then lets it resume" Style="{StaticResource InlineHintStyle}"/>
                     </StackPanel>
                 </Button>
                 <StackPanel x:Name="PriorityPanel" Height="0" Visibility="Collapsed" ClipToBounds="True">
