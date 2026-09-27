@@ -82,6 +82,12 @@ function Find-Button($root, $text) {
   return $null
 }
 
+# Any element whose Name is exactly $text, button or not (a row label).
+function Find-Text($root, $text) {
+  $cond = New-Object System.Windows.Automation.PropertyCondition($AE::NameProperty, $text)
+  return $root.FindFirst($TS::Descendants, $cond)
+}
+
 # The layout rebuild after Mini/Maxi takes a moment to reach the
 # automation tree, so poll for the key that proves it happened.
 function Wait-Button($root, $text, $timeoutMs = 5000) {
@@ -153,7 +159,13 @@ function Save-Window($el, $file, $radius = 0) {
 Invoke-Button $dash "Mouse";    Save-Window $dash "UBK-Mouse.png"
 Invoke-Button $dash "Keyboard"; Save-Window $dash "UBK-Keyboard-Page.png"
 Invoke-Button $dash "Voice";    Save-Window $dash "UBK-Voice.png"
-Invoke-Button $dash '"press one"'; Save-Window $dash "UBK-Editor.png"
+Invoke-Button $dash '"press one"'
+# A plain Tap shows only a few rows; for the picture, Repeat reveals the
+# duration, Infinite and Infinite pause rows, then Tap puts it back.
+$wasTap = ($null -eq (Find-Text $dash "Duration"))
+if ($wasTap) { Invoke-Button $dash "Repeat" 900 }
+Save-Window $dash "UBK-Editor.png"
+if ($wasTap) { Invoke-Button $dash "Tap" 600 }
 Invoke-Button $dash "Settings"; Save-Window $dash "UBK-Settings.png"
 Invoke-Button $dash "Help";     Save-Window $dash "UBK-Help.png"
 
