@@ -49,6 +49,7 @@ public static class KeyCatalog
         new("Mouse Button 5", 0x06),
     };
 
+    // Named but not listed: see DisplayNameFor.
     private static readonly Entry[] Punctuation =
     {
         new("- (minus)", 0xBD),
@@ -80,9 +81,7 @@ public static class KeyCatalog
         ("Navigation", Navigation),
         ("Modifiers", Modifiers),
         ("Mouse", MouseButtons),
-        // Punctuation folds into Other (Fizzil: one category fewer in the
-        // picker); the keys stay pickable and DisplayNameFor still finds them.
-        ("Other", Other.Concat(Punctuation).ToArray()),
+        ("Other", Other),
     };
 
     public static string DisplayNameFor(ushort vk)
@@ -91,6 +90,13 @@ public static class KeyCatalog
             foreach (var entry in keys)
                 if (entry.VkCode == vk)
                     return entry.DisplayName;
+
+        // Punctuation is not offered in the picker (Fizzil: the symbols out
+        // altogether) but keeps its names, so a mapping saved with one still
+        // reads "; (semicolon)" rather than a code.
+        foreach (var entry in Punctuation)
+            if (entry.VkCode == vk)
+                return entry.DisplayName;
 
         return $"Key 0x{vk:X2}";
     }
