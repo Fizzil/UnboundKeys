@@ -80,8 +80,9 @@ public static class KeyCatalog
         ("Navigation", Navigation),
         ("Modifiers", Modifiers),
         ("Mouse", MouseButtons),
-        ("Punctuation", Punctuation),
-        ("Other", Other),
+        // Punctuation folds into Other (Fizzil: one category fewer in the
+        // picker); the keys stay pickable and DisplayNameFor still finds them.
+        ("Other", Other.Concat(Punctuation).ToArray()),
     };
 
     public static string DisplayNameFor(ushort vk)

@@ -250,19 +250,22 @@ public partial class RemapCard
         KeyGroup.Children.Add(grid);
         KeyGroup.Children.Add(categoryList);
 
-        PopulateCategoryList(categoryList, onSelect);
+        PopulateCategoryList(categoryList, onSelect, value);
     }
 
-    // Left column: one button per KeyCatalog category (Letters, Numbers,
-    // ...). Right column: a scrollable list of whichever category was
-    // last hovered.
-    private void PopulateCategoryList(Grid categoryList, Action<KeyCatalog.Entry> onSelect)
+    // Left column: one row per KeyCatalog category (Letters, Numbers,
+    // ...), each a small key cap with a sample glyph and the name, in the
+    // rail's own pill style; the category whose keys are showing keeps
+    // its pill and its sample turns accent. Right column: that category's
+    // keys, the one this mapping currently sends in accent. Opens on the
+    // current key's category, so what is set is the first thing seen.
+    private void PopulateCategoryList(Grid categoryList, Action<KeyCatalog.Entry> onSelect, string currentKeyName)
     {
-        var nav = new StackPanel();
+        var nav = new StackPanel { Margin = new Thickness(0, 4, 0, 0) };
         Grid.SetColumn(nav, 0);
         categoryList.Children.Add(nav);
 
-        var keyListPanel = new StackPanel();
+        var keyListPanel = new StackPanel { Margin = new Thickness(0, 4, 0, 0) };
         var keyScroll = new ScrollViewer
         {
             Content = keyListPanel,
@@ -276,38 +279,90 @@ public partial class RemapCard
         categoryList.Children.Add(keyScroll);
         EdgeAutoScrollBehavior.SetEnable(keyScroll, true);
 
-        void HoverCategory(KeyCatalog.Entry[] keys)
+        Button? activeCategory = null;
+        TextBlock? activeSample = null;
+
+        void ShowCategory(Button categoryButton, TextBlock sample, KeyCatalog.Entry[] keys)
         {
+            if (activeCategory != null)
+            {
+                activeCategory.Tag = false;
+                activeSample!.SetResourceReference(TextBlock.ForegroundProperty, "TextSecondaryBrush");
+            }
+            activeCategory = categoryButton;
+            activeSample = sample;
+            categoryButton.Tag = true;
+            sample.SetResourceReference(TextBlock.ForegroundProperty, "AccentBrush");
+
             keyListPanel.Children.Clear();
             foreach (var entry in keys)
             {
-                var keyButton = new Button
-                {
-                    Content = entry.DisplayName,
-                    Height = 34,
-                    Style = (System.Windows.Style)FindResource("QuietListButtonStyle"),
-                };
+                var keyButton = new Button { Content = entry.DisplayName, Tag = entry.DisplayName == currentKeyName };
+                keyButton.SetResourceReference(StyleProperty, "PickerKeyButtonStyle");
                 keyButton.Click += (_, _) => onSelect(entry);
                 keyListPanel.Children.Add(keyButton);
             }
         }
 
+        Button? first = null;
+        TextBlock? firstSample = null;
+        KeyCatalog.Entry[]? firstKeys = null;
         foreach (var (category, keys) in KeyCatalog.Groups)
         {
-            var categoryButton = new Button
+            var sample = new TextBlock
             {
-                Content = category,
-                Height = 40,
-                Style = (System.Windows.Style)FindResource("CategoryNavButtonStyle"),
+                Text = SampleFor(category),
+                FontSize = 11,
+                FontWeight = FontWeights.SemiBold,
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
             };
-            categoryButton.MouseEnter += (_, _) => HoverCategory(keys);
+            if (category == "Mouse")
+            {
+                // The rail's own mouse glyph.
+                sample.FontFamily = new System.Windows.Media.FontFamily("Segoe MDL2 Assets");
+                sample.FontSize = 13;
+                sample.FontWeight = FontWeights.Normal;
+            }
+            sample.SetResourceReference(TextBlock.ForegroundProperty, "TextSecondaryBrush");
+
+            var cap = new Border { Width = 30, Height = 22, CornerRadius = new CornerRadius(4), Margin = new Thickness(0, 0, 10, 0), Child = sample };
+            cap.SetResourceReference(Border.BackgroundProperty, "HoverBrush");
+
+            var content = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal };
+            content.Children.Add(cap);
+            content.Children.Add(new TextBlock { Text = category, VerticalAlignment = VerticalAlignment.Center });
+
+            var categoryButton = new Button { Content = content };
+            categoryButton.SetResourceReference(StyleProperty, "CategoryNavButtonStyle");
+            var keysHere = keys;
+            categoryButton.MouseEnter += (_, _) => ShowCategory(categoryButton, sample, keysHere);
             nav.Children.Add(categoryButton);
+
+            // The first category is the fallback; the one holding the
+            // current key wins.
+            if (first == null || keys.Any(k => k.DisplayName == currentKeyName))
+            {
+                first = categoryButton;
+                firstSample = sample;
+                firstKeys = keys;
+            }
         }
 
-        // Something shows on first expand rather than a blank right panel
-        // until the first hover.
-        HoverCategory(KeyCatalog.Groups[0].Keys);
+        ShowCategory(first!, firstSample!, firstKeys!);
     }
+
+    // What each category's key cap shows.
+    private static string SampleFor(string category) => category switch
+    {
+        "Letters" => "A",
+        "Numbers" => "7",
+        "Function Keys" => "F5",
+        "Navigation" => "→",
+        "Modifiers" => "Alt",
+        "Mouse" => "",
+        _ => "Esc",
+    };
 
     // ---- Mode ----
 

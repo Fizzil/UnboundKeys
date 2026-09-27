@@ -314,12 +314,67 @@
         </Style.Triggers>
     </Style>
 
-    <!-- The category nav list (Letters, Numbers, ...) next to a key's
-         split-view key picker — QuietListButtonStyle's own quiet-at-rest/
-         brighter-on-hover text, just left-aligned instead of centered. -->
-    <Style x:Key="CategoryNavButtonStyle" TargetType="Button" BasedOn="{StaticResource QuietListButtonStyle}">
+    <!-- The category nav (Letters, Numbers, ...) beside a key's picker:
+         the rail's own look (Fizzil: the plain list read as unthemed) —
+         transparent at rest, the Elevated pill on hover, and the pill kept
+         on the category whose keys are showing (Tag="True"). The content
+         is built in code (RemapCard.PopulateCategoryList): a small key cap
+         with a sample glyph, then the label. -->
+    <Style x:Key="CategoryNavButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="FontFamily" Value="Segoe UI"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Height" Value="38"/>
+        <Setter Property="Margin" Value="4,1,4,1"/>
+        <Setter Property="Padding" Value="8,0,8,0"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="HorizontalContentAlignment" Value="Left"/>
-        <Setter Property="Padding" Value="16,0,0,0"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bg" Background="Transparent" CornerRadius="6">
+                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bg" Property="Background" Value="{DynamicResource ElevatedBrush}"/>
+                        </Trigger>
+                        <Trigger Property="Tag" Value="{StaticResource TagOn}">
+                            <Setter TargetName="Bg" Property="Background" Value="{DynamicResource ElevatedBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            </Trigger>
+            <Trigger Property="Tag" Value="{StaticResource TagOn}">
+                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- One key in the picker's list: the same quiet row with the pill
+         on hover; Tag="True" marks the key this mapping currently sends,
+         in accent (an active state, so accent is right by the rule). -->
+    <Style x:Key="PickerKeyButtonStyle" TargetType="Button" BasedOn="{StaticResource CategoryNavButtonStyle}">
+        <Setter Property="Height" Value="34"/>
+        <Setter Property="Margin" Value="4,0,4,0"/>
+        <Setter Property="Padding" Value="14,0,8,0"/>
+        <Style.Triggers>
+            <Trigger Property="Tag" Value="{StaticResource TagOn}">
+                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
     <!-- A small bordered "chip" button — no fill at rest, just an outline,
