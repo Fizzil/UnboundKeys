@@ -646,8 +646,8 @@ public partial class RemapCard
     {
         AddInfoLine("World of Warcraft", "Custom cooldown: switch it on once per sub-profile and every infinite repeat in it waits that long between keys. Put your haste into the calculator for the exact number: 1.5 s over one plus haste, never under 0.75 s. The 1 s cooldown of Rogues, cat Druids and Monks ignores haste.");
         AddInfoLine("Custom gaps between keys", "This mapping waits its own time instead of the sub-profile cooldown (the everyday tool, since many abilities reset faster than the global cooldown): one gap for all its keys, and a different one after any key if you want.");
-        AddInfoLine("Priority", "A priority key can interrupt an infinite repeat. Press it and the repeat pauses, the app waits for the current GCD to finish, your key fires, the repeat pauses one more GCD, then it resumes where it left off.");
-        AddInfoLine("Channelled ability", "Tick it on a priority key whose ability channels, and set how long the channel takes, usually two to three seconds. The repeat stays paused that long instead of one GCD.");
+        AddInfoLine("Priority", "A priority key can interrupt an infinite repeat. Press it and the repeat pauses; your key goes out at once, and again just before the cooldown ends if the first press was too early for the game to queue it, so it lands the moment it can. The repeat pauses one more gap, then resumes where it left off.");
+        AddInfoLine("Channelled ability", "Tick it on a priority key whose ability channels, and set how long the channel takes, usually two to three seconds. The repeat stays paused that long instead of one gap.");
         AddInfoLine("Two priority keys in a row", "extend the pause; the second never cuts the first short.");
         AddInfoLine("Where it applies", "Any mapping can be a priority key: a spoken word, a mouse button, an on-screen key or a remapped real key. Game mode only shows these rows; the settings work even with it off.");
     }

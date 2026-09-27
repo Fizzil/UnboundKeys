@@ -165,10 +165,11 @@ internal static class KeyExecutor
     // Every repeat loop (timed or infinite) waits out _pauseUntil before
     // each key, and notes when it last fired and with what gap. A priority
     // mapping arriving while any repeat runs sets _pauseUntil so the loops
-    // stop at once, waits for the game cooldown left over from that last
-    // repeat key, fires (the normal Execute path does that), and keeps the
-    // loops paused for its own time after that. A second priority press
-    // during a pause extends it rather than cutting it short.
+    // stop at once and stay paused until that cooldown ends plus the
+    // priority's own time; the press itself goes out at once, and again
+    // inside the game's spell-queue window if it was early (see Execute).
+    // A second priority press during a pause extends it rather than cutting
+    // it short.
     private static readonly object _pauseLock = new();
     private static DateTime _pauseUntil = DateTime.MinValue;
     private static DateTime _lastRepeatKeyAt = DateTime.MinValue;
@@ -197,29 +198,36 @@ internal static class KeyExecutor
         }
     }
 
-    private static void PauseRepeatsForPriority(KeyBehavior behavior, CancellationToken token)
+    // The game queues a press this close to a cooldown's end (WoW's spell
+    // queue window, 400 ms by default); a second press goes out this far
+    // before the end, inside that window (see Execute).
+    private const int SpellQueueMs = 400;
+    private const int QueuedPressLeadMs = 300;
+
+    // Pauses every running repeat for a priority mapping: from now until
+    // the running repeat's cooldown ends plus the priority's own pause
+    // (a second priority press extends, never shortens). Returns how much
+    // of that cooldown is left, 0 when no repeat is running.
+    private static int PauseRepeatsForPriority(KeyBehavior behavior)
     {
-        int waitMs;
         lock (_pauseLock)
         {
             if (_runningRepeats == 0)
-                return;
+                return 0;
             var now = DateTime.UtcNow;
             var cooldownEnds = _lastRepeatKeyAt.AddMilliseconds(_lastRepeatGapMs);
-            waitMs = (int)Math.Max(0, (cooldownEnds - now).TotalMilliseconds);
+            int waitMs = (int)Math.Max(0, (cooldownEnds - now).TotalMilliseconds);
             double pauseMs = behavior.PrioritySeconds > 0 ? behavior.PrioritySeconds * 1000 : _lastRepeatGapMs;
             var until = now.AddMilliseconds(waitMs + pauseMs);
             if (until > _pauseUntil)
                 _pauseUntil = until;
+            return waitMs;
         }
-        if (waitMs > 0)
-            InterruptibleSleep(waitMs, token);
     }
 
     public static void Execute(string word, IReadOnlyList<(ushort Vk, bool Extended)> keys, KeyBehavior behavior)
     {
-        if (behavior.Priority)
-            PauseRepeatsForPriority(behavior, _stopSignal.Token);
+        int cooldownLeftMs = behavior.Priority ? PauseRepeatsForPriority(behavior) : 0;
 
         if (behavior.Infinite)
         {
@@ -234,13 +242,31 @@ internal static class KeyExecutor
         }
 
         var token = _stopSignal.Token;
+        FireOnce(keys, behavior, token);
 
+        // A priority press that lands more than the game's spell-queue
+        // window before the running repeat's cooldown ends is wasted
+        // ("not ready"), and the old answer, waiting the whole cooldown
+        // out before pressing, read as a dead press that needed a second
+        // one (Fizzil, playtesting). So: press at once, and if that was
+        // too early, press again just inside the window, so the game
+        // queues it and it fires the instant the cooldown ends.
+        if (behavior.Priority && cooldownLeftMs > SpellQueueMs)
+        {
+            InterruptibleSleep(cooldownLeftMs - QueuedPressLeadMs, token);
+            if (!token.IsCancellationRequested)
+                FireOnce(keys, behavior, token);
+        }
+    }
+
+    // One pass over the keys: a Repeat mapping with no duration marches
+    // through its sequence once, each key waiting its own gap, instead of
+    // collapsing into a single simultaneous tap of every key (for a 1-key
+    // mapping that is one tap either way); anything else is one combo tap.
+    private static void FireOnce(IReadOnlyList<(ushort Vk, bool Extended)> keys, KeyBehavior behavior, CancellationToken token)
+    {
         if (behavior.Repeat)
         {
-            // No repeat duration set (0s) — still march through the whole
-            // sequence once, respecting each key's own gap, instead of
-            // collapsing into a single simultaneous tap of every key. For a
-            // 1-key word this is just one tap either way, same as before.
             for (int i = 0; i < keys.Count && !token.IsCancellationRequested; i++)
             {
                 TapKeySequentially(keys, i);

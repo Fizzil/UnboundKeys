@@ -188,7 +188,7 @@
                 <Button x:Name="PriorityButton" Click="PriorityButton_Click" Style="{StaticResource RailToggleStyle}" Height="48" Margin="4,0,4,0">
                     <StackPanel>
                         <TextBlock Text="Priority"/>
-                        <TextBlock Text="Pauses an infinite repeat, waits for the GCD, fires, pauses one more GCD, then resumes" Style="{StaticResource InlineHintStyle}"/>
+                        <TextBlock Text="Pauses an infinite repeat, fires as soon as the cooldown allows, pauses one more gap, then resumes" Style="{StaticResource InlineHintStyle}"/>
                     </StackPanel>
                 </Button>
                 <StackPanel x:Name="PriorityPanel" Height="0" Visibility="Collapsed" ClipToBounds="True">
@@ -197,7 +197,7 @@
                     <Button x:Name="ChannelButton" Click="ChannelButton_Click" Style="{StaticResource RailToggleStyle}" Height="48" Margin="20,0,4,0">
                         <StackPanel>
                             <TextBlock Text="Channelled ability"/>
-                            <TextBlock Text="Keeps the repeat paused for the cast time below instead of one GCD" Style="{StaticResource InlineHintStyle}"/>
+                            <TextBlock Text="Keeps the repeat paused for the cast time below instead of one gap" Style="{StaticResource InlineHintStyle}"/>
                         </StackPanel>
                     </Button>
                     <StackPanel x:Name="ChannelPanel" Height="0" Visibility="Collapsed" ClipToBounds="True">

@@ -34,7 +34,7 @@ public partial class HelpPage : IDashboardPage
         AddLine("Hold", "keeps them pressed for the duration. With several keys it holds them all together, as a combo.");
         AddLine("Infinite", "runs until you say the word or press the button again.");
         AddLine("Say or press it again", "to stop a Repeat or Hold early, Infinite or not.");
-        AddLine("Game mode", "a fold in the editor with the timing a game with cooldowns needs. World of Warcraft: a custom cooldown, switched on once per sub-profile (per class), that every infinite repeat waits between keys, and a haste calculator that turns your haste into the exact number. Custom gaps between keys: one mapping's own gaps instead, the everyday tool since many abilities reset faster than the global cooldown. Priority: a key that pauses the infinite repeat, waits for the current gap to finish, fires, pauses one more gap (or a channel cast time), then resumes the repeat.");
+        AddLine("Game mode", "a fold in the editor with the timing a game with cooldowns needs. World of Warcraft: a custom cooldown, switched on once per sub-profile (per class), that every infinite repeat waits between keys, and a haste calculator that turns your haste into the exact number. Custom gaps between keys: one mapping's own gaps instead, the everyday tool since many abilities reset faster than the global cooldown. Priority: a key that pauses the infinite repeat, fires as soon as the cooldown allows (at once, and again inside the game's spell queue if the first press was early), pauses one more gap (or a channel cast time), then resumes the repeat.");
 
         AddHeader("SAFETY NETS", topMargin: 6);
         AddLine($"\"press {VoiceEngine.StopWord}\"", "lets go of everything, whatever is mapped.");
