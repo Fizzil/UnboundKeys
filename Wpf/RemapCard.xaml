@@ -66,55 +66,92 @@
                 </Button>
             </StackPanel>
 
-            <!-- Game mode (Fizzil, after a WoW night): the timing a game
-                 with a global cooldown needs. One app-wide switch, so it
-                 stays on in every editor once a game is being set up. It
-                 reveals three switches: the sub-profile's (class's) global
-                 cooldown, custom gaps for this mapping alone (Repeat only),
-                 and Priority — a mapping that pauses any infinite repeat,
-                 waits out the GCD, fires, pauses one more GCD (or a
-                 channel's cast time), then lets it resume (see
-                 KeyExecutor's priority pause). -->
-            <Button x:Name="GameModeButton" Click="GameModeButton_Click" Style="{StaticResource RailToggleStyle}" Height="48" Margin="4,0,4,0">
-                <StackPanel>
-                    <TextBlock Text="Game mode"/>
-                    <TextBlock Text="Timing for games with a global cooldown, in every editor" Style="{StaticResource InlineHintStyle}"/>
-                </StackPanel>
-            </Button>
-            <StackPanel x:Name="GamePanel" Height="0" Visibility="Collapsed" ClipToBounds="True">
+            <!-- Game mode (Fizzil, after WoW nights): the timing a game with
+                 cooldowns needs, under a fold like the Help topics rather
+                 than a switch (it was never really on or off). Whether it
+                 is open is remembered app-wide, so it stays open in every
+                 editor while a game is being set up. Inside: a World of
+                 Warcraft fold with the sub-profile's custom cooldown and a
+                 haste calculator for it, custom gaps for this mapping alone
+                 (Repeat only; what Fizzil actually uses, since many
+                 abilities reset faster than the global cooldown), and
+                 Priority — a mapping that pauses any infinite repeat, waits
+                 out the gap, fires, pauses one more gap (or a channel's cast
+                 time), then lets it resume (see KeyExecutor's priority
+                 pause). -->
+            <local:FoldSection x:Name="GameFold" Title="GAME MODE" Margin="4,0,4,0">
+            <StackPanel x:Name="GamePanel">
 
-                <!-- The class's GCD: one value for the whole sub-profile
-                     (GameTiming), so it shows the same in every editor.
-                     Off = none applied; on = pick a class, or step the
-                     number for haste. -->
-                <Button x:Name="GcdButton" Click="GcdButton_Click" Style="{StaticResource RailToggleStyle}" Height="48" Margin="4,0,4,0">
+                <!-- The sub-profile's cooldown (GameTiming): one value for the
+                     whole sub-profile, so it shows the same in every editor.
+                     Off = none applied. The class presets it used to have are
+                     gone (Fizzil: clunky, since many abilities reset faster
+                     than the global cooldown); the haste calculator below
+                     gives the exact number instead. -->
+                <local:FoldSection x:Name="WowFold" Title="WORLD OF WARCRAFT" Margin="12,0,4,0">
                     <StackPanel>
-                        <TextBlock Text="Global cooldown"/>
-                        <TextBlock x:Name="GcdHint" Text="One GCD between the keys of every infinite repeat in this sub-profile" Style="{StaticResource InlineHintStyle}"/>
-                    </StackPanel>
-                </Button>
-                <StackPanel x:Name="GcdPanel" Height="0" Visibility="Collapsed" ClipToBounds="True">
-                    <Border Style="{StaticResource SegmentGroupStyle}" Margin="28,2,8,4" HorizontalAlignment="Left">
-                        <UniformGrid Rows="1" Width="424">
-                            <Button x:Name="GcdMostButton" Content="Most classes · 1.5 s" Click="GcdMostButton_Click" Style="{StaticResource SegmentButtonStyle}"/>
-                            <Button x:Name="GcdFastButton" Content="Rogue, cat Druid, Monk · 1.0 s" Click="GcdFastButton_Click" Style="{StaticResource SegmentButtonStyle}"/>
-                        </UniformGrid>
-                    </Border>
-                    <Grid Height="44">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="Custom" Style="{StaticResource RowLabelStyle}" Margin="28,0,0,0"/>
-                        <TextBlock x:Name="GcdText" Grid.Column="1" Style="{StaticResource ValueTextStyle}"/>
-                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
-                            <Button Content="−0.1 s" Click="GcdMinusTenthButton_Click" Style="{StaticResource StepButtonStyle}"/>
-                            <Button Content="+0.1 s" Click="GcdPlusTenthButton_Click" Style="{StaticResource StepButtonStyle}"/>
+                        <Button x:Name="GcdButton" Click="GcdButton_Click" Style="{StaticResource RailToggleStyle}" Height="48" Margin="4,0,4,0">
+                            <StackPanel>
+                                <TextBlock Text="Custom cooldown"/>
+                                <TextBlock Text="One wait between the keys of every infinite repeat in this sub-profile" Style="{StaticResource InlineHintStyle}"/>
+                            </StackPanel>
+                        </Button>
+                        <StackPanel x:Name="GcdPanel" Height="0" Visibility="Collapsed" ClipToBounds="True">
+                            <Grid Height="44">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Cooldown" Style="{StaticResource RowLabelStyle}" Margin="28,0,0,0"/>
+                                <TextBlock x:Name="GcdText" Grid.Column="1" Style="{StaticResource ValueTextStyle}"/>
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
+                                    <Button Content="−0.1 s" Click="GcdMinusTenthButton_Click" Style="{StaticResource StepButtonStyle}"/>
+                                    <Button Content="+0.1 s" Click="GcdPlusTenthButton_Click" Style="{StaticResource StepButtonStyle}"/>
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock x:Name="GcdOwnerHint" Style="{StaticResource RowHintStyle}" Margin="28,0,12,8"/>
                         </StackPanel>
-                    </Grid>
-                    <TextBlock x:Name="GcdOwnerHint" Style="{StaticResource RowHintStyle}" Margin="28,0,12,8"/>
-                </StackPanel>
+
+                        <!-- The haste calculator (Fizzil): haste in, the global
+                             cooldown out, by the game's own rule — 1.5 s over one
+                             plus haste, never under 0.75 s — and a button that
+                             makes it the cooldown above. The 1 s cooldown of
+                             Rogues, cat Druids and Monks ignores haste, so it
+                             needs no sum. Haste is saved per sub-profile. -->
+                        <Grid Height="44">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Haste" Style="{StaticResource RowLabelStyle}"/>
+                            <TextBlock x:Name="HasteText" Grid.Column="1" Style="{StaticResource ValueTextStyle}"/>
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
+                                <Button Content="−10" Tag="-10" Click="HasteStepButton_Click" Style="{StaticResource StepButtonStyle}"/>
+                                <Button Content="−1" Tag="-1" Click="HasteStepButton_Click" Style="{StaticResource StepButtonStyle}"/>
+                                <Button Content="−0.1" Tag="-0.1" Click="HasteStepButton_Click" Style="{StaticResource StepButtonStyle}"/>
+                                <Button Content="+0.1" Tag="0.1" Click="HasteStepButton_Click" Style="{StaticResource StepButtonStyle}"/>
+                                <Button Content="+1" Tag="1" Click="HasteStepButton_Click" Style="{StaticResource StepButtonStyle}"/>
+                                <Button Content="+10" Tag="10" Click="HasteStepButton_Click" Style="{StaticResource StepButtonStyle}"/>
+                            </StackPanel>
+                        </Grid>
+                        <Grid Height="44">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Global cooldown" Style="{StaticResource RowLabelStyle}"/>
+                            <TextBlock x:Name="GcdFromHasteText" Grid.Column="1" Style="{StaticResource ValueTextStyle}"/>
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
+                                <Button Content="Use as cooldown" Click="UseHasteButton_Click" Style="{StaticResource StepButtonStyle}"/>
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock Text="1.5 s divided by one plus your haste, never under 0.75 s. The 1 s cooldown of Rogues, cat Druids and Monks ignores haste."
+                                   Style="{StaticResource RowHintStyle}" Margin="12,0,12,8"/>
+                    </StackPanel>
+                </local:FoldSection>
 
                 <!-- Custom gaps: this mapping waits its own time instead of
                      the class GCD — one gap for all its keys, and a row per
@@ -124,7 +161,7 @@
                     <Button x:Name="RepeatIntervalButton" Click="RepeatIntervalButton_Click" Style="{StaticResource RailToggleStyle}" Height="48" Margin="4,0,4,0">
                         <StackPanel>
                             <TextBlock Text="Custom gaps between keys"/>
-                            <TextBlock Text="Its own gap for this mapping instead of the class GCD, per key if you want" Style="{StaticResource InlineHintStyle}"/>
+                            <TextBlock Text="Its own gap for this mapping instead of the cooldown, per key if you want" Style="{StaticResource InlineHintStyle}"/>
                         </StackPanel>
                     </Button>
                     <StackPanel x:Name="CustomGapRows" Height="0" Visibility="Collapsed" ClipToBounds="True">
@@ -190,6 +227,7 @@
                     <StackPanel x:Name="GameInfoLines" Margin="0,2,0,6"/>
                 </local:FoldSection>
             </StackPanel>
+            </local:FoldSection>
 
             <Border Height="6" Background="Transparent"/>
 

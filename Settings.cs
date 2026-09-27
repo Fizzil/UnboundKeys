@@ -88,6 +88,10 @@ internal static class Settings
         // keys unless the mapping sets its own gap (see GameTiming).
         public double GcdSeconds { get; set; }
 
+        // Game mode, World of Warcraft: the haste this sub-profile (class)
+        // has, in percent, for the cooldown calculator (see RemapCard).
+        public double HastePercent { get; set; }
+
         // A JSON round trip is the one deep copy this file needs (a new
         // sub-profile starts as a copy of the active one).
         public MappingSet Clone() =>
@@ -528,6 +532,12 @@ internal static class Settings
 
     public static void SaveGcdSeconds(string profile, double seconds) =>
         SaveFields(profile, d => d.GcdSeconds = seconds);
+
+    public static double LoadHastePercent(string profile) =>
+        Resolve(Read(), profile)?.HastePercent ?? 0;
+
+    public static void SaveHastePercent(string profile, double percent) =>
+        SaveFields(profile, d => d.HastePercent = percent);
 
     // The theme belongs to the game, not the sub-profile: switching class
     // keeps the game's colour.

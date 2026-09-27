@@ -19,7 +19,12 @@ public class FoldSection : ContentControl
         DependencyProperty.Register(nameof(Summary), typeof(string), typeof(FoldSection), new PropertyMetadata(""));
 
     public static readonly DependencyProperty IsOpenProperty =
-        DependencyProperty.Register(nameof(IsOpen), typeof(bool), typeof(FoldSection), new PropertyMetadata(false));
+        DependencyProperty.Register(nameof(IsOpen), typeof(bool), typeof(FoldSection),
+            new PropertyMetadata(false, (d, e) => ((FoldSection)d).IsOpenChanged?.Invoke((bool)e.NewValue)));
+
+    // Raised whenever the fold opens or closes, by click or by code: for a
+    // fold whose state is remembered (the editor's Game mode).
+    public event Action<bool>? IsOpenChanged;
 
     public string Title
     {

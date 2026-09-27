@@ -36,6 +36,8 @@ public partial class RemapCard
     private double _repeatGap;
     private bool _priorityOn;
     private double _prioritySeconds;
+    // World of Warcraft: this sub-profile's haste, for the cooldown calculator.
+    private double _haste;
     // One gap per key (index 0 = Key 1): how long to wait after that key
     // before the next, 0 meaning the executor's default. Rebuilt to the
     // right length rather than trusting saved data blindly — same guard
@@ -64,6 +66,7 @@ public partial class RemapCard
         _priorityOn = behavior.Priority;
         _prioritySeconds = behavior.PrioritySeconds;
         _gameMode = Settings.LoadGameMode();
+        _haste = Settings.LoadHastePercent(KeyMap.ActiveProfile);
 
         int totalKeyCount = 1 + _source.ExtraWords[_id].Count;
         _keyIntervalSeconds = behavior.RepeatKeyIntervalsSeconds.Count == totalKeyCount
@@ -83,11 +86,14 @@ public partial class RemapCard
         SetElementVisible(TimingPanel, _repeatOn || _holdOn, animate: false);
         RebuildKeyIntervalRows();
         UpdateRepeatIntervalVisibility(animate: false);
-        GameModeButton.Tag = _gameMode;
         PriorityButton.Tag = _priorityOn;
         UpdateGapText();
         UpdatePriorityText();
-        SetElementVisible(GamePanel, _gameMode, animate: false);
+        // Game mode is a fold that remembers whether it was left open (app-wide).
+        GameFold.IsOpen = _gameMode;
+        GameFold.IsOpenChanged += open => Settings.SaveGameMode(open);
+        WowFold.IsOpen = GameTiming.GcdSeconds > 0;
+        UpdateHasteRows();
         SetElementVisible(GcdPanel, GameTiming.GcdSeconds > 0, animate: false);
         SetElementVisible(PriorityPanel, _priorityOn, animate: false);
         ChannelButton.Tag = _prioritySeconds > 0;
@@ -483,7 +489,7 @@ public partial class RemapCard
     private string GapText(double seconds) =>
         seconds > 0 ? $"{seconds.ToString("0.0", CultureInfo.InvariantCulture)} s"
         : _repeatGap > 0 ? $"gap ({_repeatGap.ToString("0.0", CultureInfo.InvariantCulture)} s)"
-        : GameTiming.GcdSeconds > 0 ? $"class GCD ({GameTiming.GcdSeconds.ToString("0.0", CultureInfo.InvariantCulture)} s)"
+        : GameTiming.GcdSeconds > 0 ? $"cooldown ({Seconds(GameTiming.GcdSeconds)} s)"
         : "default (0.1 s)";
 
     private void SetGap(int index, double seconds)
@@ -518,48 +524,73 @@ public partial class RemapCard
 
     // ---- Game mode ----
 
-    private void GameModeButton_Click(object sender, RoutedEventArgs e)
-    {
-        _gameMode = !_gameMode;
-        GameModeButton.Tag = _gameMode;
-        Settings.SaveGameMode(_gameMode);
-        SetElementVisible(GamePanel, _gameMode, animate: true);
-    }
-
-    // The class GCD belongs to the sub-profile, not this mapping (see
+    // The cooldown belongs to the sub-profile, not this mapping (see
     // GameTiming), so every editor shows and edits the same value. Off is
-    // 0 (none applied); switching on starts at the common 1.5 s.
+    // 0 (none applied); switching on brings back the last value set this
+    // run, or the game's usual 1.5 s the first time.
+    private static double _lastGcd;
+
     private void GcdButton_Click(object sender, RoutedEventArgs e)
     {
         bool on = GameTiming.GcdSeconds <= 0;
-        SetGcd(on ? 1.5 : 0.0);
+        if (!on)
+            _lastGcd = GameTiming.GcdSeconds;
+        SetGcd(on ? (_lastGcd > 0 ? _lastGcd : 1.5) : 0.0);
         SetElementVisible(GcdPanel, on, animate: true);
     }
 
-    private void GcdMostButton_Click(object sender, RoutedEventArgs e) => SetGcd(1.5);
-    private void GcdFastButton_Click(object sender, RoutedEventArgs e) => SetGcd(1.0);
-    private void GcdMinusTenthButton_Click(object sender, RoutedEventArgs e) => SetGcd(Math.Max(0.1, Math.Round(GameTiming.GcdSeconds - 0.1, 1)));
-    private void GcdPlusTenthButton_Click(object sender, RoutedEventArgs e) => SetGcd(Math.Round(GameTiming.GcdSeconds + 0.1, 1));
+    private void GcdMinusTenthButton_Click(object sender, RoutedEventArgs e) => SetGcd(Math.Max(0.1, Math.Round(GameTiming.GcdSeconds - 0.1, 2)));
+    private void GcdPlusTenthButton_Click(object sender, RoutedEventArgs e) => SetGcd(Math.Round(GameTiming.GcdSeconds + 0.1, 2));
 
     private void SetGcd(double seconds)
     {
         GameTiming.Set(seconds);
         RefreshGcdRows();
         UpdateGapText();
-        RebuildKeyIntervalRows(); // their "default" wording follows the GCD
+        RebuildKeyIntervalRows(); // their "default" wording follows the cooldown
     }
 
     private void RefreshGcdRows()
     {
         double gcd = GameTiming.GcdSeconds;
         GcdButton.Tag = gcd > 0;
-        GcdText.Text = gcd > 0 ? $"{gcd.ToString("0.0", CultureInfo.InvariantCulture)} s" : "off";
-        GcdMostButton.Tag = Math.Abs(gcd - 1.5) < 0.001;
-        GcdFastButton.Tag = Math.Abs(gcd - 1.0) < 0.001;
+        GcdText.Text = gcd > 0 ? $"{Seconds(gcd)} s" : "off";
+        WowFold.Summary = gcd > 0 ? $"cooldown {Seconds(gcd)} s" : "";
         string game = KeyMap.ActiveProfile;
         bool several = Settings.LoadSubProfileNames(game).Count > 1;
         string owner = several ? $"the {Settings.LoadActiveSubProfile(game)} sub-profile" : $"the {game} profile";
-        GcdOwnerHint.Text = $"Set once for {owner}: every infinite repeat in it waits this long between keys. Step it down a little if haste makes abilities queue up.";
+        GcdOwnerHint.Text = $"Set once for {owner}: every infinite repeat in it waits this long between keys, unless a mapping has custom gaps of its own.";
+    }
+
+    // "1.3 s" for a stepped value, "1.33 s" for one the calculator made.
+    private static string Seconds(double value) =>
+        value.ToString(Math.Abs(value * 10 - Math.Round(value * 10)) < 0.001 ? "0.0" : "0.00", CultureInfo.InvariantCulture);
+
+    // ---- The haste calculator ----
+
+    // WoW's rule: the 1.5 s global cooldown over one plus haste, never
+    // under 0.75 s. (The 1 s cooldown of Rogues, cat Druids and Monks
+    // ignores haste, so there is nothing to calculate for it.)
+    private double GcdFromHaste() => Math.Max(0.75, Math.Round(1.5 / (1 + _haste / 100), 2));
+
+    private void HasteStepButton_Click(object sender, RoutedEventArgs e)
+    {
+        double delta = double.Parse((string)((Button)sender).Tag, CultureInfo.InvariantCulture);
+        _haste = Math.Clamp(Math.Round(_haste + delta, 1), 0, 300);
+        Settings.SaveHastePercent(KeyMap.ActiveProfile, _haste);
+        UpdateHasteRows();
+    }
+
+    private void UseHasteButton_Click(object sender, RoutedEventArgs e)
+    {
+        SetGcd(GcdFromHaste());
+        SetElementVisible(GcdPanel, true, animate: true);
+    }
+
+    private void UpdateHasteRows()
+    {
+        HasteText.Text = $"{_haste.ToString("0.0", CultureInfo.InvariantCulture)} %";
+        GcdFromHasteText.Text = $"{GcdFromHaste().ToString("0.00", CultureInfo.InvariantCulture)} s";
     }
 
     private void GapPlusTenthButton_Click(object sender, RoutedEventArgs e) => SetRepeatGap(Math.Round(_repeatGap + 0.1, 1));
@@ -574,7 +605,7 @@ public partial class RemapCard
         SaveBehavior();
     }
 
-    // 0 = this mapping follows the class GCD (or the usual 0.1 s if none).
+    // 0 = this mapping follows the sub-profile cooldown (or the usual 0.1 s if none).
     private void UpdateGapText() => RepeatGapText.Text = GapText(_repeatGap);
 
     private void PriorityButton_Click(object sender, RoutedEventArgs e)
@@ -613,8 +644,8 @@ public partial class RemapCard
     // The Help page lines for game mode, here as well, under a fold.
     private void AddGameInfo()
     {
-        AddInfoLine("Global cooldown", "Switch it on and pick your class: every infinite repeat in this sub-profile then waits one GCD between keys. 1.5 s for most WoW classes, 1.0 s for Rogues, cat-form Druids and Monks; step it down a little if haste makes abilities queue up.");
-        AddInfoLine("Custom gaps between keys", "This mapping waits its own time instead of the class GCD: one gap for all its keys, and a different one after any key if you want.");
+        AddInfoLine("World of Warcraft", "Custom cooldown: switch it on once per sub-profile and every infinite repeat in it waits that long between keys. Put your haste into the calculator for the exact number: 1.5 s over one plus haste, never under 0.75 s. The 1 s cooldown of Rogues, cat Druids and Monks ignores haste.");
+        AddInfoLine("Custom gaps between keys", "This mapping waits its own time instead of the sub-profile cooldown (the everyday tool, since many abilities reset faster than the global cooldown): one gap for all its keys, and a different one after any key if you want.");
         AddInfoLine("Priority", "A priority key can interrupt an infinite repeat. Press it and the repeat pauses, the app waits for the current GCD to finish, your key fires, the repeat pauses one more GCD, then it resumes where it left off.");
         AddInfoLine("Channelled ability", "Tick it on a priority key whose ability channels, and set how long the channel takes, usually two to three seconds. The repeat stays paused that long instead of one GCD.");
         AddInfoLine("Two priority keys in a row", "extend the pause; the second never cuts the first short.");
