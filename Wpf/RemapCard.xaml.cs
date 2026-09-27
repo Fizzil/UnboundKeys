@@ -73,6 +73,14 @@ public partial class RemapCard
             ? new List<double>(behavior.RepeatKeyIntervalsSeconds)
             : new List<double>(new double[totalKeyCount]);
 
+        // A priority key saved before Infinite pause existed, with "one gap"
+        // (0) as its pause, reads as the 1.0 s start.
+        if (_priorityOn && _prioritySeconds < 0.1)
+        {
+            _prioritySeconds = DefaultPauseSeconds;
+            SaveBehavior();
+        }
+
         _resetTapTimer.Tick += (_, _) =>
         {
             _resetTapCount = 0;
@@ -86,18 +94,14 @@ public partial class RemapCard
         SetElementVisible(TimingPanel, _repeatOn || _holdOn, animate: false);
         RebuildKeyIntervalRows();
         UpdateRepeatIntervalVisibility(animate: false);
-        PriorityButton.Tag = _priorityOn;
         UpdateGapText();
-        UpdatePriorityText();
         // Game mode is a fold that remembers whether it was left open (app-wide).
         GameFold.IsOpen = _gameMode;
         GameFold.IsOpenChanged += open => Settings.SaveGameMode(open);
         WowFold.IsOpen = GameTiming.GcdSeconds > 0;
         UpdateHasteRows();
         SetElementVisible(GcdPanel, GameTiming.GcdSeconds > 0, animate: false);
-        SetElementVisible(PriorityPanel, _priorityOn, animate: false);
-        ChannelButton.Tag = _prioritySeconds > 0;
-        SetElementVisible(ChannelPanel, _prioritySeconds > 0, animate: false);
+        RefreshPauseRows(animate: false);
         RefreshGcdRows();
         AddGameInfo();
     }
@@ -608,48 +612,49 @@ public partial class RemapCard
     // 0 = this mapping follows the sub-profile cooldown (or the usual 0.1 s if none).
     private void UpdateGapText() => RepeatGapText.Text = GapText(_repeatGap);
 
-    private void PriorityButton_Click(object sender, RoutedEventArgs e)
+    // ---- Infinite pause ----
+    //
+    // Priority and Channelled ability as one switch and one number
+    // (Fizzil, playtesting): every infinite repeat pauses for
+    // PrioritySeconds while this key fires. The key's own Mode stays
+    // separate; a Hold of the same length is Fizzil's recipe for an
+    // ability that must land whatever the cooldown.
+    private const double DefaultPauseSeconds = 1.0;
+
+    private void PauseButton_Click(object sender, RoutedEventArgs e)
     {
         _priorityOn = !_priorityOn;
-        PriorityButton.Tag = _priorityOn;
-        SetElementVisible(PriorityPanel, _priorityOn, animate: true);
+        _prioritySeconds = _priorityOn ? (_prioritySeconds >= 0.1 ? _prioritySeconds : DefaultPauseSeconds) : 0.0;
+        RefreshPauseRows(animate: true);
         SaveBehavior();
     }
 
-    // A channel = a pause time of its own; off = one GCD (PrioritySeconds 0).
-    private const double DefaultChannelSeconds = 2.5;
+    private void PauseMinusTenthButton_Click(object sender, RoutedEventArgs e) => SetPauseSeconds(Math.Round(_prioritySeconds - 0.1, 1));
+    private void PausePlusTenthButton_Click(object sender, RoutedEventArgs e) => SetPauseSeconds(Math.Round(_prioritySeconds + 0.1, 1));
+    private void PauseResetButton_Click(object sender, RoutedEventArgs e) => SetPauseSeconds(DefaultPauseSeconds);
 
-    private void ChannelButton_Click(object sender, RoutedEventArgs e)
+    private void SetPauseSeconds(double seconds)
     {
-        bool on = _prioritySeconds <= 0;
-        SetPrioritySeconds(on ? DefaultChannelSeconds : 0.0);
-        SetElementVisible(ChannelPanel, on, animate: true);
-    }
-
-    private void PriorityPlusTenthButton_Click(object sender, RoutedEventArgs e) => SetPrioritySeconds(Math.Round(_prioritySeconds + 0.1, 1));
-    private void PriorityPlusOneButton_Click(object sender, RoutedEventArgs e) => SetPrioritySeconds(Math.Round(_prioritySeconds + 1.0, 1));
-    private void PriorityResetButton_Click(object sender, RoutedEventArgs e) => SetPrioritySeconds(DefaultChannelSeconds);
-
-    private void SetPrioritySeconds(double seconds)
-    {
-        _prioritySeconds = seconds;
-        ChannelButton.Tag = _prioritySeconds > 0;
-        UpdatePriorityText();
+        _prioritySeconds = Math.Max(0.1, seconds);
+        RefreshPauseRows(animate: false);
         SaveBehavior();
     }
 
-    private void UpdatePriorityText() =>
-        PriorityText.Text = _prioritySeconds <= 0 ? "one GCD" : $"{_prioritySeconds.ToString("0.0", CultureInfo.InvariantCulture)} s";
+    private void RefreshPauseRows(bool animate)
+    {
+        PauseButton.Tag = _priorityOn;
+        PauseText.Text = $"{_prioritySeconds.ToString("0.0", CultureInfo.InvariantCulture)} s";
+        SetElementVisible(PausePanel, _priorityOn, animate);
+    }
 
     // The Help page lines for game mode, here as well, under a fold.
     private void AddGameInfo()
     {
         AddInfoLine("World of Warcraft", "Custom cooldown: switch it on once per sub-profile and every infinite repeat in it waits that long between keys. Put your haste into the calculator for the exact number: 1.5 s over one plus haste, never under 0.75 s. The 1 s cooldown of Rogues, cat Druids and Monks ignores haste.");
         AddInfoLine("Custom gaps between keys", "This mapping waits its own time instead of the sub-profile cooldown (the everyday tool, since many abilities reset faster than the global cooldown): one gap for all its keys, and a different one after any key if you want.");
-        AddInfoLine("Priority", "A priority key can interrupt an infinite repeat. Press it and the repeat pauses; your key goes out at once, and again just before the cooldown ends if the first press was too early for the game to queue it, so it lands the moment it can. The repeat pauses one more gap, then resumes where it left off.");
-        AddInfoLine("Channelled ability", "Tick it on a priority key whose ability channels, and set how long the channel takes, usually two to three seconds. The repeat stays paused that long instead of one gap.");
-        AddInfoLine("Two priority keys in a row", "extend the pause; the second never cuts the first short.");
-        AddInfoLine("Where it applies", "Any mapping can be a priority key: a spoken word, a mouse button, an on-screen key or a remapped real key. Game mode only shows these rows; the settings work even with it off.");
+        AddInfoLine("Infinite pause", "For a key that must cut into an infinite repeat. Switch it on and set the time: every infinite repeat pauses that long while this key fires, then resumes where it left off. One to two seconds usually does it; a channelled ability wants its cast time. Set the key's own Mode to Hold for the same time and, with the game's press-and-hold casting on, it lands the moment the cooldown allows.");
+        AddInfoLine("Two pause keys in a row", "extend the pause; the second never cuts the first short.");
+        AddInfoLine("Where it applies", "Any mapping can have an infinite pause: a spoken word, a mouse button, an on-screen key or a remapped real key. Game mode only shows these rows; the settings work even with it closed.");
     }
 
     private void AddInfoLine(string lead, string explanation)
@@ -693,12 +698,8 @@ public partial class RemapCard
         SetElementVisible(TimingPanel, _repeatOn || _holdOn, animate: true);
         RebuildKeyIntervalRows();
         UpdateRepeatIntervalVisibility(animate: true);
-        PriorityButton.Tag = false;
         UpdateGapText();
-        UpdatePriorityText();
-        SetElementVisible(PriorityPanel, false, animate: true);
-        ChannelButton.Tag = false;
-        SetElementVisible(ChannelPanel, false, animate: true);
+        RefreshPauseRows(animate: true);
         ResetAllButton.Visibility = Visibility.Collapsed;
     }
 

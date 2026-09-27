@@ -185,39 +185,37 @@
                     </StackPanel>
                 </StackPanel>
 
-                <Button x:Name="PriorityButton" Click="PriorityButton_Click" Style="{StaticResource RailToggleStyle}" Height="48" Margin="4,0,4,0">
+                <!-- Infinite pause (Fizzil, playtesting): Priority and
+                     Channelled ability were one idea in two switches. One
+                     switch and one number now: every infinite repeat pauses
+                     for the time set while this key fires. The key's own
+                     Mode stays separate (Fizzil: it is the key's base
+                     trigger); a Hold of the same length is the recipe that
+                     makes the ability land whatever the cooldown, with the
+                     game's press-and-hold casting on. -->
+                <Button x:Name="PauseButton" Click="PauseButton_Click" Style="{StaticResource RailToggleStyle}" Height="48" Margin="4,0,4,0">
                     <StackPanel>
-                        <TextBlock Text="Priority"/>
-                        <TextBlock Text="Pauses an infinite repeat, fires as soon as it can, then lets it resume" Style="{StaticResource InlineHintStyle}"/>
+                        <TextBlock Text="Infinite pause"/>
+                        <TextBlock Text="Pauses every infinite repeat for the time below while this key fires" Style="{StaticResource InlineHintStyle}"/>
                     </StackPanel>
                 </Button>
-                <StackPanel x:Name="PriorityPanel" Height="0" Visibility="Collapsed" ClipToBounds="True">
-                    <!-- A channel needs its cast time, not one GCD: the switch
-                         reveals the pause time only when it applies (Fizzil). -->
-                    <Button x:Name="ChannelButton" Click="ChannelButton_Click" Style="{StaticResource RailToggleStyle}" Height="48" Margin="20,0,4,0">
-                        <StackPanel>
-                            <TextBlock Text="Channelled ability"/>
-                            <TextBlock Text="Keeps the repeat paused for the cast time below instead of one gap" Style="{StaticResource InlineHintStyle}"/>
+                <StackPanel x:Name="PausePanel" Height="0" Visibility="Collapsed" ClipToBounds="True">
+                    <Grid Height="44">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Pause for" Style="{StaticResource RowLabelStyle}" Margin="28,0,0,0"/>
+                        <TextBlock x:Name="PauseText" Grid.Column="1" Style="{StaticResource ValueTextStyle}"/>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
+                            <Button Content="−0.1 s" Click="PauseMinusTenthButton_Click" Style="{StaticResource StepButtonStyle}"/>
+                            <Button Content="+0.1 s" Click="PausePlusTenthButton_Click" Style="{StaticResource StepButtonStyle}"/>
+                            <Button Content="Reset" Click="PauseResetButton_Click" Style="{StaticResource StepButtonStyle}"/>
                         </StackPanel>
-                    </Button>
-                    <StackPanel x:Name="ChannelPanel" Height="0" Visibility="Collapsed" ClipToBounds="True">
-                        <Grid Height="44">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="Pause the repeat for" Style="{StaticResource RowLabelStyle}" Margin="28,0,0,0"/>
-                            <TextBlock x:Name="PriorityText" Grid.Column="1" Style="{StaticResource ValueTextStyle}"/>
-                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
-                                <Button Content="+0.1 s" Click="PriorityPlusTenthButton_Click" Style="{StaticResource StepButtonStyle}"/>
-                                <Button Content="+1 s" Click="PriorityPlusOneButton_Click" Style="{StaticResource StepButtonStyle}"/>
-                                <Button Content="Reset" Click="PriorityResetButton_Click" Style="{StaticResource StepButtonStyle}"/>
-                            </StackPanel>
-                        </Grid>
-                        <TextBlock Text="How long the channel takes, usually two to three seconds. Reset goes back to 2.5 s."
-                                   Style="{StaticResource RowHintStyle}" Margin="28,0,12,8"/>
-                    </StackPanel>
+                    </Grid>
+                    <TextBlock Text="One to two seconds usually does it; a channelled ability wants its cast time. Reset goes back to 1.0 s. Set this key's Mode to Hold for the same time and it lands every time."
+                               Style="{StaticResource RowHintStyle}" Margin="28,0,12,8"/>
                 </StackPanel>
 
                 <!-- The explanations, where the switches are (Fizzil): a fold
