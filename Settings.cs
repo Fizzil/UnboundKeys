@@ -83,15 +83,6 @@ internal static class Settings
         public Dictionary<string, List<ushort>> VirtualExtraKeys { get; set; } = new();
         public Dictionary<string, KeyBehavior> VirtualBehaviors { get; set; } = new();
 
-        // Game mode: this sub-profile (class) global cooldown, in seconds;
-        // 0 = not set. Every infinite repeat in it waits this long between
-        // keys unless the mapping sets its own gap (see GameTiming).
-        public double GcdSeconds { get; set; }
-
-        // Game mode, World of Warcraft: the haste this sub-profile (class)
-        // has, in percent, for the cooldown calculator (see RemapCard).
-        public double HastePercent { get; set; }
-
         // A JSON round trip is the one deep copy this file needs (a new
         // sub-profile starts as a copy of the active one).
         public MappingSet Clone() =>
@@ -188,10 +179,6 @@ internal static class Settings
         // with the voice keys paused.
         public bool StartWithWindows { get; set; }
         public bool AutoStartPaused { get; set; }
-
-        // The editor Game mode switch (see RemapCard): app-wide, so it stays
-        // on across every editor once a game is being set up.
-        public bool GameMode { get; set; }
 
         // Pre-profiles shape — only ever read, for one-time migration.
         public Dictionary<string, ushort>? KeyMap { get; set; }
@@ -470,15 +457,6 @@ internal static class Settings
         Write(saved);
     }
 
-    public static bool LoadGameMode() => Read().GameMode;
-
-    public static void SaveGameMode(bool on)
-    {
-        var saved = Read();
-        saved.GameMode = on;
-        Write(saved);
-    }
-
     // ---- Mappings, through the game's active sub-profile --------------
 
     // Shared body for every Load* method below: only the MappingSet field
@@ -525,19 +503,6 @@ internal static class Settings
 
     public static Dictionary<string, KeyBehavior> LoadVirtualBehaviors(string profile, Dictionary<string, KeyBehavior> defaults) =>
         LoadField(profile, defaults, d => d.VirtualBehaviors);
-
-    // The active sub-profile global cooldown (see GameTiming).
-    public static double LoadGcdSeconds(string profile) =>
-        Resolve(Read(), profile)?.GcdSeconds ?? 0;
-
-    public static void SaveGcdSeconds(string profile, double seconds) =>
-        SaveFields(profile, d => d.GcdSeconds = seconds);
-
-    public static double LoadHastePercent(string profile) =>
-        Resolve(Read(), profile)?.HastePercent ?? 0;
-
-    public static void SaveHastePercent(string profile, double percent) =>
-        SaveFields(profile, d => d.HastePercent = percent);
 
     // The theme belongs to the game, not the sub-profile: switching class
     // keeps the game's colour.

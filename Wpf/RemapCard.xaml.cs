@@ -29,20 +29,10 @@ public partial class RemapCard
     private bool _holdOn;
     private double _duration;
     private bool _infiniteOn;
-    private bool _useCustomRepeatIntervals;
-    // Game mode (see the XAML comment): the gap after every repeated key,
-    // and priority with its hold time, all in seconds (0 = the defaults).
-    private bool _gameMode;
-    private double _repeatGap;
+    // Infinite pause (see the XAML comment): every infinite repeat pauses
+    // for _prioritySeconds while this key fires.
     private bool _priorityOn;
     private double _prioritySeconds;
-    // World of Warcraft: this sub-profile's haste, for the cooldown calculator.
-    private double _haste;
-    // One gap per key (index 0 = Key 1): how long to wait after that key
-    // before the next, 0 meaning the executor's default. Rebuilt to the
-    // right length rather than trusting saved data blindly — same guard
-    // as RemapCardTab (WinForms).
-    private List<double> _keyIntervalSeconds = new();
     private int _resetTapCount;
     private readonly DispatcherTimer _resetTapTimer = new() { Interval = TimeSpan.FromMilliseconds(600) };
 
@@ -61,17 +51,8 @@ public partial class RemapCard
         _holdOn = behavior.Hold;
         _duration = behavior.DurationSeconds;
         _infiniteOn = behavior.Infinite;
-        _useCustomRepeatIntervals = behavior.UseCustomRepeatIntervals;
-        _repeatGap = behavior.RepeatGapSeconds;
         _priorityOn = behavior.Priority;
         _prioritySeconds = behavior.PrioritySeconds;
-        _gameMode = Settings.LoadGameMode();
-        _haste = Settings.LoadHastePercent(KeyMap.ActiveProfile);
-
-        int totalKeyCount = 1 + _source.ExtraWords[_id].Count;
-        _keyIntervalSeconds = behavior.RepeatKeyIntervalsSeconds.Count == totalKeyCount
-            ? new List<double>(behavior.RepeatKeyIntervalsSeconds)
-            : new List<double>(new double[totalKeyCount]);
 
         // A priority key saved before Infinite pause existed, with "one gap"
         // (0) as its pause, reads as the 1.0 s start.
@@ -92,18 +73,7 @@ public partial class RemapCard
         InfiniteButton.Tag = _infiniteOn;
         UpdateDurationText();
         SetElementVisible(TimingPanel, _repeatOn || _holdOn, animate: false);
-        RebuildKeyIntervalRows();
-        UpdateRepeatIntervalVisibility(animate: false);
-        UpdateGapText();
-        // Game mode is a fold that remembers whether it was left open (app-wide).
-        GameFold.IsOpen = _gameMode;
-        GameFold.IsOpenChanged += open => Settings.SaveGameMode(open);
-        WowFold.IsOpen = GameTiming.GcdSeconds > 0;
-        UpdateHasteRows();
-        SetElementVisible(GcdPanel, GameTiming.GcdSeconds > 0, animate: false);
         RefreshPauseRows(animate: false);
-        RefreshGcdRows();
-        AddGameInfo();
     }
 
     // Every "Key N: X" string IRemapSource builds follows the same
@@ -142,16 +112,7 @@ public partial class RemapCard
             }, onDelete: () =>
             {
                 _source.RemoveExtraKey(_id, slotIndex);
-
-                // Keep the per-key gaps in step: slot 0 is always Key 1, so
-                // an extra at slotIndex is gap entry slotIndex + 1.
-                int removedGapIndex = slotIndex + 1;
-                if (removedGapIndex < _keyIntervalSeconds.Count)
-                    _keyIntervalSeconds.RemoveAt(removedGapIndex);
-
                 RebuildKeyGroup();
-                RebuildKeyIntervalRows();
-                UpdateRepeatIntervalVisibility(animate: true);
             });
         }
 
@@ -171,10 +132,7 @@ public partial class RemapCard
             addKeyButton.Click += (_, _) =>
             {
                 _source.AddExtraKey(_id, _source.AddKeySeed(_id));
-                _keyIntervalSeconds.Add(0.0);
                 RebuildKeyGroup();
-                RebuildKeyIntervalRows();
-                UpdateRepeatIntervalVisibility(animate: true);
             };
             KeyGroup.Children.Add(addKeyButton);
         }
@@ -388,7 +346,14 @@ public partial class RemapCard
         _holdOn = hold;
         UpdateModeVisuals();
         SetElementVisible(TimingPanel, _repeatOn || _holdOn, animate: true);
-        UpdateRepeatIntervalVisibility(animate: true);
+        // Infinite pause lives under the timing rows, so Tap (which hides
+        // them) switches it off rather than leaving it set out of sight.
+        if (!_repeatOn && !_holdOn && _priorityOn)
+        {
+            _priorityOn = false;
+            _prioritySeconds = 0.0;
+            RefreshPauseRows(animate: true);
+        }
         SaveBehavior();
     }
 
@@ -436,182 +401,6 @@ public partial class RemapCard
     private void UpdateDurationText() =>
         DurationText.Text = _infiniteOn ? "∞" : $"{_duration.ToString("0.0", CultureInfo.InvariantCulture)} s";
 
-    // ---- Per-key gaps ----
-
-    private void RepeatIntervalButton_Click(object sender, RoutedEventArgs e)
-    {
-        _useCustomRepeatIntervals = !_useCustomRepeatIntervals;
-        RepeatIntervalButton.Tag = _useCustomRepeatIntervals;
-        SaveBehavior();
-        UpdateRepeatIntervalVisibility(animate: true);
-    }
-
-    // One row per key: "After Key N … 0.3 s [+0.1 s] [+1 s] [Reset]".
-    // Rebuilt whenever a key is added/removed or a gap changes.
-    private void RebuildKeyIntervalRows()
-    {
-        KeyIntervalRows.Children.Clear();
-
-        for (int i = 0; i < _keyIntervalSeconds.Count; i++)
-        {
-            int index = i; // captured per-row, not the loop variable
-
-            var row = new Grid { Height = 40 };
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-            // Indented under the switch it belongs to (RowLabelStyle's own
-            // margin is 12; a local value outranks the style's).
-            var label = new TextBlock { Text = $"After Key {index + 1}", Margin = new Thickness(28, 0, 0, 0) };
-            label.SetResourceReference(StyleProperty, "RowLabelStyle");
-            row.Children.Add(label);
-
-            var value = new TextBlock { Text = GapText(_keyIntervalSeconds[index]) };
-            value.SetResourceReference(StyleProperty, "ValueTextStyle");
-            Grid.SetColumn(value, 1);
-            row.Children.Add(value);
-
-            var buttons = new StackPanel
-            {
-                Orientation = System.Windows.Controls.Orientation.Horizontal,
-                VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(0, 0, 8, 0),
-            };
-            buttons.Children.Add(StepButton("+0.1 s", () => SetGap(index, Math.Round(_keyIntervalSeconds[index] + 0.1, 1))));
-            buttons.Children.Add(StepButton("+1 s", () => SetGap(index, Math.Round(_keyIntervalSeconds[index] + 1.0, 1))));
-            buttons.Children.Add(StepButton("Reset", () => SetGap(index, 0.0)));
-            Grid.SetColumn(buttons, 2);
-            row.Children.Add(buttons);
-
-            KeyIntervalRows.Children.Add(row);
-        }
-    }
-
-    // 0 isn't "no gap" — it's "the executor's usual 0.1 s" (see
-    // KeyExecutor.GapMsAfterKey), so say so instead of showing 0.0 s.
-    private string GapText(double seconds) =>
-        seconds > 0 ? $"{seconds.ToString("0.0", CultureInfo.InvariantCulture)} s"
-        : _repeatGap > 0 ? $"gap ({_repeatGap.ToString("0.0", CultureInfo.InvariantCulture)} s)"
-        : GameTiming.GcdSeconds > 0 ? $"cooldown ({Seconds(GameTiming.GcdSeconds)} s)"
-        : "default (0.1 s)";
-
-    private void SetGap(int index, double seconds)
-    {
-        _keyIntervalSeconds[index] = seconds;
-        RebuildKeyIntervalRows();
-        SaveBehavior();
-    }
-
-    private static Button StepButton(string text, Action onClick)
-    {
-        var button = new Button { Content = text };
-        button.SetResourceReference(StyleProperty, "StepButtonStyle");
-        button.Click += (_, _) => onClick();
-        return button;
-    }
-
-    // Custom gaps only apply to Repeat; if that stops being true the
-    // feature switches itself off. The mapping-wide gap shows whenever it
-    // is on; a row per key only with two or more keys.
-    private void UpdateRepeatIntervalVisibility(bool animate)
-    {
-        bool canCustomize = _repeatOn;
-        if (!canCustomize && _useCustomRepeatIntervals)
-            _useCustomRepeatIntervals = false;
-        RepeatIntervalButton.Tag = _useCustomRepeatIntervals;
-
-        SetElementVisible(GapsPanel, canCustomize, animate);
-        SetElementVisible(CustomGapRows, canCustomize && _useCustomRepeatIntervals, animate);
-        SetElementVisible(KeyIntervalRows, canCustomize && _useCustomRepeatIntervals && _source.ExtraWords[_id].Count >= 1, animate);
-    }
-
-    // ---- Game mode ----
-
-    // The cooldown belongs to the sub-profile, not this mapping (see
-    // GameTiming), so every editor shows and edits the same value. Off is
-    // 0 (none applied); switching on brings back the last value set this
-    // run, or the game's usual 1.5 s the first time.
-    private static double _lastGcd;
-
-    private void GcdButton_Click(object sender, RoutedEventArgs e)
-    {
-        bool on = GameTiming.GcdSeconds <= 0;
-        if (!on)
-            _lastGcd = GameTiming.GcdSeconds;
-        SetGcd(on ? (_lastGcd > 0 ? _lastGcd : 1.5) : 0.0);
-        SetElementVisible(GcdPanel, on, animate: true);
-    }
-
-    private void GcdMinusTenthButton_Click(object sender, RoutedEventArgs e) => SetGcd(Math.Max(0.1, Math.Round(GameTiming.GcdSeconds - 0.1, 2)));
-    private void GcdPlusTenthButton_Click(object sender, RoutedEventArgs e) => SetGcd(Math.Round(GameTiming.GcdSeconds + 0.1, 2));
-
-    private void SetGcd(double seconds)
-    {
-        GameTiming.Set(seconds);
-        RefreshGcdRows();
-        UpdateGapText();
-        RebuildKeyIntervalRows(); // their "default" wording follows the cooldown
-    }
-
-    private void RefreshGcdRows()
-    {
-        double gcd = GameTiming.GcdSeconds;
-        GcdButton.Tag = gcd > 0;
-        GcdText.Text = gcd > 0 ? $"{Seconds(gcd)} s" : "off";
-        WowFold.Summary = gcd > 0 ? $"cooldown {Seconds(gcd)} s" : "";
-        string game = KeyMap.ActiveProfile;
-        bool several = Settings.LoadSubProfileNames(game).Count > 1;
-        string owner = several ? $"the {Settings.LoadActiveSubProfile(game)} sub-profile" : $"the {game} profile";
-        GcdOwnerHint.Text = $"Set once for {owner}: every infinite repeat in it waits this long between keys, unless a mapping has custom gaps of its own.";
-    }
-
-    // "1.3 s" for a stepped value, "1.33 s" for one the calculator made.
-    private static string Seconds(double value) =>
-        value.ToString(Math.Abs(value * 10 - Math.Round(value * 10)) < 0.001 ? "0.0" : "0.00", CultureInfo.InvariantCulture);
-
-    // ---- The haste calculator ----
-
-    // WoW's rule: the 1.5 s global cooldown over one plus haste, never
-    // under 0.75 s. (The 1 s cooldown of Rogues, cat Druids and Monks
-    // ignores haste, so there is nothing to calculate for it.)
-    private double GcdFromHaste() => Math.Max(0.75, Math.Round(1.5 / (1 + _haste / 100), 2));
-
-    private void HasteStepButton_Click(object sender, RoutedEventArgs e)
-    {
-        double delta = double.Parse((string)((Button)sender).Tag, CultureInfo.InvariantCulture);
-        _haste = Math.Clamp(Math.Round(_haste + delta, 1), 0, 300);
-        Settings.SaveHastePercent(KeyMap.ActiveProfile, _haste);
-        UpdateHasteRows();
-    }
-
-    private void UseHasteButton_Click(object sender, RoutedEventArgs e)
-    {
-        SetGcd(GcdFromHaste());
-        SetElementVisible(GcdPanel, true, animate: true);
-    }
-
-    private void UpdateHasteRows()
-    {
-        HasteText.Text = $"{_haste.ToString("0.0", CultureInfo.InvariantCulture)} %";
-        GcdFromHasteText.Text = $"{GcdFromHaste().ToString("0.00", CultureInfo.InvariantCulture)} s";
-    }
-
-    private void GapPlusTenthButton_Click(object sender, RoutedEventArgs e) => SetRepeatGap(Math.Round(_repeatGap + 0.1, 1));
-    private void GapPlusOneButton_Click(object sender, RoutedEventArgs e) => SetRepeatGap(Math.Round(_repeatGap + 1.0, 1));
-    private void GapResetButton_Click(object sender, RoutedEventArgs e) => SetRepeatGap(0.0);
-
-    private void SetRepeatGap(double seconds)
-    {
-        _repeatGap = seconds;
-        UpdateGapText();
-        RebuildKeyIntervalRows(); // their "default" wording follows the gap
-        SaveBehavior();
-    }
-
-    // 0 = this mapping follows the sub-profile cooldown (or the usual 0.1 s if none).
-    private void UpdateGapText() => RepeatGapText.Text = GapText(_repeatGap);
-
     // ---- Infinite pause ----
     //
     // Priority and Channelled ability as one switch and one number
@@ -647,32 +436,8 @@ public partial class RemapCard
         SetElementVisible(PausePanel, _priorityOn, animate);
     }
 
-    // The Help page lines for game mode, here as well, under a fold.
-    private void AddGameInfo()
-    {
-        AddInfoLine("World of Warcraft", "Custom cooldown: switch it on once per sub-profile and every infinite repeat in it waits that long between keys. Put your haste into the calculator for the exact number: 1.5 s over one plus haste, never under 0.75 s. The 1 s cooldown of Rogues, cat Druids and Monks ignores haste.");
-        AddInfoLine("Custom gaps between keys", "This mapping waits its own time instead of the sub-profile cooldown (the everyday tool, since many abilities reset faster than the global cooldown): one gap for all its keys, and a different one after any key if you want.");
-        AddInfoLine("Infinite pause", "For a key that must cut into an infinite repeat. Switch it on and set the time: every infinite repeat pauses that long while this key fires, then resumes where it left off. One to two seconds usually does it; a channelled ability wants its cast time. Set the key's own Mode to Hold for the same time and, with the game's press-and-hold casting on, it lands the moment the cooldown allows.");
-        AddInfoLine("Two pause keys in a row", "extend the pause; the second never cuts the first short.");
-        AddInfoLine("Where it applies", "Any mapping can have an infinite pause: a spoken word, a mouse button, an on-screen key or a remapped real key. Game mode only shows these rows; the settings work even with it closed.");
-    }
-
-    private void AddInfoLine(string lead, string explanation)
-    {
-        var line = new TextBlock { FontSize = 12, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(12, 3, 12, 3) };
-        var leadRun = new System.Windows.Documents.Run(lead);
-        leadRun.SetResourceReference(System.Windows.Documents.TextElement.ForegroundProperty, "TextPrimaryBrush");
-        line.Inlines.Add(leadRun);
-        line.Inlines.Add(new System.Windows.Documents.Run("  " + explanation));
-        line.SetResourceReference(TextBlock.ForegroundProperty, "TextSecondaryBrush");
-        GameInfoLines.Children.Add(line);
-    }
-
-    // ---- Save / Reset ----
-
     private void SaveBehavior() =>
-        _source.SetBehavior(_id, _repeatOn, _holdOn, _duration, _infiniteOn,
-            _useCustomRepeatIntervals, _keyIntervalSeconds, _repeatGap, _priorityOn, _prioritySeconds);
+        _source.SetBehavior(_id, _repeatOn, _holdOn, _duration, _infiniteOn, _priorityOn, _prioritySeconds);
 
     // Resets everything about this mapping: the key(s), Mode, Infinite,
     // the duration, and every gap.
@@ -686,9 +451,6 @@ public partial class RemapCard
         _holdOn = behavior.Hold;
         _duration = behavior.DurationSeconds;
         _infiniteOn = behavior.Infinite;
-        _keyIntervalSeconds = new List<double> { 0.0 }; // only the primary key remains after reset
-        _useCustomRepeatIntervals = false;
-        _repeatGap = 0.0;
         _priorityOn = false;
         _prioritySeconds = 0.0;
 
@@ -696,9 +458,6 @@ public partial class RemapCard
         InfiniteButton.Tag = _infiniteOn;
         UpdateDurationText();
         SetElementVisible(TimingPanel, _repeatOn || _holdOn, animate: true);
-        RebuildKeyIntervalRows();
-        UpdateRepeatIntervalVisibility(animate: true);
-        UpdateGapText();
         RefreshPauseRows(animate: true);
         ResetAllButton.Visibility = Visibility.Collapsed;
     }

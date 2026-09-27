@@ -26,32 +26,6 @@ internal static class KeyExecutor
     private static void InterruptibleSleep(int ms, CancellationToken token) =>
         token.WaitHandle.WaitOne(ms);
 
-    // A 2+ key word can customize the gap after each key in its sequence
-    // (see KeyBehavior.UseCustomRepeatIntervals) — keyIndex is which key
-    // was just tapped (0 = Key 1), and its own gap value is what to wait
-    // before the next one. A 0 entry, or the feature being off entirely,
-    // means "use the normal fixed gap" above.
-    private static int GapMsAfterKey(KeyBehavior behavior, int keyIndex, int keyCount)
-    {
-        if (behavior.UseCustomRepeatIntervals)
-        {
-            int slot = keyIndex % keyCount;
-            if (slot < behavior.RepeatKeyIntervalsSeconds.Count)
-            {
-                double seconds = behavior.RepeatKeyIntervalsSeconds[slot];
-                if (seconds > 0)
-                    return (int)(seconds * 1000);
-            }
-            // The mapping-wide gap, when its custom gaps are on.
-            if (behavior.RepeatGapSeconds > 0)
-                return (int)(behavior.RepeatGapSeconds * 1000);
-        }
-        // The sub-profile (class) global cooldown, when one is set.
-        if (GameTiming.GcdSeconds > 0)
-            return (int)(GameTiming.GcdSeconds * 1000);
-        return RepeatIntervalMs;
-    }
-
     // Tracks which words/button-ids/physical-key-ids currently have an
     // infinite hold/repeat running, so the next time it's heard/pressed we
     // know to stop it instead of starting another one. Shared across all
@@ -271,7 +245,7 @@ internal static class KeyExecutor
             {
                 TapKeySequentially(keys, i);
                 if (i < keys.Count - 1)
-                    InterruptibleSleep(GapMsAfterKey(behavior, i, keys.Count), token);
+                    InterruptibleSleep(RepeatIntervalMs, token);
             }
         }
         else
@@ -349,7 +323,7 @@ internal static class KeyExecutor
                         if (token.IsCancellationRequested)
                             break;
                         TapKeySequentially(keys, i);
-                        int gapMs = GapMsAfterKey(behavior, i, keys.Count);
+                        int gapMs = RepeatIntervalMs;
                         NoteRepeatKey(gapMs);
                         InterruptibleSleep(gapMs, token);
                         i++;
@@ -547,7 +521,7 @@ internal static class KeyExecutor
                     if (!IsEngaged(word) || token.IsCancellationRequested)
                         break;
                     TapKeySequentially(keys, i);
-                    int gapMs = GapMsAfterKey(behavior, i, keys.Count);
+                    int gapMs = RepeatIntervalMs;
                     NoteRepeatKey(gapMs);
                     InterruptibleSleep(gapMs, token);
                     i++;

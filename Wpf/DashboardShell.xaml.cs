@@ -167,7 +167,6 @@ public partial class DashboardShell
             return;
 
         KeyMap.SwitchProfile(name);
-        GameTiming.Reload();
         MouseMap.SwitchProfile(name);
         VirtualKeyMap.SwitchProfile(name);
         ThemeMode.SwitchProfile(name);
@@ -199,7 +198,6 @@ public partial class DashboardShell
             return;
         }
         KeyMap.SwitchProfile(game);
-        GameTiming.Reload();
         MouseMap.SwitchProfile(game);
         VirtualKeyMap.SwitchProfile(game);
         ShowProfileOnRail();

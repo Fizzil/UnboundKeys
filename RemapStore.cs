@@ -117,7 +117,7 @@ internal sealed class RemapStore
         return keys;
     }
 
-    public void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool useCustomRepeatIntervals, List<double> repeatKeyIntervalsSeconds, double repeatGapSeconds, bool priority, double prioritySeconds)
+    public void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool priority, double prioritySeconds)
     {
         Behaviors[id] = new KeyBehavior
         {
@@ -125,9 +125,6 @@ internal sealed class RemapStore
             Hold = hold,
             DurationSeconds = durationSeconds,
             Infinite = infinite,
-            UseCustomRepeatIntervals = useCustomRepeatIntervals,
-            RepeatKeyIntervalsSeconds = new List<double>(repeatKeyIntervalsSeconds),
-            RepeatGapSeconds = repeatGapSeconds,
             Priority = priority,
             PrioritySeconds = prioritySeconds,
         };

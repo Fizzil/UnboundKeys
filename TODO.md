@@ -41,3 +41,5 @@ heavy machinery for what it does. It's not premature complexity — it's a
 direct, hard-won fix for a specific bug (infinite repeat stopping itself
 after a few taps). A simpler-looking version was tried and failed. Read
 the comments in place before touching it.
+
+- **Cooldown rethink** (2026-09-27, Fizzil): a loop through several abilities wastes global cooldowns on abilities still on their own cooldown, so any shared cooldown or per-key gap presses into nothing. The right version has to know each ability's own cooldown. Game mode, the class cooldown, the haste calculator and custom gaps between keys were removed from the editor pending that; the code is in history at tag v4.2.0.
