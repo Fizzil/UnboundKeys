@@ -169,6 +169,9 @@ internal static class Settings
         // keyboard makes (see KeyClick). On unless switched off.
         public bool KeyClickSound { get; set; } = true;
 
+        // The Mouse page start card has been read (Got it clicked) once.
+        public bool StartCardDismissed { get; set; }
+
         // Where the dashboard window was last left — null until it has
         // been moved, in which case it opens centered.
         public double? DashboardLeft { get; set; }
@@ -434,6 +437,15 @@ internal static class Settings
     {
         var saved = Read();
         saved.KeyboardScale = scale;
+        Write(saved);
+    }
+
+    public static bool LoadStartCardDismissed() => Read().StartCardDismissed;
+
+    public static void SaveStartCardDismissed()
+    {
+        var saved = Read();
+        saved.StartCardDismissed = true;
         Write(saved);
     }
 

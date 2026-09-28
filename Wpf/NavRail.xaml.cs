@@ -20,7 +20,12 @@ public partial class NavRail
     public event Action? ProfileChipClicked;
     public event Action? ListeningToggled;
     public event Action? FadeToggled;
+    public event Action? StopRequested;
     public event Action? QuitRequested;
+
+    // The Stop row says "Stopped" for a moment after a click, so the click
+    // visibly did something even when nothing was running.
+    private readonly System.Windows.Threading.DispatcherTimer _stoppedTimer = new() { Interval = TimeSpan.FromSeconds(1.2) };
 
     public NavRail()
     {
@@ -77,4 +82,20 @@ public partial class NavRail
     private void ProfileChip_Click(object sender, RoutedEventArgs e) => ProfileChipClicked?.Invoke();
     private void ListeningToggle_Click(object sender, RoutedEventArgs e) => ListeningToggled?.Invoke();
     private void FadeToggle_Click(object sender, RoutedEventArgs e) => FadeToggled?.Invoke();
+
+    private void StopButton_Click(object sender, RoutedEventArgs e)
+    {
+        StopRequested?.Invoke();
+        StopLabel.Text = "Stopped";
+        _stoppedTimer.Stop();
+        _stoppedTimer.Tick -= StoppedTimer_Tick;
+        _stoppedTimer.Tick += StoppedTimer_Tick;
+        _stoppedTimer.Start();
+    }
+
+    private void StoppedTimer_Tick(object? sender, EventArgs e)
+    {
+        _stoppedTimer.Stop();
+        StopLabel.Text = "Stop";
+    }
 }

@@ -64,6 +64,16 @@ public class NoActivateWindow : Window
         SourceInitialized += OnSourceInitialized;
     }
 
+    // These windows never want keyboard input: nothing in them is typed
+    // into, and every button is non-focusable. Should a keystroke reach
+    // one anyway (the window got activated by a taskbar click, say), it is
+    // swallowed here rather than "clicking" whatever happens to hold
+    // focus — a stray Space once toggled something and could not be
+    // caught in the act.
+    protected override void OnPreviewKeyDown(System.Windows.Input.KeyEventArgs e) => e.Handled = true;
+    protected override void OnPreviewKeyUp(System.Windows.Input.KeyEventArgs e) => e.Handled = true;
+    protected override void OnPreviewTextInput(System.Windows.Input.TextCompositionEventArgs e) => e.Handled = true;
+
     private void OnSourceInitialized(object? sender, EventArgs e)
     {
         var hwnd = new WindowInteropHelper(this).Handle;

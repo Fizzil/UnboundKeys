@@ -6,12 +6,26 @@
          (BUTTONS, then SCROLL WHEEL — the same grouping Discord's settings
          use for related rows). Hovering either side lights the other, and
          clicking either opens that button's editor. -->
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
-        <local:MouseDiagram x:Name="Diagram" Width="160" VerticalAlignment="Top" Margin="4,12,24,0"/>
-        <StackPanel x:Name="Rows" Grid.Column="1"/>
-    </Grid>
+    <StackPanel>
+        <!-- Start here (Fizzil: the whole app in three lines, for someone
+             who has just unzipped it), shown until Got it is clicked once
+             (Settings.StartCardDismissed). -->
+        <Border x:Name="StartCard" CornerRadius="6" Background="{DynamicResource ElevatedBrush}" Margin="4,8,8,6" Padding="14,10,14,12">
+            <StackPanel>
+                <TextBlock Text="START HERE" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,4"/>
+                <TextBlock Text="1.  Click a mouse button on the drawing below and pick the key it should send." FontSize="12" TextWrapping="Wrap" Margin="0,2,0,2" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                <TextBlock Text="2.  Say &quot;press one&quot; to &quot;press ten&quot;: each word sends a key you choose on the Voice page." FontSize="12" TextWrapping="Wrap" Margin="0,2,0,2" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                <TextBlock Text="3.  The Keyboard page opens an on-screen keyboard you type on with the mouse. Stop, at the bottom left, lets go of everything." FontSize="12" TextWrapping="Wrap" Margin="0,2,0,2" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                <Button x:Name="GotItButton" Content="Got it" Style="{StaticResource SecondaryButtonStyle}" Height="32" Padding="14,0,14,0" HorizontalAlignment="Right" Margin="0,6,0,0"/>
+            </StackPanel>
+        </Border>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <local:MouseDiagram x:Name="Diagram" Width="160" VerticalAlignment="Top" Margin="4,12,24,0"/>
+            <StackPanel x:Name="Rows" Grid.Column="1"/>
+        </Grid>
+    </StackPanel>
 </UserControl>

@@ -67,6 +67,8 @@ public partial class DashboardShell
         Rail.ListeningToggled += ListeningMode.Toggle;
         Rail.FadeToggled += FadeMode.Toggle;
         Rail.QuitRequested += () => QuitRequested?.Invoke();
+        // The rail's Stop: the same release as "press stop", off the UI thread.
+        Rail.StopRequested += () => System.Threading.Tasks.Task.Run(KeyExecutor.ReleaseAll);
         ListeningMode.Changed += () => Rail.SetListening(!ListeningMode.IsPaused);
         FadeMode.Changed += () => Rail.SetFade(FadeMode.IsOn);
         // Covers a swatch click and a profile switch alike — ThemeMode

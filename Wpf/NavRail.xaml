@@ -79,7 +79,17 @@
                  app from Task Manager, never having found it in Settings):
                  the last row of the rail, two clicks to confirm like the
                  Settings one, the label saying so while armed. -->
-            <Button x:Name="QuitButton" Style="{StaticResource NavRailButtonStyle}" Height="40" Margin="8,4,8,0">
+            <!-- Stop, in plain sight: the panic button ("press stop", Caps
+                 twice) as a row anyone can find. One click, no confirm —
+                 letting go of everything is never the wrong thing. -->
+            <Button x:Name="StopButton" Style="{StaticResource NavRailButtonStyle}" Height="40" Margin="8,4,8,0"
+                    ToolTip="Lets go of every held or repeating key" Click="StopButton_Click">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE71A;" FontFamily="Segoe MDL2 Assets" FontSize="14" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <TextBlock x:Name="StopLabel" Text="Stop" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+            <Button x:Name="QuitButton" Style="{StaticResource NavRailButtonStyle}" Height="40" Margin="8,0,8,0">
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="&#xE7E8;" FontFamily="Segoe MDL2 Assets" FontSize="14" VerticalAlignment="Center" Margin="0,0,10,0"/>
                     <TextBlock x:Name="QuitLabel" Text="Quit" VerticalAlignment="Center"/>

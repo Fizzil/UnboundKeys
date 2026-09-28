@@ -18,6 +18,14 @@ public partial class MousePage : IDashboardPage
     {
         InitializeComponent();
 
+        // The start card, until it has been read once.
+        StartCard.Visibility = Settings.LoadStartCardDismissed() ? Visibility.Collapsed : Visibility.Visible;
+        GotItButton.Click += (_, _) =>
+        {
+            StartCard.Visibility = Visibility.Collapsed;
+            Settings.SaveStartCardDismissed();
+        };
+
         var hint = new TextBlock
         {
             Text = "Click a button on the mouse, or its row, to change what it sends.",

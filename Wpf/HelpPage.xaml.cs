@@ -38,7 +38,8 @@ public partial class HelpPage : IDashboardPage
         AddLine("Infinite pause", "in the editor, under Infinite, for a key that must cut into an infinite repeat: every infinite repeat pauses for the time you set (1.0 s to start) while the key fires, then resumes. Set that key's Mode to Hold for the same time and, with the game's press-and-hold casting on, it lands whatever the cooldown.");
 
         AddHeader("SAFETY NETS", topMargin: 6);
-        AddLine($"\"press {VoiceEngine.StopWord}\"", "lets go of everything, whatever is mapped.");
+        AddLine("Stop, on the rail", "lets go of everything, whatever is mapped, with one click.");
+        AddLine($"\"press {VoiceEngine.StopWord}\"", "does the same by voice.");
         AddLine("Caps, twice quickly", "on the on-screen keyboard releases everything and lifts Fade. A real Caps Lock key does the same and also shows or hides this dashboard.");
         AddLine("Switching windows", "releases everything too, so alt-tab or a new browser tab never leaves a key stuck.");
         AddLine("Left Click", "is never remapped, so you can always click.");
