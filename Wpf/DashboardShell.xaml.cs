@@ -66,6 +66,7 @@ public partial class DashboardShell
         Rail.ProfileChipClicked += ToggleProfileFlyout;
         Rail.ListeningToggled += ListeningMode.Toggle;
         Rail.FadeToggled += FadeMode.Toggle;
+        Rail.QuitRequested += () => QuitRequested?.Invoke();
         ListeningMode.Changed += () => Rail.SetListening(!ListeningMode.IsPaused);
         FadeMode.Changed += () => Rail.SetFade(FadeMode.IsOn);
         // Covers a swatch click and a profile switch alike — ThemeMode

@@ -75,6 +75,16 @@
             </Button>
             <Button x:Name="ListeningToggle" Content="Listening" Style="{StaticResource RailToggleStyle}" Click="ListeningToggle_Click"/>
             <Button x:Name="FadeToggle" Content="Fade" Style="{StaticResource RailToggleStyle}" Click="FadeToggle_Click"/>
+            <!-- Quit, where it can be found (a friend of Fizzil's ended the
+                 app from Task Manager, never having found it in Settings):
+                 the last row of the rail, two clicks to confirm like the
+                 Settings one, the label saying so while armed. -->
+            <Button x:Name="QuitButton" Style="{StaticResource NavRailButtonStyle}" Height="40" Margin="8,4,8,0">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE7E8;" FontFamily="Segoe MDL2 Assets" FontSize="14" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <TextBlock x:Name="QuitLabel" Text="Quit" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
         </StackPanel>
     </Grid>
 </UserControl>

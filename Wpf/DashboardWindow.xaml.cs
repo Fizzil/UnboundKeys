@@ -6,6 +6,9 @@ namespace UnboundKeys.Wpf;
 public partial class DashboardWindow
 {
     public event Action? QuitRequested;
+    // The X was clicked: the window hid to the tray (Program tells the tray
+    // icon, which says so once).
+    public event Action? HiddenByClose;
 
     public DashboardWindow()
     {
@@ -15,7 +18,11 @@ public partial class DashboardWindow
         // DashboardShell's constructor is internal.
         var shell = new DashboardShell();
         shell.MinimizeRequested += () => WindowState = WindowState.Minimized;
-        shell.CloseRequested += Hide;
+        shell.CloseRequested += () =>
+        {
+            Hide();
+            HiddenByClose?.Invoke();
+        };
         shell.QuitRequested += () => QuitRequested?.Invoke();
         shell.ToggleRequested += ToggleVisible;
         Root.Children.Add(shell);

@@ -41,7 +41,7 @@
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                     <Button Content="&#xE921;" Style="{StaticResource WindowButtonStyle}" ToolTip="Minimize" Click="Minimize_Click"/>
-                    <Button Content="&#xE8BB;" Style="{StaticResource WindowButtonStyle}" ToolTip="Close" Click="Close_Click"/>
+                    <Button Content="&#xE8BB;" Style="{StaticResource WindowButtonStyle}" ToolTip="Hide. UnboundKeys keeps running in the tray; Quit is at the bottom of the rail." Click="Close_Click"/>
                 </StackPanel>
                 <Border Style="{StaticResource SectionRuleStyle}" Margin="0" VerticalAlignment="Bottom"/>
             </Grid>

@@ -9,7 +9,8 @@ Everything here works with the left mouse button alone: no right-clicks, no scro
 The dashboard is a fixed-size window with five pages down its left side — **Mouse**, **Keyboard**, **Voice**, **Settings** and **Help** — and, in the bottom-left corner, the current **profile**, a **Listening** switch and a **Fade** switch.
 
 - Drag it by its top strip (the app's name, or the page title). It remembers where you leave it.
-- The **—** and **✕** at the top right minimize and close it. Closing only hides it: UnboundKeys keeps running in the system tray (the skull icon by the clock). Click that icon, press **Menu** on the on-screen keyboard, double-tap Caps Lock on a real keyboard, or say **"press menu"**, to bring it back. If Windows has tucked the icon behind the little **^** arrow, drag it out onto the taskbar once.
+- The **—** and **✕** at the top right minimize and close it. Closing only hides it: UnboundKeys keeps running in the system tray (the skull icon by the clock). Click that icon, press **Menu** on the on-screen keyboard, double-tap Caps Lock on a real keyboard, or say **"press menu"**, to bring it back. If Windows has tucked the icon behind the little **^** arrow, drag it out onto the taskbar once. The first time you close it, the tray icon says so.
+- **Quit** is the last row of the rail: click it once to arm it, then again within four seconds. (It's in Settings too.)
 - It never takes keyboard focus, so a game underneath keeps receiving input while you click around in it.
 - **Quit** is at the bottom of Settings — two clicks, to avoid accidents.
 - **Help** is this manual in one page: the voice commands, the modes, the safety nets and the on-screen keyboard tricks.

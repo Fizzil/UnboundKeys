@@ -124,8 +124,8 @@ static class Program
 
         tray.Clicked += dashboard.ToggleVisible;
         dashboard.QuitRequested += () => app.Shutdown();
-
-        // The active sub-profile global cooldown, before anything can fire.
+        // The first X click: the tray icon says the app is still running.
+        dashboard.HiddenByClose += tray.SayStillRunningOnce;
 
         voice.Start();
         mouse.Start();

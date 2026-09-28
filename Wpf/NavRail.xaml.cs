@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Windows;
+using System.Windows.Controls;
+using UnboundKeys.Themes;
 using Button = System.Windows.Controls.Button;
 
 namespace UnboundKeys.Wpf;
@@ -17,10 +20,25 @@ public partial class NavRail
     public event Action? ProfileChipClicked;
     public event Action? ListeningToggled;
     public event Action? FadeToggled;
+    public event Action? QuitRequested;
 
     public NavRail()
     {
         InitializeComponent();
+
+        // Two clicks within four seconds, the same arm-then-confirm as the
+        // Settings Quit (ConfirmDeleteBehavior sets Tag while armed); the
+        // label says what the second click does, in accent while it waits.
+        ConfirmDeleteBehavior.AttachTo(QuitButton, () => QuitRequested?.Invoke());
+        DependencyPropertyDescriptor.FromProperty(TagProperty, typeof(Button)).AddValueChanged(QuitButton, (_, _) =>
+        {
+            bool armed = QuitButton.Tag is true;
+            QuitLabel.Text = armed ? "Click again to quit" : "Quit";
+            if (armed)
+                QuitLabel.SetResourceReference(TextBlock.ForegroundProperty, "AccentBrush");
+            else
+                QuitLabel.ClearValue(TextBlock.ForegroundProperty);
+        });
 
         _sectionOf = new Dictionary<Button, DashboardSection>
         {
