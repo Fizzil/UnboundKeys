@@ -46,7 +46,7 @@ Clicking a mouse button, a spoken word or a keyboard key opens its editor page (
 
 Saying a word (or pressing a button) again while its Repeat or Hold is still running — Infinite or not — stops it early. That makes a long fixed duration a usable stand-in for Infinite whenever you'd rather have a backstop maximum length.
 
-With several keys: **Tap** and **Hold** press them all together, as a combo like Ctrl+C. **Repeat** cycles through them one at a time — Key 1, then Key 2, and so on, then back to Key 1 — a tenth of a second apart.
+With several keys: **Tap** and **Hold** press them all together, as a combo like Ctrl+C. **Repeat** cycles through them one at a time — Key 1, then Key 2, and so on, then back to Key 1 — a tenth of a second apart. **Rotation** presses all of them in order every tick, a few milliseconds apart, so the game takes the first one that's ready and rejects the rest: a one-button rotation in your own priority order, Key 1 first, with the game deciding what's ready and no cooldown numbers to enter. Leave anything you want to press yourself off the list, and turn the game's error speech down, since the rejected presses say "not ready". Duration, Infinite and Infinite pause work for Rotation as they do for Repeat.
 
 ## The on-screen keyboard
 

@@ -14,6 +14,16 @@ public sealed class KeyBehavior
     public double DurationSeconds { get; set; }
     public bool Infinite { get; set; }
 
+    // Rotation (the editor's fourth Mode; Repeat must be set too): every
+    // tick presses ALL the keys in order a few milliseconds apart instead
+    // of one key per tick. The game takes the first it can and rejects the
+    // rest, so each tick is "the highest-priority ready ability", Key 1
+    // first — a one-button rotation in the player's own order, with no
+    // cooldown knowledge on this side at all (Fizzil: the round-robin loop
+    // kept firing fillers ahead of the big hits just because of where they
+    // sat in it).
+    public bool Rotation { get; set; }
+
     // Infinite pause (the editor's switch of that name): this mapping
     // pauses every running repeat while it fires. It presses at once (and
     // once more just before the running repeat's gap ends, if that was

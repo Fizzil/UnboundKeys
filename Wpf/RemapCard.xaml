@@ -19,10 +19,12 @@
 
             <Border Height="10" Background="Transparent"/>
 
-            <!-- Exactly one of Tap / Repeat / Hold — one segmented control
-                 rather than two independent toggles that happened to
+            <!-- Exactly one of Tap / Repeat / Rotation / Hold — one segmented
+                 control rather than independent toggles that happened to
                  cancel each other. Tap is "neither Repeat nor Hold" in
-                 KeyBehavior terms. -->
+                 KeyBehavior terms; Rotation is Repeat that presses every key
+                 in order each tick, so the game takes the first that is
+                 ready (see KeyBehavior.Rotation). -->
             <Grid Height="48">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -30,9 +32,10 @@
                 </Grid.ColumnDefinitions>
                 <TextBlock Text="Mode" Style="{StaticResource RowLabelStyle}"/>
                 <Border Grid.Column="1" Style="{StaticResource SegmentGroupStyle}" Margin="0,0,8,0">
-                    <UniformGrid Rows="1" Width="288">
+                    <UniformGrid Rows="1" Width="384">
                         <Button x:Name="TapButton" Content="Tap" Click="TapButton_Click" Style="{StaticResource SegmentButtonStyle}"/>
                         <Button x:Name="RepeatButton" Content="Repeat" Click="RepeatButton_Click" Style="{StaticResource SegmentButtonStyle}"/>
+                        <Button x:Name="RotationButton" Content="Rotation" Click="RotationButton_Click" Style="{StaticResource SegmentButtonStyle}"/>
                         <Button x:Name="HoldButton" Content="Hold" Click="HoldButton_Click" Style="{StaticResource SegmentButtonStyle}"/>
                     </UniformGrid>
                 </Border>

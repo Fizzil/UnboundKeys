@@ -93,8 +93,8 @@ public static class VirtualKeyMap
         ExtraWords[id].Count > 0 ||
         Behaviors[id] is not { Repeat: false, Hold: false, Infinite: false, Priority: false };
 
-    public static void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool priority, double prioritySeconds) =>
-        _store.SetBehavior(id, repeat, hold, durationSeconds, infinite, priority, prioritySeconds);
+    public static void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool priority, double prioritySeconds, bool rotation) =>
+        _store.SetBehavior(id, repeat, hold, durationSeconds, infinite, priority, prioritySeconds, rotation);
 
     // Puts a key back to its own natural key, no extras, default behavior.
     public static void ResetToDefault(string id) => _store.ResetToDefault(id);

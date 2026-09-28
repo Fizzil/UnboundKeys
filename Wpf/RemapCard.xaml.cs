@@ -29,6 +29,7 @@ public partial class RemapCard
     private bool _holdOn;
     private double _duration;
     private bool _infiniteOn;
+    private bool _rotation; // Repeat as priority bursts (see KeyBehavior.Rotation)
     // Infinite pause (see the XAML comment): every infinite repeat pauses
     // for _prioritySeconds while this key fires.
     private bool _priorityOn;
@@ -51,6 +52,7 @@ public partial class RemapCard
         _holdOn = behavior.Hold;
         _duration = behavior.DurationSeconds;
         _infiniteOn = behavior.Infinite;
+        _rotation = behavior.Rotation;
         _priorityOn = behavior.Priority;
         _prioritySeconds = behavior.PrioritySeconds;
 
@@ -336,14 +338,18 @@ public partial class RemapCard
 
     private void TapButton_Click(object sender, RoutedEventArgs e) => SetMode(repeat: false, hold: false);
     private void RepeatButton_Click(object sender, RoutedEventArgs e) => SetMode(repeat: true, hold: false);
+    private void RotationButton_Click(object sender, RoutedEventArgs e) => SetMode(repeat: true, hold: false, rotation: true);
     private void HoldButton_Click(object sender, RoutedEventArgs e) => SetMode(repeat: false, hold: true);
 
-    private void SetMode(bool repeat, bool hold)
+    // Rotation is Repeat with the burst pattern, so it shares Repeat's
+    // rows (Duration, Infinite, Infinite pause).
+    private void SetMode(bool repeat, bool hold, bool rotation = false)
     {
-        if (_repeatOn == repeat && _holdOn == hold)
+        if (_repeatOn == repeat && _holdOn == hold && _rotation == rotation)
             return;
         _repeatOn = repeat;
         _holdOn = hold;
+        _rotation = rotation;
         UpdateModeVisuals();
         SetElementVisible(TimingPanel, _repeatOn || _holdOn, animate: true);
         // Infinite pause lives under the timing rows, so Tap (which hides
@@ -360,9 +366,11 @@ public partial class RemapCard
     private void UpdateModeVisuals()
     {
         TapButton.Tag = !_repeatOn && !_holdOn;
-        RepeatButton.Tag = _repeatOn;
+        RepeatButton.Tag = _repeatOn && !_rotation;
+        RotationButton.Tag = _repeatOn && _rotation;
         HoldButton.Tag = _holdOn;
         ModeHint.Text = _holdOn ? "Keeps the keys pressed for the duration below."
+            : _repeatOn && _rotation ? "Presses every key in order each tick, Key 1 first; the game takes the first that is ready. Leave anything you want to press yourself off the list."
             : _repeatOn ? "Taps the keys again and again for the duration below."
             : "Presses the keys once each time.";
     }
@@ -437,7 +445,7 @@ public partial class RemapCard
     }
 
     private void SaveBehavior() =>
-        _source.SetBehavior(_id, _repeatOn, _holdOn, _duration, _infiniteOn, _priorityOn, _prioritySeconds);
+        _source.SetBehavior(_id, _repeatOn, _holdOn, _duration, _infiniteOn, _priorityOn, _prioritySeconds, _rotation);
 
     // Resets everything about this mapping: the key(s), Mode, Infinite,
     // the duration, and every gap.
@@ -451,6 +459,7 @@ public partial class RemapCard
         _holdOn = behavior.Hold;
         _duration = behavior.DurationSeconds;
         _infiniteOn = behavior.Infinite;
+        _rotation = behavior.Rotation;
         _priorityOn = false;
         _prioritySeconds = 0.0;
 

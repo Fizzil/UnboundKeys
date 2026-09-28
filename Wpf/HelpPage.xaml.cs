@@ -32,6 +32,7 @@ public partial class HelpPage : IDashboardPage
         AddLine("Tap", "presses the keys once.");
         AddLine("Repeat", "taps them again and again for the duration. With several keys it cycles through them one at a time.");
         AddLine("Hold", "keeps them pressed for the duration. With several keys it holds them all together, as a combo.");
+        AddLine("Rotation", "presses all the keys in order every tick, a few milliseconds apart, so the game takes the first that is ready: a one-button rotation in your own priority order, Key 1 first, with no cooldown numbers to enter.");
         AddLine("Infinite", "runs until you say the word or press the button again.");
         AddLine("Say or press it again", "to stop a Repeat or Hold early, Infinite or not.");
         AddLine("Infinite pause", "in the editor, under Infinite, for a key that must cut into an infinite repeat: every infinite repeat pauses for the time you set (1.0 s to start) while the key fires, then resumes. Set that key's Mode to Hold for the same time and, with the game's press-and-hold casting on, it lands whatever the cooldown.");

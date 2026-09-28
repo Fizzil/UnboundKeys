@@ -8,7 +8,8 @@ using UnboundKeys;
 // sends, so the pause key's own press and the repeat's resume can be
 // checked in milliseconds rather than believed.
 const ushort F13 = 0x7C; // the repeat key
-const ushort F14 = 0x7D; // the pause key
+const ushort F14 = 0x7D; // the pause key (and a rotation's second key)
+const ushort F15 = 0x7E; // a rotation's third key
 const int WmKeyDown = 0x100;
 const int WmSysKeyDown = 0x104;
 
@@ -20,7 +21,7 @@ LowLevelHook.HookProc proc = (nCode, wParam, lParam) =>
     if (nCode >= 0 && ((int)wParam == WmKeyDown || (int)wParam == WmSysKeyDown))
     {
         ushort vk = (ushort)Marshal.ReadInt32(lParam);
-        if (vk == F13 || vk == F14)
+        if (vk >= F13 && vk <= F15)
             lock (events)
                 events.Add((clock.Elapsed.TotalSeconds, vk));
     }
@@ -43,6 +44,7 @@ bool allPassed = true;
 
 allPassed &= Scenario("a tap with a 2.0 s pause", new KeyBehavior { Priority = true, PrioritySeconds = 2.0 }, expectedPause: 2.0);
 allPassed &= Scenario("Fizzil's recipe: Hold 1.0 s with a 1.0 s pause", new KeyBehavior { Hold = true, DurationSeconds = 1.0, Priority = true, PrioritySeconds = 1.0 }, expectedPause: 1.0);
+allPassed &= RotationScenario();
 
 Console.WriteLine(allPassed ? "ALL PASSED" : "FAILED");
 return allPassed ? 0 : 1;
@@ -100,5 +102,51 @@ bool Scenario(string name, KeyBehavior pause, double expectedPause)
     for (int i = 1; i < Math.Min(after.Count, 5); i++)
         Check(Math.Abs(after[i].T - after[i - 1].T - gap) < 0.08, $"repeat gap after resume {i}: {after[i].T - after[i - 1].T:0.000} s");
 
+    return ok;
+}
+
+// Rotation (see KeyBehavior.Rotation): three keys on one infinite repeat.
+// Every tick should press all three in order a few milliseconds apart,
+// then pause a tenth of a second, then start again from the first.
+bool RotationScenario()
+{
+    Console.WriteLine("--- rotation: bursts in priority order ---");
+    lock (events)
+        events.Clear();
+
+    var keys = new List<(ushort Vk, bool Extended)> { (F13, false), (F14, false), (F15, false) };
+    var rotation = new KeyBehavior { Repeat = true, Infinite = true, Rotation = true };
+
+    clock.Restart();
+    _ = Task.Run(() => KeyExecutor.Execute("three", keys, rotation));
+    Thread.Sleep(1000);
+    KeyExecutor.ReleaseAll();
+    Thread.Sleep(300);
+
+    List<(double T, ushort Vk)> log;
+    lock (events)
+        log = new List<(double, ushort)>(events);
+
+    bool ok = true;
+    void Check(bool condition, string what)
+    {
+        Console.WriteLine($"  [{(condition ? "ok" : "FAIL")}] {what}");
+        ok &= condition;
+    }
+
+    Console.WriteLine($"  {log.Count} keys in a second, {log.Count / 3} bursts");
+    Check(log.Count >= 18, $"several bursts went out (got {log.Count / 3})");
+    var expected = new[] { F13, F14, F15 };
+    bool inOrder = log.Count > 0;
+    for (int i = 0; i < log.Count; i++)
+        inOrder &= log[i].Vk == expected[i % 3];
+    Check(inOrder, "every burst pressed Key 1, Key 2, Key 3 in that order");
+    for (int b = 0; b + 2 < log.Count && b < 9; b += 3)
+        Check(log[b + 2].T - log[b].T < 0.08, $"burst {b / 3 + 1} took {(log[b + 2].T - log[b].T) * 1000:0} ms from its first key to its last");
+    for (int b = 3; b + 2 < log.Count && b < 12; b += 3)
+    {
+        double period = log[b].T - log[b - 3].T;
+        Check(period > 0.10 && period < 0.25, $"burst {b / 3 + 1} began {period * 1000:0} ms after the one before");
+    }
     return ok;
 }

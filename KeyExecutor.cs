@@ -134,6 +134,21 @@ internal static class KeyExecutor
         NativeInput.KeyUp(key.Vk, key.Extended);
     }
 
+    // Rotation (see KeyBehavior.Rotation): every key, in order, a few
+    // milliseconds apart. The game takes the first it can and rejects the
+    // rest, so one burst is "the highest-priority ready ability".
+    private const int BurstGapMs = 15;
+
+    private static void TapBurst(IReadOnlyList<(ushort Vk, bool Extended)> keys, CancellationToken token)
+    {
+        for (int i = 0; i < keys.Count && !token.IsCancellationRequested; i++)
+        {
+            TapKeySequentially(keys, i);
+            if (i < keys.Count - 1)
+                InterruptibleSleep(BurstGapMs, token);
+        }
+    }
+
     // ---- Priority pauses (see KeyBehavior.Priority) ----
     //
     // Every repeat loop (timed or infinite) waits out _pauseUntil before
@@ -239,7 +254,11 @@ internal static class KeyExecutor
     // mapping that is one tap either way); anything else is one combo tap.
     private static void FireOnce(IReadOnlyList<(ushort Vk, bool Extended)> keys, KeyBehavior behavior, CancellationToken token)
     {
-        if (behavior.Repeat)
+        if (behavior.Repeat && behavior.Rotation)
+        {
+            TapBurst(keys, token);
+        }
+        else if (behavior.Repeat)
         {
             for (int i = 0; i < keys.Count && !token.IsCancellationRequested; i++)
             {
@@ -322,7 +341,10 @@ internal static class KeyExecutor
                         WaitOutPause(token);
                         if (token.IsCancellationRequested)
                             break;
-                        TapKeySequentially(keys, i);
+                        if (behavior.Rotation)
+                            TapBurst(keys, token);
+                        else
+                            TapKeySequentially(keys, i);
                         int gapMs = RepeatIntervalMs;
                         NoteRepeatKey(gapMs);
                         InterruptibleSleep(gapMs, token);
@@ -520,7 +542,10 @@ internal static class KeyExecutor
                     WaitOutPause(token);
                     if (!IsEngaged(word) || token.IsCancellationRequested)
                         break;
-                    TapKeySequentially(keys, i);
+                    if (behavior.Rotation)
+                        TapBurst(keys, token);
+                    else
+                        TapKeySequentially(keys, i);
                     int gapMs = RepeatIntervalMs;
                     NoteRepeatKey(gapMs);
                     InterruptibleSleep(gapMs, token);

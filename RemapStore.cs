@@ -117,7 +117,7 @@ internal sealed class RemapStore
         return keys;
     }
 
-    public void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool priority, double prioritySeconds)
+    public void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool priority, double prioritySeconds, bool rotation)
     {
         Behaviors[id] = new KeyBehavior
         {
@@ -127,6 +127,7 @@ internal sealed class RemapStore
             Infinite = infinite,
             Priority = priority,
             PrioritySeconds = prioritySeconds,
+            Rotation = rotation,
         };
         Save();
     }
