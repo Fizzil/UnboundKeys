@@ -33,7 +33,7 @@ public partial class NavRail
         DependencyPropertyDescriptor.FromProperty(TagProperty, typeof(Button)).AddValueChanged(QuitButton, (_, _) =>
         {
             bool armed = QuitButton.Tag is true;
-            QuitLabel.Text = armed ? "Click again to quit" : "Quit";
+            QuitLabel.Text = armed ? "Are you sure?" : "Quit"; // Fizzil's wording; fits the rail beside the glyph
             if (armed)
                 QuitLabel.SetResourceReference(TextBlock.ForegroundProperty, "AccentBrush");
             else
