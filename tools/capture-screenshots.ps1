@@ -55,10 +55,31 @@ $settings = Get-Content "$env:APPDATA\UnboundKeys\settings.json" -Raw | ConvertF
 $originalSize = "Small"
 if ($settings.KeyboardScale -ge 0.99) { $originalSize = "Large" } elseif ($settings.KeyboardScale -ge 0.79) { $originalSize = "Medium" }
 
+Add-Type @"
+using System; using System.Text; using System.Runtime.InteropServices;
+public static class T {
+  [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
+  [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern int GetWindowText(IntPtr h, StringBuilder s, int n);
+  [DllImport("user32.dll")] public static extern bool EnumWindows(EnumProc cb, IntPtr data);
+  public delegate bool EnumProc(IntPtr h, IntPtr data);
+  public static IntPtr FindByTitle(string title) {
+    IntPtr found = IntPtr.Zero;
+    EnumWindows((h, d) => {
+      if (!IsWindowVisible(h)) return true;
+      var sb = new StringBuilder(256); GetWindowText(h, sb, 256);
+      if (sb.ToString() == title) { found = h; return false; }
+      return true; }, IntPtr.Zero);
+    return found;
+  }
+}
+"@
+# By exact title among the visible top-level windows, then wrapped as an
+# automation element. (Filtering the automation root by process id missed
+# the dashboard once when two copies of the app were running.)
 function Get-Window($name) {
-  $cond = New-Object System.Windows.Automation.PropertyCondition($AE::ProcessIdProperty, $proc.Id)
-  foreach ($w in $AE::RootElement.FindAll($TS::Children, $cond)) { if ($w.Current.Name -eq $name) { return $w } }
-  return $null
+  $h = [T]::FindByTitle($name)
+  if ($h -eq [IntPtr]::Zero) { return $null }
+  return [System.Windows.Automation.AutomationElement]::FromHandle($h)
 }
 
 # By title: with the keyboard open, the process's main window handle can
@@ -181,24 +202,33 @@ if ($null -eq $kb) {
 }
 if ($null -eq $kb) { throw "keyboard window not found" }
 Invoke-Button $dash "Large" 900
-$isMini = $null -ne (Find-Button $kb "Maxi")
-if ($isMini) { Save-Window $kb "UBK-Keyboard-Mini.png" 10 } else { Save-Window $kb "UBK-Keyboard.png" 10 }
-if ($Method -eq "sendinput") {
-  if ($isMini) {
-    Push-Key $kb "Maxi"
-    if (-not (Wait-Button $kb "Mini")) { throw "Maxi click did not switch the layout" }
-    Save-Window $kb "UBK-Keyboard.png" 10
-    Push-Key $kb "Mini"
-  } else {
-    Push-Key $kb "Mini"
-    if (-not (Wait-Button $kb "Maxi")) { throw "Mini click did not switch the layout" }
-    Save-Window $kb "UBK-Keyboard-Mini.png" 10
-    Push-Key $kb "Maxi"
+# From here on the keyboard is not as the user left it, so whatever
+# happens below, the size (and an opened keyboard) is put back in finally.
+try {
+  $isMini = $null -ne (Find-Button $kb "Maxi")
+  if ($isMini) { Save-Window $kb "UBK-Keyboard-Mini.png" 10 } else { Save-Window $kb "UBK-Keyboard.png" 10 }
+  if ($Method -eq "sendinput") {
+    # A click right after the size change has missed once (the keys are
+    # rebuilt at the new size); a second try has always landed.
+    if ($isMini) {
+      Push-Key $kb "Maxi"
+      if (-not (Wait-Button $kb "Mini")) { Push-Key $kb "Maxi" }
+      if (-not (Wait-Button $kb "Mini")) { throw "Maxi click did not switch the layout" }
+      Save-Window $kb "UBK-Keyboard.png" 10
+      Push-Key $kb "Mini"
+    } else {
+      Push-Key $kb "Mini"
+      if (-not (Wait-Button $kb "Maxi")) { Push-Key $kb "Mini" }
+      if (-not (Wait-Button $kb "Maxi")) { throw "Mini click did not switch the layout" }
+      Save-Window $kb "UBK-Keyboard-Mini.png" 10
+      Push-Key $kb "Maxi"
+    }
   }
+} finally {
+  Invoke-Button $dash $originalSize 600
+  if ($opened) { Invoke-Button $dash "Show on-screen keyboard" 600 }
+  Invoke-Button $dash "Mouse"
 }
-Invoke-Button $dash $originalSize 600
-if ($opened) { Invoke-Button $dash "Show on-screen keyboard" 600 }
-Invoke-Button $dash "Mouse"
 Log "done"
 } catch {
   Log ("ERROR: " + $_.Exception.Message)

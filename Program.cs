@@ -5,13 +5,21 @@ namespace UnboundKeys;
 // UnboundKeys' whole runtime lives here: the speech engine and the two
 // input hooks feed KeyExecutor, and the WPF dashboard (Wpf/DashboardWindow)
 // plus a tray icon are the user's side of it. The dashboard hides rather
-// than closing, so the app runs until Quit (in the dashboard's Settings);
-// the tray icon or "press menu" brings the dashboard back.
+// than closing, so the app runs until Quit (the rail's last row, or
+// Settings); the tray icon or "press menu" brings the dashboard back.
 static class Program
 {
     [STAThread]
     static void Main()
     {
+        // One copy at a time (see SingleInstance): a second launch hands
+        // over to the running one and leaves, before any hook is set.
+        if (!SingleInstance.Claim())
+        {
+            SingleInstance.AskRunningCopyToShowDashboard();
+            return;
+        }
+
         // Spelled out fully: with both UseWindowsForms (kept for the tray
         // icon) and UseWPF on, a bare "Application" is ambiguous. The
         // dashboard hiding must not end the app, hence explicit shutdown.

@@ -47,6 +47,19 @@ public partial class DashboardWindow
                 SavePlacement();
         };
         Closing += (_, _) => SavePlacement();
+
+        // A second copy of the app, started by mistake, asks this one to
+        // show itself before it quits (see SingleInstance).
+        SourceInitialized += (_, _) =>
+            System.Windows.Interop.HwndSource.FromHwnd(new System.Windows.Interop.WindowInteropHelper(this).Handle)?.AddHook((IntPtr _, int msg, IntPtr _, IntPtr _, ref bool handled) =>
+            {
+                if (msg == SingleInstance.ShowDashboardMessage)
+                {
+                    ShowDashboard();
+                    handled = true;
+                }
+                return IntPtr.Zero;
+            });
     }
 
     public void ToggleVisible()
