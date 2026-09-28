@@ -130,6 +130,8 @@ static class Program
         voice.Start();
         mouse.Start();
         physical.Start();
+        // Shortcuts made to an older release open this one from now on (see Shortcuts.cs).
+        Task.Run(Shortcuts.PointAtThisVersion);
 
         // Started by the sign-in task (see StartupTask) rather than a click:
         // honour "start with voice keys paused". And whenever the setting is
