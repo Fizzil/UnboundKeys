@@ -39,8 +39,8 @@ Left Click is never remappable: it's the one button that always works as a click
 Clicking a mouse button, a spoken word or a keyboard key opens its editor page (**‹ Back** returns to the list).
 
 - **Keys** — Key 1 is what it sends. **+ Add key** adds more, up to six in all; the **✕** beside an extra key removes it (click it once to arm it, then again). Clicking a key's value opens a picker: hover a category on the left, then click a key on the right — hover near the top or bottom edge of a long list to scroll it.
-- **Mode** — **Tap** presses the keys once (the default). **Repeat** taps them again and again. **Hold** keeps them pressed.
-- **Duration** — for Repeat and Hold: how long, in steps of +0.1 s and +1 s, or **Reset** to 0. **Infinite** instead runs until you say the word (or press the button) again; turning Infinite on clears the duration, and changing the duration turns Infinite off.
+- **Mode** — **Tap** presses the keys once (the default). **Repeat** taps them again and again. **Rotation** presses all of them in priority order every tick, so the game takes the first that's ready (see below). **Hold** keeps them pressed.
+- **Duration** — for Repeat, Rotation and Hold: how long, in steps of +0.1 s and +1 s, or **Reset** to 0. **Infinite** instead runs until you say the word (or press the button) again; turning Infinite on clears the duration, and changing the duration turns Infinite off.
 - **Infinite pause** — under Infinite, for a key that must cut into an infinite repeat: switch it on and set the time (1.0 s to start; one to two seconds usually does it, and a channelled ability wants its cast time). Press the key and every infinite repeat pauses that long while it fires, then resumes where it left off. Set that key's Mode to Hold for the same time and, with the game's press-and-hold casting on, the ability lands the moment the cooldown allows. Two such keys in a row extend the pause, and a timed repeat pauses the same way.
 - **Reset this mapping** puts it back to its default. Tapping Reset three times quickly also reveals **Reset every mapping**, the same as Settings → Reset All.
 
