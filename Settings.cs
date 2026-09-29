@@ -160,6 +160,10 @@ internal static class Settings
         public double? KeyboardTop { get; set; }
         public bool KeyboardMini { get; set; }
 
+        // Whether the on-screen keyboard was open (the Keyboard page switch),
+        // so the next start can bring it back (see DashboardShell.RestoreKeyboard).
+        public bool KeyboardShown { get; set; }
+
         // How big the on-screen keyboard is drawn (1.0 = full size).
         // Defaults to about the footprint of Windows' own on-screen
         // keyboard, the one it replaces (Fizzil's ask).
@@ -446,6 +450,15 @@ internal static class Settings
     {
         var saved = Read();
         saved.StartCardDismissed = true;
+        Write(saved);
+    }
+
+    public static bool LoadKeyboardShown() => Read().KeyboardShown;
+
+    public static void SaveKeyboardShown(bool shown)
+    {
+        var saved = Read();
+        saved.KeyboardShown = shown;
         Write(saved);
     }
 

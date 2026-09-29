@@ -108,17 +108,37 @@ public partial class DashboardShell
     }
 
     // The dashboard owns the on-screen keyboard window: one at a time,
-    // shown and hidden from the Keyboard page's switch (and, in Stage C,
-    // from the overlay icon too). Reopens in whichever of Mini/Maxi it was
-    // last left in.
+    // shown and hidden from the Keyboard page's switch. Reopens in
+    // whichever of Mini/Maxi it was last left in. The switch's state is
+    // remembered (Settings.KeyboardShown) so the next start can put the
+    // keyboard back — saved here, on the user's own open and close, and
+    // never on quit, which closes the window without meaning "hidden".
     private void ToggleKeyboard()
     {
         if (_keyboard != null)
         {
             _keyboard.Close();
+            Settings.SaveKeyboardShown(false);
             return;
         }
 
+        OpenKeyboard();
+        Settings.SaveKeyboardShown(true);
+    }
+
+    // At startup: the keyboard comes back if it was open when the app was
+    // last quit. True if it did (Program then leaves the dashboard hidden;
+    // the keyboard's Menu key brings it up).
+    public bool RestoreKeyboard()
+    {
+        if (_keyboard != null || !Settings.LoadKeyboardShown())
+            return false;
+        OpenKeyboard();
+        return true;
+    }
+
+    private void OpenKeyboard()
+    {
         var (_, _, mini) = Settings.LoadKeyboardPlacement();
         var keyboard = new VirtualKeyboardWindow(mini);
         keyboard.Closed += (_, _) =>

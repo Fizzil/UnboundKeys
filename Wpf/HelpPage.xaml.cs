@@ -40,7 +40,7 @@ public partial class HelpPage : IDashboardPage
         AddHeader("SAFETY NETS", topMargin: 6);
         AddLine("Stop, on the rail", "lets go of everything, whatever is mapped, with one click.");
         AddLine($"\"press {VoiceEngine.StopWord}\"", "does the same by voice.");
-        AddLine("Caps, twice quickly", "on the on-screen keyboard releases everything and lifts Fade. A real Caps Lock key does the same and also shows or hides this dashboard.");
+        AddLine("Caps, twice quickly", "on the on-screen keyboard, or a real Caps Lock key, releases everything, lifts Fade, and shows or hides this dashboard.");
         AddLine("Switching windows", "releases everything too, so alt-tab or a new browser tab never leaves a key stuck.");
         AddLine("Left Click", "is never remapped, so you can always click.");
 

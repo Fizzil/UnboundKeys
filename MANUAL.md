@@ -53,7 +53,7 @@ With several keys: **Tap** and **Hold** press them all together, as a combo like
 
 The **Keyboard** page shows a map of the keyboard: the lit keys — the digits and letters — are the ones you can remap; click one to edit it. A key that's been changed shows what it now sends, and the same key on a real keyboard is caught too. Everything else on the keyboard (Tab, Enter, Shift, the arrows…) is a plain key.
 
-**Show on-screen keyboard** opens the keyboard itself — a floating window that stays on top and never takes focus, so it types into whatever is behind it.
+**Show on-screen keyboard** opens the keyboard itself — a floating window that stays on top and never takes focus, so it types into whatever is behind it. If it was open when you last quit, it comes back on the next start where you left it, in the same layout, and the dashboard stays hidden until you press Menu or click the tray icon.
 
 - Click a key to press it; hold it to repeat. Its letter and number keys send whatever they've been remapped to.
 - **Shift, Ctrl, Alt, Win** are sticky: click one (it lights up), then click the key it should combine with — everything lets go together. Click a lit modifier again to cancel it.
@@ -77,7 +77,7 @@ The **Listening** switch pauses the voice keys only. With it off, nothing you sa
 Because Infinite holds and repeats can run indefinitely, UnboundKeys is built so a stuck key is never the only way out:
 
 - Voice keys, mouse keys and the on-screen keyboard each get their own slots: only one *word*, one *mouse button* and one *keyboard key* can be doing an infinite hold at a time (and likewise an infinite repeat) — starting a new one only bumps whichever of the same kind had that slot, never the other kinds. Infinite repeats of different kinds run side by side, each on its own timer, without queueing or blocking one another.
-- **Stop** on the rail, **"press stop"**, two quick clicks of the on-screen keyboard's **Caps**, or a double-tap of a real **Caps Lock** key releases everything currently held or repeating, all at once, no matter what's mapped. The real Caps Lock double-tap also shows the dashboard, or hides it if it was showing. Caps Lock's own on/off state ends up right back where it started, since two real toggles cancel out.
+- **Stop** on the rail, **"press stop"**, two quick clicks of the on-screen keyboard's **Caps**, or a double-tap of a real **Caps Lock** key releases everything currently held or repeating, all at once, no matter what's mapped. Either Caps double-tap also shows the dashboard, or hides it if it was showing. Caps Lock's own on/off state ends up right back where it started, since two real toggles cancel out.
 - Quitting UnboundKeys, or switching away from the game window (alt-tab, or switching browser tabs), releases everything automatically too. Pausing Listening releases whatever the voice keys were holding.
 - The on-screen keyboard's sticky modifiers are released whenever the keyboard closes, so a Shift or Ctrl can't be left held down.
 

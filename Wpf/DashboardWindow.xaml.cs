@@ -10,6 +10,12 @@ public partial class DashboardWindow
     // icon, which says so once).
     public event Action? HiddenByClose;
 
+    private readonly DashboardShell _shell;
+
+    // At startup: the on-screen keyboard comes back if it was open when the
+    // app was last quit (see DashboardShell.RestoreKeyboard).
+    public bool RestoreKeyboard() => _shell.RestoreKeyboard();
+
     public DashboardWindow()
     {
         InitializeComponent();
@@ -17,6 +23,7 @@ public partial class DashboardWindow
         // Built here in code rather than in the XAML because
         // DashboardShell's constructor is internal.
         var shell = new DashboardShell();
+        _shell = shell;
         shell.MinimizeRequested += () => WindowState = WindowState.Minimized;
         shell.CloseRequested += () =>
         {

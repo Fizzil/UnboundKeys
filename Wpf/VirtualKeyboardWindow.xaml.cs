@@ -497,9 +497,11 @@ public partial class VirtualKeyboardWindow
         MiniLayout.Visibility = _isMini ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    // Two quick clicks of Caps: release everything (KeyExecutor.ReleaseAll)
-    // and lift Fade — the panic button a mouse-only user actually has, so
-    // it's also the way out of a screen too faded to find the Fade switch.
+    // Two quick clicks of Caps: release everything (KeyExecutor.ReleaseAll),
+    // lift Fade, and show or hide the dashboard — the same three things a
+    // real Caps Lock's double-tap does (Fizzil: one safety net, wherever
+    // Caps is). The panic button a mouse-only user actually has, so it's
+    // also the way out of a screen too faded to find the Fade switch.
     private void HandleCapsLockPanicTap()
     {
         var now = DateTime.UtcNow;
@@ -514,6 +516,7 @@ public partial class VirtualKeyboardWindow
         _capsLockPanicTapCount = 0;
         Task.Run(KeyExecutor.ReleaseAll);
         FadeMode.TurnOff();
+        MenuRequested?.Invoke();
     }
 
     // ---- Placement ----

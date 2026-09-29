@@ -152,7 +152,13 @@ static class Program
         if (Settings.LoadStartWithWindows())
             Task.Run(() => { try { StartupTask.Register(); } catch { } });
 
-        dashboard.Show();
+        // Start as it was left (Fizzil): with the on-screen keyboard open,
+        // it comes back where it was, in its Mini or full layout, and the
+        // dashboard stays out of the way (the keyboard's Menu key or the
+        // tray icon brings it up). Otherwise the dashboard shows, so there
+        // is always something on screen.
+        if (!dashboard.RestoreKeyboard())
+            dashboard.Show();
         app.Run();
 
         // In case a word (or mouse button) was mid-"infinite hold" when the
