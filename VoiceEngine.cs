@@ -79,35 +79,84 @@ public sealed class VoiceEngine : IDisposable
         _waveIn.DataAvailable += OnDataAvailable;
     }
 
+    // Acting on partial results (Fizzil: the delay). The recognizer decides
+    // a phrase is finished only after a pause in speech, several hundred
+    // milliseconds after the last word; but it reports its running guess
+    // after every audio chunk (100 ms), and with this small a grammar the
+    // guess is usually right as soon as the phrase is complete. So: when the
+    // running guess is a whole command and has read the same for two
+    // chunks in a row, fire it then, and when the finished result arrives
+    // fire only if it names a different command (the guess was wrong and
+    // the user's actual word still deserves its press).
+    private string _lastPartial = "";
+    private int _partialRepeats;
+    private string? _firedFromPartial;
+
     private void OnDataAvailable(object? sender, WaveInEventArgs e)
     {
-        // Returns true once it's decided a phrase is finished (on a pause in
-        // speech) — Result() then has the finished text. False means it's
-        // still only a partial/in-progress guess, not worth acting on yet.
         if (_recognizer.AcceptWaveform(e.Buffer, e.BytesRecorded))
-            HandleResult(_recognizer.Result());
+            HandleFinal(TextOf(_recognizer.Result(), "text"));
+        else
+            HandlePartial(TextOf(_recognizer.PartialResult(), "partial"));
     }
 
-    private void HandleResult(string resultJson)
+    private void HandlePartial(string text)
+    {
+        if (text.Length == 0)
+        {
+            _lastPartial = "";
+            _partialRepeats = 0;
+            return;
+        }
+
+        _partialRepeats = text == _lastPartial ? _partialRepeats + 1 : 1;
+        _lastPartial = text;
+
+        string? command = CommandOf(text);
+        bool fire = command != null && _firedFromPartial == null && _partialRepeats >= 2;
+        if (fire)
+        {
+            _firedFromPartial = command;
+            CommandRecognized?.Invoke(command!);
+        }
+        VoiceHeard.Report(text, final: false, fire ? command : null);
+    }
+
+    private void HandleFinal(string text)
+    {
+        string? command = CommandOf(text);
+        bool fire = command != null && command != _firedFromPartial;
+        if (fire)
+            CommandRecognized?.Invoke(command!);
+        if (text.Length > 0)
+            VoiceHeard.Report(text, final: true, fire ? command : _firedFromPartial);
+
+        _firedFromPartial = null;
+        _lastPartial = "";
+        _partialRepeats = 0;
+    }
+
+    private static string TextOf(string resultJson, string property)
     {
         using var doc = JsonDocument.Parse(resultJson);
-        if (!doc.RootElement.TryGetProperty("text", out var textProperty))
-            return;
+        return doc.RootElement.TryGetProperty(property, out var value) ? (value.GetString() ?? "").Trim() : "";
+    }
 
-        var text = textProperty.GetString();
-        if (string.IsNullOrWhiteSpace(text))
-            return;
-
+    // "press <word>" for a word this app knows, else null. Anything else the
+    // recognizer produces (a lone "press", two commands run together) is
+    // not a command.
+    private static string? CommandOf(string text)
+    {
         var parts = text.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length != 2 || parts[0] != "press")
-            return;
+            return null;
 
         var spoken = parts[1].Trim();
-        if (KeyMap.Words.ContainsKey(spoken)
+        bool known = KeyMap.Words.ContainsKey(spoken)
             || string.Equals(spoken, StopWord, StringComparison.OrdinalIgnoreCase)
             || string.Equals(spoken, MenuWord, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(spoken, FadeWord, StringComparison.OrdinalIgnoreCase))
-            CommandRecognized?.Invoke(spoken);
+            || string.Equals(spoken, FadeWord, StringComparison.OrdinalIgnoreCase);
+        return known ? spoken : null;
     }
 
     public void Start() => _waveIn.StartRecording();

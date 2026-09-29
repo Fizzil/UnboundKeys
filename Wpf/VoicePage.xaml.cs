@@ -71,7 +71,51 @@ public partial class VoicePage : IDashboardPage
         AddCommandLine($"\"press {VoiceEngine.MenuWord}\"", "brings this dashboard back");
         AddCommandLine($"\"press {VoiceEngine.FadeWord}\"", "turns Fade on or off");
 
+        // What the microphone just heard (Fizzil: "did it hear me?"), live
+        // as the words come in, the command that fired in accent, then back
+        // to an idle line a few seconds later.
+        AddHeader("HEARD", topMargin: 16);
+        _heardLine = new TextBlock { FontSize = 13, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(12, 2, 12, 2) };
+        _heardLine.SetResourceReference(TextBlock.ForegroundProperty, "TextSecondaryBrush");
+        Rows.Children.Add(_heardLine);
+        _heardIdleTimer.Tick += (_, _) =>
+        {
+            _heardIdleTimer.Stop();
+            ShowHeardIdle();
+        };
+        ShowHeardIdle();
+        VoiceHeard.Changed += (text, final, command) => Dispatcher.InvokeAsync(() => ShowHeard(text, final, command));
+        ListeningMode.Changed += () => Dispatcher.InvokeAsync(() =>
+        {
+            if (!_heardIdleTimer.IsEnabled)
+                ShowHeardIdle();
+        });
+
         Refresh();
+    }
+
+    private TextBlock _heardLine = null!;
+    private readonly System.Windows.Threading.DispatcherTimer _heardIdleTimer = new() { Interval = TimeSpan.FromSeconds(4) };
+
+    private void ShowHeard(string text, bool final, string? command)
+    {
+        _heardLine.Inlines.Clear();
+        var words = new System.Windows.Documents.Run($"“{text}”");
+        words.SetResourceReference(System.Windows.Documents.TextElement.ForegroundProperty,
+            command != null ? "AccentBrush" : final ? "TextPrimaryBrush" : "TextSecondaryBrush");
+        _heardLine.Inlines.Add(words);
+        if (command != null)
+            _heardLine.Inlines.Add(new System.Windows.Documents.Run("  sent"));
+        else if (!final)
+            _heardLine.Inlines.Add(new System.Windows.Documents.Run("  …"));
+        _heardIdleTimer.Stop();
+        _heardIdleTimer.Start();
+    }
+
+    private void ShowHeardIdle()
+    {
+        _heardLine.Inlines.Clear();
+        _heardLine.Inlines.Add(new System.Windows.Documents.Run(ListeningMode.IsPaused ? "Voice keys are paused." : "Listening. Say \"press\" and a number."));
     }
 
     private Button BuildTile(string word)

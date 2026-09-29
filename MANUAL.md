@@ -19,7 +19,7 @@ The dashboard is a fixed-size window with five pages down its left side — **Mo
 
 Say **"press"** and a number, `one` through `ten`. Speech recognition runs fully offline with a vocabulary limited to just these words, so ordinary conversation won't trigger anything.
 
-By default `one`–`nine` send the number keys and `ten` sends `0`. What each word sends, and how, is changed on the **Voice** page: click a word's tile.
+By default `one`–`nine` send the number keys and `ten` sends `0`. What each word sends, and how, is changed on the **Voice** page: click a word's tile. Under the keypad, **Heard** shows what the microphone just made of your words as you say them, with a command that fired in the accent colour, so you can tell a miss from a mishearing. A command fires as soon as the phrase is complete, not after the pause that follows it.
 
 Three commands always work, whatever's mapped:
 
