@@ -61,9 +61,12 @@ static class Program
             }
             // Recognized on the microphone's thread; the windows (and the
             // switches that mirror Fade) live on the dispatcher's.
+            // "press menu" shows the dashboard, or hides it if it is showing
+            // (Fizzil: the second "press menu" should put it away again),
+            // the same toggle as the tray icon and the keyboard's Menu key.
             if (word == VoiceEngine.MenuWord)
             {
-                app.Dispatcher.InvokeAsync(dashboard.ShowDashboard);
+                app.Dispatcher.InvokeAsync(dashboard.ToggleVisible);
                 return;
             }
             if (word == VoiceEngine.FadeWord)

@@ -26,7 +26,7 @@ Three commands always work, whatever's mapped:
 | Say | Effect |
 |---|---|
 | **"press stop"** | releases every key currently held or repeating |
-| **"press menu"** | brings the dashboard back |
+| **"press menu"** | shows the dashboard, or hides it again |
 | **"press fade"** | turns Fade on or off |
 
 ## Mouse keys

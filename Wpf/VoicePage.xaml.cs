@@ -68,7 +68,7 @@ public partial class VoicePage : IDashboardPage
         // Beneath the keypad (Fizzil): the words you say come first.
         AddHeader("ALWAYS AVAILABLE", topMargin: 16);
         AddCommandLine($"\"press {VoiceEngine.StopWord}\"", "releases every key being held or repeated");
-        AddCommandLine($"\"press {VoiceEngine.MenuWord}\"", "brings this dashboard back");
+        AddCommandLine($"\"press {VoiceEngine.MenuWord}\"", "shows this dashboard, or hides it again");
         AddCommandLine($"\"press {VoiceEngine.FadeWord}\"", "turns Fade on or off");
 
         // What the microphone just heard (Fizzil: "did it hear me?"), live

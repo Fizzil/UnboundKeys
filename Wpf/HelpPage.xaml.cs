@@ -24,7 +24,7 @@ public partial class HelpPage : IDashboardPage
         AddHeader("VOICE", topMargin: 0);
         AddLine("\"press\" and a number", "is all it listens for, one to ten. Ordinary talk is ignored, and nothing leaves your PC.");
         AddLine($"\"press {VoiceEngine.StopWord}\"", "releases every key being held or repeated.");
-        AddLine($"\"press {VoiceEngine.MenuWord}\"", "brings this dashboard back.");
+        AddLine($"\"press {VoiceEngine.MenuWord}\"", "shows this dashboard, or hides it again.");
         AddLine($"\"press {VoiceEngine.FadeWord}\"", "turns Fade on or off.");
         AddLine("Listening switch", "pauses the voice keys only. Mouse buttons and both keyboards keep working.");
 
