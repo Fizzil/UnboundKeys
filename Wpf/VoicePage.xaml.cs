@@ -155,13 +155,13 @@ public partial class VoicePage : IDashboardPage
         return tile;
     }
 
-    // A word counts as changed once its key, its extra keys, or its
-    // Repeat/Hold/Infinite differ from a fresh install — the same test
+    // A word counts as changed once its key, its extra keys, or how it is
+    // pressed differ from a fresh install — the same test
     // VirtualKeyMap.IsCustomized applies to the keyboard's keys.
     private static bool IsCustomized(string word) =>
         KeyMap.Words[word] != KeyMap.DefaultWords[word]
         || KeyMap.ExtraWords[word].Count > 0
-        || KeyMap.Behaviors[word] is not { Repeat: false, Hold: false, Infinite: false };
+        || !KeyMap.Behaviors[word].IsPlainTap();
 
     public void Refresh()
     {

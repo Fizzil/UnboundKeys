@@ -61,6 +61,10 @@ internal static class SettingsTests
               && loaded.PrioritySeconds == 1.5 && loaded.DurationSeconds == 2.5,
               "every field of a behavior loads again (Repeat, Infinite, Rotation, the pause and both times)");
 
+        Check(new KeyBehavior().IsPlainTap() && new KeyBehavior { DurationSeconds = 3 }.IsPlainTap()
+              && !new KeyBehavior { Priority = true }.IsPlainTap() && !loaded.IsPlainTap(),
+              "a fresh behavior is a plain tap; one with a pause, a repeat or a hold is not");
+
         Settings.SaveMouseProfile("Default", new() { ["middle"] = true }, new() { ["middle"] = 0x46 }, new(), new());
         Settings.SaveVirtualProfile("Default", new() { ["f1"] = 0x47 }, new(), new());
         Check(Settings.LoadKeyMap("Default", Words())["one"] == 0x41

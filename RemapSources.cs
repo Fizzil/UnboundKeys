@@ -15,7 +15,7 @@ internal interface IRemapSource
     void AddExtraKey(string id, ushort vkCode);
     void SetExtraKey(string id, int index, ushort vkCode);
     void RemoveExtraKey(string id, int index);
-    void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool priority, double prioritySeconds, bool rotation);
+    void SetBehavior(string id, KeyBehavior behavior);
     void ResetToDefault(string id);
 
     // "Key 1: X" for a word (always has a real key); "Key 1: Not Mapped"
@@ -41,8 +41,7 @@ internal sealed class KeyMapSource : IRemapSource
     public void AddExtraKey(string id, ushort vkCode) => KeyMap.AddExtraKey(id, vkCode);
     public void SetExtraKey(string id, int index, ushort vkCode) => KeyMap.SetExtraKey(id, index, vkCode);
     public void RemoveExtraKey(string id, int index) => KeyMap.RemoveExtraKey(id, index);
-    public void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool priority, double prioritySeconds, bool rotation) =>
-        KeyMap.SetBehavior(id, repeat, hold, durationSeconds, infinite, priority, prioritySeconds, rotation);
+    public void SetBehavior(string id, KeyBehavior behavior) => KeyMap.SetBehavior(id, behavior);
     public void ResetToDefault(string id) => KeyMap.ResetToDefault(id);
 
     public string KeyLabelFor(string id) => $"Key 1: {KeyCatalog.DisplayNameFor(KeyMap.Words[id])}";
@@ -62,8 +61,7 @@ internal sealed class MouseMapSource : IRemapSource
     public void AddExtraKey(string id, ushort vkCode) => MouseMap.AddExtraKey(id, vkCode);
     public void SetExtraKey(string id, int index, ushort vkCode) => MouseMap.SetExtraKey(id, index, vkCode);
     public void RemoveExtraKey(string id, int index) => MouseMap.RemoveExtraKey(id, index);
-    public void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool priority, double prioritySeconds, bool rotation) =>
-        MouseMap.SetBehavior(id, repeat, hold, durationSeconds, infinite, priority, prioritySeconds, rotation);
+    public void SetBehavior(string id, KeyBehavior behavior) => MouseMap.SetBehavior(id, behavior);
     public void ResetToDefault(string id) => MouseMap.ResetToDefault(id);
 
     public string KeyLabelFor(string id) =>
@@ -84,8 +82,7 @@ internal sealed class VirtualKeyMapSource : IRemapSource
     public void AddExtraKey(string id, ushort vkCode) => VirtualKeyMap.AddExtraKey(id, vkCode);
     public void SetExtraKey(string id, int index, ushort vkCode) => VirtualKeyMap.SetExtraKey(id, index, vkCode);
     public void RemoveExtraKey(string id, int index) => VirtualKeyMap.RemoveExtraKey(id, index);
-    public void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool priority, double prioritySeconds, bool rotation) =>
-        VirtualKeyMap.SetBehavior(id, repeat, hold, durationSeconds, infinite, priority, prioritySeconds, rotation);
+    public void SetBehavior(string id, KeyBehavior behavior) => VirtualKeyMap.SetBehavior(id, behavior);
     public void ResetToDefault(string id) => VirtualKeyMap.ResetToDefault(id);
 
     public string KeyLabelFor(string id) => $"Key 1: {KeyCatalog.DisplayNameFor(VirtualKeyMap.Words[id])}";

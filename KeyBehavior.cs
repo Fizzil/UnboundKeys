@@ -33,4 +33,11 @@ public sealed class KeyBehavior
     // whatever the game's cooldown: this, plus Hold for the same time.
     public bool Priority { get; set; }
     public double PrioritySeconds { get; set; }
+
+    // A mapping nobody has changed the behavior of: a single tap that
+    // pauses nothing. The one test the Voice page and the on-screen
+    // keyboard both use to decide whether a mapping counts as customized.
+    // (A method, not a property, so it is never written to the settings
+    // file. Rotation needs Repeat, so it needs no mention here.)
+    public bool IsPlainTap() => !Repeat && !Hold && !Infinite && !Priority;
 }

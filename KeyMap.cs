@@ -59,21 +59,9 @@ public static class KeyMap
     private static Dictionary<string, ushort> FreshDefaultWords() =>
         new(DefaultWords, StringComparer.OrdinalIgnoreCase);
 
-    private static Dictionary<string, KeyBehavior> FreshDefaultBehaviors()
-    {
-        var map = new Dictionary<string, KeyBehavior>(StringComparer.OrdinalIgnoreCase);
-        foreach (var word in RemappableWords)
-            map[word] = new KeyBehavior();
-        return map;
-    }
+    private static Dictionary<string, KeyBehavior> FreshDefaultBehaviors() => RemapStore.FreshBehaviors(RemappableWords);
 
-    private static Dictionary<string, List<ushort>> FreshDefaultExtraWords()
-    {
-        var map = new Dictionary<string, List<ushort>>(StringComparer.OrdinalIgnoreCase);
-        foreach (var word in RemappableWords)
-            map[word] = new List<ushort>();
-        return map;
-    }
+    private static Dictionary<string, List<ushort>> FreshDefaultExtraWords() => RemapStore.FreshExtraKeys(RemappableWords);
 
     private static Dictionary<string, ushort> BuildMap() =>
         Settings.LoadKeyMap(ActiveProfile, FreshDefaultWords());
@@ -101,11 +89,9 @@ public static class KeyMap
 
     public static List<(ushort Vk, bool Extended)> GetAllKeys(string word) => _store.GetAllKeys(word);
 
-    // Called by the dashboard when the user changes a word's Repeat/Hold/
-    // Infinite checkboxes, its duration, or (for a 2+ key word) its
-    // per-key repeat intervals.
-    public static void SetBehavior(string word, bool repeat, bool hold, double durationSeconds, bool infinite, bool priority, double prioritySeconds, bool rotation) =>
-        _store.SetBehavior(word, repeat, hold, durationSeconds, infinite, priority, prioritySeconds, rotation);
+    // Called by the dashboard when the user changes anything about how a
+    // word's key is pressed: its Mode, Infinite, the duration, the pause.
+    public static void SetBehavior(string word, KeyBehavior behavior) => _store.SetBehavior(word, behavior);
 
     // Called by the dashboard's card-level reset button: puts a word back to
     // its original key with no repeat/hold/duration set, and no extra keys.

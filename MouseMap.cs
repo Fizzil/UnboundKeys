@@ -64,21 +64,9 @@ public static class MouseMap
         return map;
     }
 
-    private static Dictionary<string, List<ushort>> FreshDefaultExtraWords()
-    {
-        var map = new Dictionary<string, List<ushort>>(StringComparer.OrdinalIgnoreCase);
-        foreach (var id in ButtonIds)
-            map[id] = new List<ushort>();
-        return map;
-    }
+    private static Dictionary<string, List<ushort>> FreshDefaultExtraWords() => RemapStore.FreshExtraKeys(ButtonIds);
 
-    private static Dictionary<string, KeyBehavior> FreshDefaultBehaviors()
-    {
-        var map = new Dictionary<string, KeyBehavior>(StringComparer.OrdinalIgnoreCase);
-        foreach (var id in ButtonIds)
-            map[id] = new KeyBehavior();
-        return map;
-    }
+    private static Dictionary<string, KeyBehavior> FreshDefaultBehaviors() => RemapStore.FreshBehaviors(ButtonIds);
 
     private static Dictionary<string, bool> BuildEnabled() =>
         Settings.LoadMouseEnabled(KeyMap.ActiveProfile, FreshDefaultEnabled());
@@ -108,8 +96,7 @@ public static class MouseMap
     public static void RemoveExtraKey(string id, int index) => _store.RemoveExtraKey(id, index);
     public static List<(ushort Vk, bool Extended)> GetAllKeys(string id) => _store.GetAllKeys(id);
 
-    public static void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool priority, double prioritySeconds, bool rotation) =>
-        _store.SetBehavior(id, repeat, hold, durationSeconds, infinite, priority, prioritySeconds, rotation);
+    public static void SetBehavior(string id, KeyBehavior behavior) => _store.SetBehavior(id, behavior);
 
     // Puts a button back to fully unmapped — no key, no extras, default
     // behavior, and (unlike a word's ResetToDefault) switched back off, so

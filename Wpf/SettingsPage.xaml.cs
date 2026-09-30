@@ -356,25 +356,18 @@ public partial class SettingsPage : IDashboardPage
         string name = NextFreeName(names, "Profile");
 
         var freshWords = new Dictionary<string, ushort>(KeyMap.DefaultWords, StringComparer.OrdinalIgnoreCase);
-        var freshExtraWords = new Dictionary<string, List<ushort>>(StringComparer.OrdinalIgnoreCase);
-        var freshBehaviors = new Dictionary<string, KeyBehavior>(StringComparer.OrdinalIgnoreCase);
-        foreach (var word in KeyMap.RemappableWords)
-        {
-            freshExtraWords[word] = new List<ushort>();
-            freshBehaviors[word] = new KeyBehavior();
-        }
+        var freshExtraWords = RemapStore.FreshExtraKeys(KeyMap.RemappableWords);
+        var freshBehaviors = RemapStore.FreshBehaviors(KeyMap.RemappableWords);
 
         var freshMouseEnabled = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
         var freshMouseWords = new Dictionary<string, ushort>(StringComparer.OrdinalIgnoreCase);
-        var freshMouseExtraWords = new Dictionary<string, List<ushort>>(StringComparer.OrdinalIgnoreCase);
-        var freshMouseBehaviors = new Dictionary<string, KeyBehavior>(StringComparer.OrdinalIgnoreCase);
-        foreach (var button in MouseCatalog.Buttons)
+        foreach (var id in MouseMap.ButtonIds)
         {
-            freshMouseEnabled[button.Id] = false;
-            freshMouseWords[button.Id] = 0;
-            freshMouseExtraWords[button.Id] = new List<ushort>();
-            freshMouseBehaviors[button.Id] = new KeyBehavior();
+            freshMouseEnabled[id] = false;
+            freshMouseWords[id] = 0;
         }
+        var freshMouseExtraWords = RemapStore.FreshExtraKeys(MouseMap.ButtonIds);
+        var freshMouseBehaviors = RemapStore.FreshBehaviors(MouseMap.ButtonIds);
 
         Settings.CreateProfileIfMissing(
             name, freshWords, freshExtraWords, freshBehaviors,

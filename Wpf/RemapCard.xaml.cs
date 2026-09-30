@@ -445,7 +445,16 @@ public partial class RemapCard
     }
 
     private void SaveBehavior() =>
-        _source.SetBehavior(_id, _repeatOn, _holdOn, _duration, _infiniteOn, _priorityOn, _prioritySeconds, _rotation);
+        _source.SetBehavior(_id, new KeyBehavior
+        {
+            Repeat = _repeatOn,
+            Hold = _holdOn,
+            DurationSeconds = _duration,
+            Infinite = _infiniteOn,
+            Rotation = _rotation,
+            Priority = _priorityOn,
+            PrioritySeconds = _prioritySeconds,
+        });
 
     // Resets everything about this mapping: the key(s), Mode, Infinite,
     // the duration, and every gap.

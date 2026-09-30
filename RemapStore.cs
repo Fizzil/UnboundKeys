@@ -117,19 +117,31 @@ internal sealed class RemapStore
         return keys;
     }
 
-    public void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool priority, double prioritySeconds, bool rotation)
+    // Takes the whole KeyBehavior rather than one argument per field, so a
+    // new field is added in KeyBehavior.cs and the editor that sets it, and
+    // nowhere in between.
+    public void SetBehavior(string id, KeyBehavior behavior)
     {
-        Behaviors[id] = new KeyBehavior
-        {
-            Repeat = repeat,
-            Hold = hold,
-            DurationSeconds = durationSeconds,
-            Infinite = infinite,
-            Priority = priority,
-            PrioritySeconds = prioritySeconds,
-            Rotation = rotation,
-        };
+        Behaviors[id] = behavior;
         Save();
+    }
+
+    // The empty starting points every source hands to Settings.Load*: no
+    // extra keys and a plain tap for each of its ids.
+    public static Dictionary<string, List<ushort>> FreshExtraKeys(IEnumerable<string> ids)
+    {
+        var map = new Dictionary<string, List<ushort>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var id in ids)
+            map[id] = new List<ushort>();
+        return map;
+    }
+
+    public static Dictionary<string, KeyBehavior> FreshBehaviors(IEnumerable<string> ids)
+    {
+        var map = new Dictionary<string, KeyBehavior>(StringComparer.OrdinalIgnoreCase);
+        foreach (var id in ids)
+            map[id] = new KeyBehavior();
+        return map;
     }
 
     // Puts an id back to its own DefaultWords entry, no extras, default

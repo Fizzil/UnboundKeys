@@ -49,21 +49,9 @@ public static class VirtualKeyMap
     private static Dictionary<string, ushort> FreshDefaultWords() =>
         new(DefaultWords, StringComparer.OrdinalIgnoreCase);
 
-    private static Dictionary<string, KeyBehavior> FreshDefaultBehaviors()
-    {
-        var map = new Dictionary<string, KeyBehavior>(StringComparer.OrdinalIgnoreCase);
-        foreach (var id in KeyIds)
-            map[id] = new KeyBehavior();
-        return map;
-    }
+    private static Dictionary<string, KeyBehavior> FreshDefaultBehaviors() => RemapStore.FreshBehaviors(KeyIds);
 
-    private static Dictionary<string, List<ushort>> FreshDefaultExtraWords()
-    {
-        var map = new Dictionary<string, List<ushort>>(StringComparer.OrdinalIgnoreCase);
-        foreach (var id in KeyIds)
-            map[id] = new List<ushort>();
-        return map;
-    }
+    private static Dictionary<string, List<ushort>> FreshDefaultExtraWords() => RemapStore.FreshExtraKeys(KeyIds);
 
     private static Dictionary<string, ushort> BuildMap() =>
         Settings.LoadVirtualKeyMap(KeyMap.ActiveProfile, FreshDefaultWords());
@@ -91,10 +79,9 @@ public static class VirtualKeyMap
     public static bool IsCustomized(string id) =>
         Words[id] != DefaultWords[id] ||
         ExtraWords[id].Count > 0 ||
-        Behaviors[id] is not { Repeat: false, Hold: false, Infinite: false, Priority: false };
+        !Behaviors[id].IsPlainTap();
 
-    public static void SetBehavior(string id, bool repeat, bool hold, double durationSeconds, bool infinite, bool priority, double prioritySeconds, bool rotation) =>
-        _store.SetBehavior(id, repeat, hold, durationSeconds, infinite, priority, prioritySeconds, rotation);
+    public static void SetBehavior(string id, KeyBehavior behavior) => _store.SetBehavior(id, behavior);
 
     // Puts a key back to its own natural key, no extras, default behavior.
     public static void ResetToDefault(string id) => _store.ResetToDefault(id);
