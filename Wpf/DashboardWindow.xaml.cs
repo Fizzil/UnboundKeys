@@ -67,6 +67,13 @@ public partial class DashboardWindow
                 }
                 return IntPtr.Zero;
             });
+
+        // The window gets its handle now rather than at its first Show. The
+        // app can start with only the on-screen keyboard up (see
+        // RestoreKeyboard) and this window never shown; without a handle
+        // there was nothing to receive the request above, so a second click
+        // on the shortcut did nothing at all.
+        new System.Windows.Interop.WindowInteropHelper(this).EnsureHandle();
     }
 
     public void ToggleVisible()
