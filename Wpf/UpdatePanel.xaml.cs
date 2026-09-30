@@ -74,6 +74,7 @@ public partial class UpdatePanel
         }
         catch (Exception ex)
         {
+            Log.Error("updating", ex);
             Show("Couldn't check.", Friendly(ex), progress: false);
             Buttons("Try again", RunCheck, "Close", Close);
         }
@@ -107,6 +108,7 @@ public partial class UpdatePanel
         }
         catch (Exception ex)
         {
+            Log.Error("updating", ex);
             Show("Couldn't install.", Friendly(ex), progress: false);
             Buttons("Try again", RunInstall, "Close", Close);
         }

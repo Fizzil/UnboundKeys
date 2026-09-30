@@ -39,15 +39,17 @@ public static class Shortcuts
                     shortcut.IconLocation = exe + ",0";
                     shortcut.Save();
                 }
-                catch
+                catch (Exception ex)
                 {
                     // One shortcut that will not read or save never stops the rest.
+                    Log.Error($"retargeting {Path.GetFileName(link)}", ex);
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
             // No shell object to edit shortcuts with: nothing to do.
+            Log.Error("retargeting shortcuts", ex);
         }
     }
 

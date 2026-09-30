@@ -49,10 +49,11 @@ internal static class Settings
             Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
             File.Copy(oldPath, FilePath);
         }
-        catch
+        catch (Exception ex)
         {
             // If this fails, Read() just falls back to defaults, same as
             // any other unreadable-settings-file case.
+            Log.Error("copying the old VoicePress settings", ex);
         }
     }
 
@@ -196,11 +197,33 @@ internal static class Settings
     {
         MigrateFromOldNameIfNeeded();
 
+        // If settings.json is there but cannot be read (a save cut short, a
+        // disk error), the backup that the last good save left behind is
+        // used instead (see Write). A missing file is a fresh start, not a
+        // reason to bring the backup back.
+        if (File.Exists(FilePath))
+        {
+            var saved = ReadFrom(FilePath);
+            if (saved != null)
+                return saved;
+            Log.Error("settings.json could not be read; trying settings.json.bak");
+            saved = ReadFrom(BackupPath);
+            if (saved != null)
+                return saved;
+        }
+        return new SavedData();
+    }
+
+    private static readonly string BackupPath = FilePath + ".bak";
+    private static readonly object WriteGate = new();
+
+    private static SavedData? ReadFrom(string path)
+    {
         try
         {
-            if (File.Exists(FilePath))
+            if (File.Exists(path))
             {
-                var json = File.ReadAllText(FilePath);
+                var json = File.ReadAllText(path);
                 var saved = JsonSerializer.Deserialize<SavedData>(json);
                 if (saved != null)
                 {
@@ -233,12 +256,13 @@ internal static class Settings
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Corrupt or unreadable settings file — fall back to the defaults.
+            // Corrupt or unreadable: the caller decides what to fall back to.
+            Log.Error($"reading {Path.GetFileName(path)}", ex);
         }
 
-        return new SavedData();
+        return null;
     }
 
     private static void Write(SavedData data)
@@ -248,12 +272,27 @@ internal static class Settings
             Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
             data.KeyMap = null;
             data.Behaviors = null;
-            File.WriteAllText(FilePath, JsonSerializer.Serialize(data));
+            // Never overwrite the file in place: a save cut short (the app
+            // killed mid-write) would leave half a file and no profiles.
+            // The new contents go to a temporary file first and are then
+            // swapped in in one step, the previous file becoming the backup
+            // that Read falls back to.
+            string json = JsonSerializer.Serialize(data);
+            string temp = FilePath + ".tmp";
+            lock (WriteGate)
+            {
+                File.WriteAllText(temp, json);
+                if (File.Exists(FilePath))
+                    File.Replace(temp, FilePath, BackupPath);
+                else
+                    File.Move(temp, FilePath);
+            }
         }
-        catch
+        catch (Exception ex)
         {
             // If saving fails (e.g. disk full), the app keeps working — it
             // just won't remember the change next time it starts.
+            Log.Error("saving settings", ex);
         }
     }
 

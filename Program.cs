@@ -20,6 +20,22 @@ static class Program
             return;
         }
 
+        // From here on, anything that goes wrong leaves a line in the log
+        // (see Log), including the errors nothing else catches.
+        Log.Info($"started {typeof(Program).Assembly.GetName().Version} on {Environment.OSVersion.VersionString}");
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+        {
+            if (e.ExceptionObject is Exception ex)
+                Log.Crash("unhandled", ex);
+            // Going down: at least don't leave a key held in the game.
+            try { KeyExecutor.ReleaseAll(); } catch { }
+        };
+        TaskScheduler.UnobservedTaskException += (_, e) =>
+        {
+            Log.Crash("background task", e.Exception);
+            e.SetObserved();
+        };
+
         // Spelled out fully: with both UseWindowsForms (kept for the tray
         // icon) and UseWPF on, a bare "Application" is ambiguous. The
         // dashboard hiding must not end the app, hence explicit shutdown.
@@ -37,6 +53,7 @@ static class Program
         }
         catch (Exception ex)
         {
+            Log.Crash("starting speech recognition", ex);
             System.Windows.MessageBox.Show(
                 $"UnboundKeys couldn't start speech recognition:\n\n{ex.Message}\n\n" +
                 "Make sure a microphone is connected and set up under " +
@@ -153,7 +170,7 @@ static class Program
         if (autoStarted && Settings.LoadAutoStartPaused())
             ListeningMode.SetPaused(true);
         if (Settings.LoadStartWithWindows())
-            Task.Run(() => { try { StartupTask.Register(); } catch { } });
+            Task.Run(() => { try { StartupTask.Register(); } catch (Exception ex) { Log.Error("refreshing the sign-in task", ex); } });
 
         // Start as it was left (Fizzil): with the on-screen keyboard open,
         // it comes back where it was, in its Mini or full layout, and the
@@ -168,5 +185,6 @@ static class Program
         // app was quit — don't leave a real keyboard key stuck down.
         KeyExecutor.ReleaseAll();
         voice.Dispose();
+        Log.Info("quit");
     }
 }

@@ -74,6 +74,19 @@ public partial class SettingsPage : IDashboardPage
         NameGrid.Cancelled += EndRename;
         ConfirmDeleteBehavior.AttachTo(ResetAllButton, () => ResetAllRequested?.Invoke());
         ConfirmDeleteBehavior.AttachTo(QuitButton, () => QuitRequested?.Invoke());
+        // About: the log, selected in Explorer (see Log.cs).
+        OpenLogButton.Click += (_, _) =>
+        {
+            try
+            {
+                Log.Info("log folder opened from Settings"); // also makes sure the file exists to select
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", $"/select,\"{Log.FilePath}\"") { UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                Log.Error("opening the log folder", ex);
+            }
+        };
         // The new version is running; this one leaves the same way Quit does.
         Updates.Launched += () => QuitRequested?.Invoke();
 
@@ -467,6 +480,7 @@ public partial class SettingsPage : IDashboardPage
         }
         catch (Exception ex)
         {
+            Log.Error("start with Windows", ex);
             StartupHint.Text = "Could not change the startup task: " + ex.Message;
             return;
         }

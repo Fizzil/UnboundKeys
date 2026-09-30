@@ -66,7 +66,19 @@
         </local:FoldSection>
 
         <local:FoldSection x:Name="AboutFold" Title="ABOUT">
-            <TextBlock x:Name="AboutText" FontSize="12" Margin="12,0,12,8" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}"/>
+            <StackPanel>
+                <TextBlock x:Name="AboutText" FontSize="12" Margin="12,0,12,8" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                <!-- The log (see Log.cs): where to look when something went
+                     wrong on a machine that is not the author's. -->
+                <Grid Height="44" Margin="4,0,4,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="A small log of starts and errors is kept beside your settings." FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" Margin="8,0,8,0" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    <Button x:Name="OpenLogButton" Grid.Column="1" Content="Open log folder" Height="36" Padding="12,0,12,0" FontSize="13" Style="{StaticResource SecondaryButtonStyle}"/>
+                </Grid>
+            </StackPanel>
         </local:FoldSection>
     </StackPanel>
 </UserControl>

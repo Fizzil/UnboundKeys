@@ -13,7 +13,7 @@ namespace UnboundKeys;
 // newest, and on request downloads its win-x64 zip, unpacks it into a
 // folder beside the running one, and starts it. Nothing here runs on its
 // own — the README's "nothing is sent anywhere" stays true until that
-// click. Everything is plain .NET 8 (HttpClient, System.Text.Json,
+// click. Everything is plain .NET (HttpClient, System.Text.Json,
 // ZipFile): no new dependencies.
 public static class UpdateChecker
 {

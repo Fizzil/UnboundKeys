@@ -105,7 +105,9 @@ Every section here folds under its heading and, while closed, shows a one-line s
 
 ## Saved data
 
-Everything is saved to `%AppData%\UnboundKeys\settings.json` — profiles and mappings, the active profile and theme, the dashboard's and keyboard's positions and the keyboard's size — and reloaded next launch. The keyboard's learned words are in `%AppData%\UnboundKeys\learned-words.txt`.
+Everything is saved to `%AppData%\UnboundKeys\settings.json` — profiles and mappings, the active profile and theme, the dashboard's and keyboard's positions and the keyboard's size — and reloaded next launch. Each save writes a new file and swaps it in, keeping the previous one as `settings.json.bak`; if `settings.json` is ever unreadable, the backup is used instead. The keyboard's learned words are in `%AppData%\UnboundKeys\learned-words.txt`.
+
+A small log of starts, stops and errors is kept in `%AppData%\UnboundKeys\log.txt` (Settings → About → **Open log folder**). Nothing you type, say or map is written to it. If something goes wrong, that file is the first thing to look at, or to send along.
 
 ## Troubleshooting
 

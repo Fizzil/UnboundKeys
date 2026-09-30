@@ -83,10 +83,11 @@ public static class WordPredictor
             File.WriteAllLines(LearnedPath, _learned.Select(entry => $"{entry.Key}\t{entry.Value}"));
             _learnedDirty = false;
         }
-        catch
+        catch (Exception ex)
         {
             // Same stance as Settings: a failed save just means the new
             // words aren't remembered next time.
+            Log.Error("saving learned words", ex);
         }
     }
 
@@ -109,10 +110,11 @@ public static class WordPredictor
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
             // Unreadable learned-words file — start fresh, the built-in
             // list still works.
+            Log.Error("reading learned words", ex);
         }
     }
 
