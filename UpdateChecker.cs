@@ -4,6 +4,7 @@ using System.IO.Compression;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Text.Json;
 
 namespace UnboundKeys;
@@ -20,7 +21,9 @@ public static class UpdateChecker
     public const string ReleasesPage = "https://github.com/Fizzil/UnboundKeys/releases";
     private const string LatestReleaseApi = "https://api.github.com/repos/Fizzil/UnboundKeys/releases/latest";
 
-    public sealed record UpdateInfo(Version Current, Version Latest, string PageUrl, string ZipUrl, long ZipBytes)
+    // ZipSha256 is the fingerprint GitHub lists for the zip, in lowercase
+    // hex; empty when the release doesn't list one.
+    public sealed record UpdateInfo(Version Current, Version Latest, string PageUrl, string ZipUrl, long ZipBytes, string ZipSha256)
     {
         public bool IsNewer => Latest > Current;
         public bool HasZip => ZipUrl.Length > 0;
@@ -61,6 +64,7 @@ public static class UpdateChecker
         string page = root.TryGetProperty("html_url", out var url) ? url.GetString() ?? ReleasesPage : ReleasesPage;
         string zipUrl = "";
         long zipBytes = 0;
+        string zipSha256 = "";
         if (root.TryGetProperty("assets", out var assets))
         {
             foreach (var asset in assets.EnumerateArray())
@@ -71,10 +75,23 @@ public static class UpdateChecker
                 {
                     zipUrl = asset.GetProperty("browser_download_url").GetString() ?? "";
                     zipBytes = asset.GetProperty("size").GetInt64();
+                    zipSha256 = Sha256Of(asset);
                 }
             }
         }
-        return new UpdateInfo(Current, Trim(latest), page, zipUrl, zipBytes);
+        return new UpdateInfo(Current, Trim(latest), page, zipUrl, zipBytes, zipSha256);
+    }
+
+    // GitHub lists each asset's fingerprint as "sha256:<hex>".
+    internal static string Sha256Of(JsonElement asset)
+    {
+        const string prefix = "sha256:";
+        if (!asset.TryGetProperty("digest", out var digest) || digest.ValueKind != JsonValueKind.String)
+            return "";
+        string text = digest.GetString() ?? "";
+        return text.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+            ? text[prefix.Length..].Trim().ToLowerInvariant()
+            : "";
     }
 
     // Where a version gets unpacked: a sibling of the running folder, named
@@ -90,8 +107,10 @@ public static class UpdateChecker
     private static string RunningDir() =>
         Path.GetFullPath(AppContext.BaseDirectory).TrimEnd(Path.DirectorySeparatorChar);
 
-    // Streams the zip into the temp folder, reporting 0..1. A cancel or a
-    // failure leaves no half-file behind.
+    // Streams the zip into the temp folder, reporting 0..1, and fingerprints
+    // it on the way: a download that doesn't match the SHA-256 GitHub lists
+    // for it is thrown away rather than unpacked. A cancel or a failure
+    // leaves no half-file behind.
     public static async Task<string> DownloadAsync(UpdateInfo info, IProgress<double> progress, CancellationToken ct)
     {
         string zipPath = Path.Combine(Path.GetTempPath(), $"UnboundKeys-v{info.Latest}-win-x64.zip");
@@ -102,18 +121,28 @@ public static class UpdateChecker
             response.EnsureSuccessStatusCode();
             long total = response.Content.Headers.ContentLength ?? info.ZipBytes;
 
-            await using var source = await response.Content.ReadAsStreamAsync(ct);
-            await using var file = new FileStream(zipPath, FileMode.Create, FileAccess.Write, FileShare.None, 1 << 16, useAsync: true);
-            var buffer = new byte[1 << 16];
-            long done = 0;
-            int read;
-            while ((read = await source.ReadAsync(buffer, ct)) > 0)
+            using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+            await using (var source = await response.Content.ReadAsStreamAsync(ct))
+            await using (var file = new FileStream(zipPath, FileMode.Create, FileAccess.Write, FileShare.None, 1 << 16, useAsync: true))
             {
-                await file.WriteAsync(buffer.AsMemory(0, read), ct);
-                done += read;
-                if (total > 0)
-                    progress.Report((double)done / total);
+                var buffer = new byte[1 << 16];
+                long done = 0;
+                int read;
+                while ((read = await source.ReadAsync(buffer, ct)) > 0)
+                {
+                    await file.WriteAsync(buffer.AsMemory(0, read), ct);
+                    hash.AppendData(buffer, 0, read);
+                    done += read;
+                    if (total > 0)
+                        progress.Report((double)done / total);
+                }
             }
+
+            string actual = Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant();
+            if (info.ZipSha256.Length == 0)
+                Log.Info($"update {info.Latest}: GitHub lists no fingerprint for the zip, so it was not checked");
+            else if (!Matches(actual, info.ZipSha256))
+                throw new InvalidDataException("The download doesn't match the fingerprint GitHub lists for it, so it was thrown away. Nothing was changed.");
             return zipPath;
         }
         catch
@@ -121,6 +150,16 @@ public static class UpdateChecker
             TryDelete(zipPath);
             throw;
         }
+    }
+
+    internal static bool Matches(string actualSha256, string listedSha256) =>
+        string.Equals(actualSha256, listedSha256, StringComparison.OrdinalIgnoreCase);
+
+    // The same fingerprint, of a file already on disk (the harness uses it).
+    internal static string Sha256OfFile(string path)
+    {
+        using var stream = File.OpenRead(path);
+        return Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
     }
 
     // Unpacks the zip into InstallDirFor(version) and returns the new exe's

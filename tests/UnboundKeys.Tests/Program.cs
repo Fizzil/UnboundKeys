@@ -13,6 +13,13 @@ const ushort F15 = 0x7E; // a rotation's third key
 const int WmKeyDown = 0x100;
 const int WmSysKeyDown = 0x104;
 
+// Settings and the log go to a scratch folder for the whole run, so nothing
+// here touches the real profiles and the harness can run with the app open.
+string scratch = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "UnboundKeys.Tests-" + Guid.NewGuid().ToString("N"));
+System.IO.Directory.CreateDirectory(scratch);
+Settings.UseScratchFile(System.IO.Path.Combine(scratch, "settings.json"));
+Log.UseScratchFile(System.IO.Path.Combine(scratch, "log.txt"));
+
 var events = new List<(double T, ushort Vk)>();
 var clock = Stopwatch.StartNew();
 var hook = new LowLevelHook();
@@ -45,7 +52,11 @@ bool allPassed = true;
 allPassed &= Scenario("a tap with a 2.0 s pause", new KeyBehavior { Priority = true, PrioritySeconds = 2.0 }, expectedPause: 2.0);
 allPassed &= Scenario("Fizzil's recipe: Hold 1.0 s with a 1.0 s pause", new KeyBehavior { Hold = true, DurationSeconds = 1.0, Priority = true, PrioritySeconds = 1.0 }, expectedPause: 1.0);
 allPassed &= RotationScenario();
-allPassed &= SettingsScenario();
+allPassed &= UnboundKeys.Tests.SettingsTests.Run(scratch);
+allPassed &= UnboundKeys.Tests.UpdaterTests.Run();
+
+try { System.IO.Directory.Delete(scratch, recursive: true); }
+catch { /* a leftover scratch folder in Temp is not a failure */ }
 
 Console.WriteLine(allPassed ? "ALL PASSED" : "FAILED");
 return allPassed ? 0 : 1;
@@ -103,40 +114,6 @@ bool Scenario(string name, KeyBehavior pause, double expectedPause)
     for (int i = 1; i < Math.Min(after.Count, 5); i++)
         Check(Math.Abs(after[i].T - after[i - 1].T - gap) < 0.08, $"repeat gap after resume {i}: {after[i].T - after[i - 1].T:0.000} s");
 
-    return ok;
-}
-
-// Saving (see Settings.Write): the new file is swapped in whole and the one
-// before it kept as the backup. Saves a value that is already there, so
-// nothing changes; run it with the app closed, since it touches the real
-// settings file.
-bool SettingsScenario()
-{
-    Console.WriteLine("--- settings: a save keeps a backup and still loads ---");
-    string file = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "UnboundKeys", "settings.json");
-    string backup = file + ".bak";
-    if (!System.IO.File.Exists(file))
-    {
-        Console.WriteLine("  (no settings file yet; skipped)");
-        return true;
-    }
-
-    bool ok = true;
-    void Check(bool condition, string what)
-    {
-        Console.WriteLine($"  [{(condition ? "ok" : "FAIL")}] {what}");
-        ok &= condition;
-    }
-
-    string before = System.IO.File.ReadAllText(file);
-    bool shown = Settings.LoadKeyboardShown();
-    Settings.SaveKeyboardShown(shown);
-
-    Check(System.IO.File.Exists(backup), "settings.json.bak exists after a save");
-    Check(System.IO.File.Exists(backup) && System.IO.File.ReadAllText(backup) == before, "the backup is the file exactly as it was");
-    Check(!System.IO.File.Exists(file + ".tmp"), "no temporary file is left behind");
-    Check(new System.IO.FileInfo(file).Length > 2, "the new file is not empty");
-    Check(Settings.LoadKeyboardShown() == shown, "the settings load again with the same value");
     return ok;
 }
 

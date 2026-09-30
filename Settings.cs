@@ -20,9 +20,19 @@ internal static class Settings
     public const string DefaultProfileName = "Default";
     public const string DefaultSubProfileName = "Default";
 
-    private static readonly string FilePath = Path.Combine(
+    private static string FilePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "UnboundKeys", "settings.json");
+    private static string BackupPath => FilePath + ".bak";
+    private static bool _scratch;
+
+    // For the harness in tests/ only: every read and save goes to this file
+    // instead, so its tests never touch the real profiles.
+    internal static void UseScratchFile(string path)
+    {
+        FilePath = path;
+        _scratch = true;
+    }
 
     // One-time migration for anyone upgrading from the app's old name
     // (VoicePress, renamed before this release — see the class comment):
@@ -35,7 +45,7 @@ internal static class Settings
     // to leave in indefinitely rather than needing to be pulled out later.
     private static void MigrateFromOldNameIfNeeded()
     {
-        if (File.Exists(FilePath))
+        if (_scratch || File.Exists(FilePath))
             return;
 
         var oldPath = Path.Combine(
@@ -214,7 +224,6 @@ internal static class Settings
         return new SavedData();
     }
 
-    private static readonly string BackupPath = FilePath + ".bak";
     private static readonly object WriteGate = new();
 
     private static SavedData? ReadFrom(string path)

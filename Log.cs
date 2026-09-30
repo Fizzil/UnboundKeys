@@ -15,9 +15,13 @@ public static class Log
     private const long MaxBytes = 256 * 1024;
     private static readonly object Gate = new();
 
-    public static string FilePath { get; } = Path.Combine(
+    public static string FilePath { get; private set; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "UnboundKeys", "log.txt");
+
+    // For the harness in tests/ only, so its deliberate errors stay out of
+    // the real log.
+    internal static void UseScratchFile(string path) => FilePath = path;
 
     public static void Info(string message) => Write("info ", message);
 
