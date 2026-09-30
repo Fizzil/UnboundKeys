@@ -18,9 +18,9 @@ Notes for a future session — not urgent.
 
 - **Per-monitor DPI.** The app is system-DPI-aware; a second monitor at
   a different scale will render blurry there.
-- **GCD at a glance.** Show a sub-profile cooldown in the profile flyout and the Settings summary
-  ("Warlock · 1.5 s").
-- **Timing harness tolerance.** tests/UnboundKeys.Tests allows 150 ms; a busy moment tripped it once.
+- **Timing harness on a busy machine.** The timing scenarios in tests/UnboundKeys.Tests have
+  failed once or twice while the machine was compiling or a permission prompt was up; a rerun
+  alone passes. The settings and updater checks are not affected.
 - **Suggestion accept key.** Fizzil's original idea for the suggestion
   strip was that typing the next letter of a *different* suggested word
   narrows, and a dedicated key accepts — worth trying once the click-to-

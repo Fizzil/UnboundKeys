@@ -30,6 +30,36 @@ internal static class UpdaterTests
         return _ok;
     }
 
+    // The one part that goes online, so it only runs when asked for
+    // (dotnet run ... -- --online): asks GitHub for the newest release and
+    // downloads its zip through the app's own code. Worth running before a
+    // release, since a check that wrongly refused the real thing would
+    // block every later update.
+    public static bool RunOnline()
+    {
+        Console.WriteLine("--- updater, online: the newest real release passes the check ---");
+        _ok = true;
+        try
+        {
+            var info = UpdateChecker.CheckAsync(CancellationToken.None).GetAwaiter().GetResult();
+            Console.WriteLine($"  newest release {info.Latest}, zip {info.ZipBytes / 1048576.0:0.0} MB, listed fingerprint {info.ZipSha256}");
+            Check(info.HasZip, "the release has a zip attached");
+            Check(info.ZipSha256.Length == 64, "GitHub lists a SHA-256 for it");
+            if (!_ok)
+                return false;
+
+            string zip = UpdateChecker.DownloadAsync(info, new Progress<double>(_ => { }), CancellationToken.None).GetAwaiter().GetResult();
+            Check(new FileInfo(zip).Length == info.ZipBytes, "the whole zip arrived");
+            Check(UpdateChecker.Matches(UpdateChecker.Sha256OfFile(zip), info.ZipSha256), "and it matches the listed fingerprint, so the app would install it");
+            File.Delete(zip);
+        }
+        catch (Exception ex)
+        {
+            Check(false, $"threw {ex.GetType().Name}: {ex.Message}");
+        }
+        return _ok;
+    }
+
     private static void Fingerprints()
     {
         // SHA-256 of the three bytes "abc", the standard's own worked example.

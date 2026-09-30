@@ -20,6 +20,17 @@ System.IO.Directory.CreateDirectory(scratch);
 Settings.UseScratchFile(System.IO.Path.Combine(scratch, "settings.json"));
 Log.UseScratchFile(System.IO.Path.Combine(scratch, "log.txt"));
 
+// "--online" runs only the one check that needs the internet (see
+// UpdaterTests.RunOnline); everything else stays on this machine.
+if (args.Contains("--online"))
+{
+    bool online = UnboundKeys.Tests.UpdaterTests.RunOnline();
+    try { System.IO.Directory.Delete(scratch, recursive: true); }
+    catch { /* a leftover scratch folder in Temp is not a failure */ }
+    Console.WriteLine(online ? "ALL PASSED" : "FAILED");
+    return online ? 0 : 1;
+}
+
 var events = new List<(double T, ushort Vk)>();
 var clock = Stopwatch.StartNew();
 var hook = new LowLevelHook();
