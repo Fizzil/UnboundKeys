@@ -12,13 +12,12 @@ static class Program
     [STAThread]
     static void Main()
     {
-        // One copy at a time (see SingleInstance): a second launch hands
-        // over to the running one and leaves, before any hook is set.
+        // One copy at a time (see SingleInstance): a second launch asks the
+        // running one to show its dashboard and leaves, before any hook is
+        // set. After an update the old copy is on its way out, and this one
+        // waits for it instead.
         if (!SingleInstance.Claim())
-        {
-            SingleInstance.AskRunningCopyToShowDashboard();
             return;
-        }
 
         // From here on, anything that goes wrong leaves a line in the log
         // (see Log), including the errors nothing else catches.

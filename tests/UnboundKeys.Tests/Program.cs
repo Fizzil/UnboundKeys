@@ -13,6 +13,10 @@ const ushort F15 = 0x7E; // a rotation's third key
 const int WmKeyDown = 0x100;
 const int WmSysKeyDown = 0x104;
 
+// Started by SingleInstanceTests as its second copy: hold a mutex, leave.
+if (args.Length == 3 && args[0] == UnboundKeys.Tests.SingleInstanceTests.HoldArgument)
+    return UnboundKeys.Tests.SingleInstanceTests.Hold(args[1], int.Parse(args[2]));
+
 // Settings and the log go to a scratch folder for the whole run, so nothing
 // here touches the real profiles and the harness can run with the app open.
 string scratch = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "UnboundKeys.Tests-" + Guid.NewGuid().ToString("N"));
@@ -65,6 +69,7 @@ allPassed &= Scenario("Fizzil's recipe: Hold 1.0 s with a 1.0 s pause", new KeyB
 allPassed &= RotationScenario();
 allPassed &= UnboundKeys.Tests.SettingsTests.Run(scratch);
 allPassed &= UnboundKeys.Tests.UpdaterTests.Run();
+allPassed &= UnboundKeys.Tests.SingleInstanceTests.Run();
 
 try { System.IO.Directory.Delete(scratch, recursive: true); }
 catch { /* a leftover scratch folder in Temp is not a failure */ }
