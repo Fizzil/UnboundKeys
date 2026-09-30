@@ -16,10 +16,17 @@
 # own pictures. Afterwards the keyboard size, its layout and the open page
 # are put back, and the keyboard is hidden again if this script opened it.
 # ASCII only: Windows PowerShell reads this file as ANSI.
+#
+# To retake only some pictures, name them: -Only "Mouse,Settings". The names
+# are Mouse, Keyboard-Page, Voice, Editor, Settings, Help, and Keyboard for
+# the two pictures of the on-screen keyboard itself.
 param(
   [string]$Out = (Join-Path $PSScriptRoot "..\Assets\screenshots"),
-  [string]$Method = "sendinput"   # "manual": Mini/Maxi were clicked by hand; capture what shows
+  [string]$Method = "sendinput",  # "manual": Mini/Maxi were clicked by hand; capture what shows
+  [string]$Only = ""              # comma-separated picture names; empty takes them all
 )
+$wanted = @($Only.Split(',') | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+function Want($name) { return ($wanted.Count -eq 0) -or ($wanted -contains $name) }
 $ErrorActionPreference = 'Stop'
 New-Item -ItemType Directory -Force $Out | Out-Null
 $log = Join-Path $env:TEMP "unboundkeys-capture.log"
@@ -86,20 +93,6 @@ function Get-Window($name) {
   if ($h -eq [IntPtr]::Zero) { return $null }
   return [System.Windows.Automation.AutomationElement]::FromHandle($h)
 }
-
-# By title: with the keyboard open, the process's main window handle can
-# point at the wrong window.
-$dash = Get-Window "UnboundKeys"
-if ($null -eq $dash) {
-  # Hidden to the tray: ask for it the way a second launch of the app does
-  # (see SingleInstance.cs), and give it a moment to appear.
-  $show = [N]::RegisterWindowMessage("UnboundKeys.ShowDashboard")
-  [void][N]::PostMessage([IntPtr]0xFFFF, $show, [IntPtr]::Zero, [IntPtr]::Zero)
-  for ($i = 0; $i -lt 10 -and $null -eq $dash; $i++) { Start-Sleep -Milliseconds 300; $dash = Get-Window "UnboundKeys" }
-  Log "dashboard was hidden; asked it to show"
-}
-if ($null -eq $dash) { throw "dashboard window not visible (say 'press menu')" }
-Log ("dashboard found, pid " + $proc.Id + ", keyboard size " + $originalSize + ", method " + $Method)
 
 # Every element whose Name is exactly $text, then the first one that sits
 # inside a Button (walking up the raw tree). Skips e.g. the page title.
@@ -200,64 +193,102 @@ function Save-Window($el, $file, $radius = 0) {
   Log "captured $file ${w}x${ht}"
 }
 
+# The dashboard, by title: with the keyboard open, the process's main
+# window handle can point at the wrong window.
+function Wait-Dashboard {
+  for ($i = 0; $i -lt 10; $i++) {
+    $w = Get-Window "UnboundKeys"
+    if ($null -ne $w) { return $w }
+    Start-Sleep -Milliseconds 300
+  }
+  return $null
+}
+$dash = Get-Window "UnboundKeys"
+if ($null -eq $dash) {
+  # Hidden to the tray: ask for it the way a second launch of the app does
+  # (see SingleInstance.cs), and give it a moment to appear.
+  $show = [N]::RegisterWindowMessage("UnboundKeys.ShowDashboard")
+  [void][N]::PostMessage([IntPtr]0xFFFF, $show, [IntPtr]::Zero, [IntPtr]::Zero)
+  Log "dashboard was hidden; asked it to show"
+  $dash = Wait-Dashboard
+}
+if ($null -eq $dash) {
+  # No answer (up to 4.6.0 a dashboard that had not been shown since the
+  # app started did not hear that request): the keyboard's Menu key.
+  $strip = Get-Window "UnboundKeys keyboard"
+  if ($null -ne $strip) {
+    Push-Key $strip "Menu"
+    Log "no answer; clicked the keyboard's Menu key"
+    $dash = Wait-Dashboard
+  }
+}
+if ($null -eq $dash) { throw "dashboard window not visible (say 'press menu')" }
+Log ("dashboard found, pid " + $proc.Id + ", keyboard size " + $originalSize + ", method " + $Method)
+
 # The five pages and an editor. Choosing a rail item closes the editor.
 Raise-Window $dash
-Invoke-Button $dash "Mouse";    Save-Window $dash "UBK-Mouse.png"
-Invoke-Button $dash "Keyboard"; Save-Window $dash "UBK-Keyboard-Page.png"
-Invoke-Button $dash "Voice";    Save-Window $dash "UBK-Voice.png"
-Invoke-Button $dash '"press one"'
-# A plain Tap shows only a few rows; for the picture, Repeat reveals the
-# duration, Infinite and Infinite pause rows, then Tap puts it back.
-$wasTap = ($null -eq (Find-Text $dash "Duration"))
-if ($wasTap) { Invoke-Button $dash "Repeat" 900 }
-Save-Window $dash "UBK-Editor.png"
-if ($wasTap) { Invoke-Button $dash "Tap" 600 }
-Invoke-Button $dash "Settings"; Save-Window $dash "UBK-Settings.png"
-Invoke-Button $dash "Help";     Save-Window $dash "UBK-Help.png"
+if (Want "Mouse")         { Invoke-Button $dash "Mouse";    Save-Window $dash "UBK-Mouse.png" }
+if (Want "Keyboard-Page") { Invoke-Button $dash "Keyboard"; Save-Window $dash "UBK-Keyboard-Page.png" }
+if (Want "Voice")         { Invoke-Button $dash "Voice";    Save-Window $dash "UBK-Voice.png" }
+if (Want "Editor") {
+  Invoke-Button $dash "Voice"
+  Invoke-Button $dash '"press one"'
+  # A plain Tap shows only a few rows; for the picture, Repeat reveals the
+  # duration, Infinite and Infinite pause rows, then Tap puts it back.
+  $wasTap = ($null -eq (Find-Text $dash "Duration"))
+  if ($wasTap) { Invoke-Button $dash "Repeat" 900 }
+  Save-Window $dash "UBK-Editor.png"
+  if ($wasTap) { Invoke-Button $dash "Tap" 600 }
+}
+if (Want "Settings")      { Invoke-Button $dash "Settings"; Save-Window $dash "UBK-Settings.png" }
+if (Want "Help")          { Invoke-Button $dash "Help";     Save-Window $dash "UBK-Help.png" }
 
-# The on-screen keyboard, at Large for a clear picture. Its window has
-# 8-DIP rounded corners; 10 px covers them at 125% scaling.
-Invoke-Button $dash "Keyboard"
-$kb = Get-Window "UnboundKeys keyboard"
-$opened = $false
-if ($null -eq $kb) {
-  Invoke-Button $dash "Show on-screen keyboard" 1200
+if (Want "Keyboard") {
+  # The on-screen keyboard, at Large for a clear picture. Its window has
+  # 8-DIP rounded corners; 10 px covers them at 125% scaling.
+  Invoke-Button $dash "Keyboard"
   $kb = Get-Window "UnboundKeys keyboard"
-  $opened = $true
-}
-if ($null -eq $kb) { throw "keyboard window not found" }
-Invoke-Button $dash "Large" 900
-# From here on the keyboard is not as the user left it, so whatever
-# happens below, the size (and an opened keyboard) is put back in finally.
-try {
-  Raise-Window $kb
-  $isMini = $null -ne (Find-Button $kb "Maxi")
-  if ($isMini) { Save-Window $kb "UBK-Keyboard-Mini.png" 10 } else { Save-Window $kb "UBK-Keyboard.png" 10 }
-  if ($Method -eq "sendinput") {
-    # A click right after the size change has missed once (the keys are
-    # rebuilt at the new size); a second try has always landed.
-    if ($isMini) {
-      Push-Key $kb "Maxi"
-      if (-not (Wait-Button $kb "Mini")) { Push-Key $kb "Maxi" }
-      if (-not (Wait-Button $kb "Mini")) { throw "Maxi click did not switch the layout" }
-      Raise-Window $kb
-      Save-Window $kb "UBK-Keyboard.png" 10
-      Push-Key $kb "Mini"
-    } else {
-      Push-Key $kb "Mini"
-      if (-not (Wait-Button $kb "Maxi")) { Push-Key $kb "Mini" }
-      if (-not (Wait-Button $kb "Maxi")) { throw "Mini click did not switch the layout" }
-      Raise-Window $kb
-      Save-Window $kb "UBK-Keyboard-Mini.png" 10
-      Push-Key $kb "Maxi"
-    }
+  $opened = $false
+  if ($null -eq $kb) {
+    Invoke-Button $dash "Show on-screen keyboard" 1200
+    $kb = Get-Window "UnboundKeys keyboard"
+    $opened = $true
   }
-} finally {
-  Invoke-Button $dash $originalSize 600
-  if ($opened) { Invoke-Button $dash "Show on-screen keyboard" 600 }
-  Invoke-Button $dash "Mouse"
-  Raise-Window $dash
+  if ($null -eq $kb) { throw "keyboard window not found" }
+  Invoke-Button $dash "Large" 900
+  # From here on the keyboard is not as the user left it, so whatever
+  # happens below, the size (and an opened keyboard) is put back in finally.
+  try {
+    Raise-Window $kb
+    $isMini = $null -ne (Find-Button $kb "Maxi")
+    if ($isMini) { Save-Window $kb "UBK-Keyboard-Mini.png" 10 } else { Save-Window $kb "UBK-Keyboard.png" 10 }
+    if ($Method -eq "sendinput") {
+      # A click right after the size change has missed once (the keys are
+      # rebuilt at the new size); a second try has always landed.
+      if ($isMini) {
+        Push-Key $kb "Maxi"
+        if (-not (Wait-Button $kb "Mini")) { Push-Key $kb "Maxi" }
+        if (-not (Wait-Button $kb "Mini")) { throw "Maxi click did not switch the layout" }
+        Raise-Window $kb
+        Save-Window $kb "UBK-Keyboard.png" 10
+        Push-Key $kb "Mini"
+      } else {
+        Push-Key $kb "Mini"
+        if (-not (Wait-Button $kb "Maxi")) { Push-Key $kb "Mini" }
+        if (-not (Wait-Button $kb "Maxi")) { throw "Mini click did not switch the layout" }
+        Raise-Window $kb
+        Save-Window $kb "UBK-Keyboard-Mini.png" 10
+        Push-Key $kb "Maxi"
+      }
+    }
+  } finally {
+    Invoke-Button $dash $originalSize 600
+    if ($opened) { Invoke-Button $dash "Show on-screen keyboard" 600 }
+  }
 }
+# Leave the dashboard on its first page, in front.
+Invoke-Button $dash "Mouse"
+Raise-Window $dash
 Log "done"
 } catch {
   Log ("ERROR: " + $_.Exception.Message)
