@@ -1,10 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- A timing harness, not a unit-test suite: it runs the real
-       KeyExecutor with a keyboard hook timing every key it sends, and
-       checks Game mode's gap, priority hand-off and resume against the
-       plan. Run it with dotnet run, project tests/UnboundKeys.Tests, Release
-       (nothing on the desktop reacts to the F13/F14 keys it sends). -->
+  <!-- A harness in three parts. Timing: it runs the real KeyExecutor with
+       a keyboard hook timing every key it sends, and checks the Infinite
+       pause and Rotation against the plan. Settings: profiles, sub-profiles,
+       older files and damaged files, in a scratch folder. Updater: the
+       download's fingerprint check, against a server on this machine.
+       Run it with dotnet run, project tests/UnboundKeys.Tests, Release
+       (nothing on the desktop reacts to the F13 to F15 keys it sends, and
+       the real settings file is never touched). -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
