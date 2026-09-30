@@ -11,9 +11,11 @@
 #   Start-Process powershell -Verb RunAs -ArgumentList '-ExecutionPolicy','Bypass','-File','tools\capture-screenshots.ps1'
 #
 # Fade should be off. Whatever profile and mappings are active are what
-# gets photographed. Afterwards the keyboard size, its layout and the
-# open page are put back, and the keyboard is hidden again if this script
-# opened it. ASCII only: Windows PowerShell reads this file as ANSI.
+# gets photographed. A dashboard hidden to the tray is asked to show. The
+# two windows may overlap: each is brought in front of the other for its
+# own pictures. Afterwards the keyboard size, its layout and the open page
+# are put back, and the keyboard is hidden again if this script opened it.
+# ASCII only: Windows PowerShell reads this file as ANSI.
 param(
   [string]$Out = (Join-Path $PSScriptRoot "..\Assets\screenshots"),
   [string]$Method = "sendinput"   # "manual": Mini/Maxi were clicked by hand; capture what shows
@@ -36,6 +38,9 @@ public static class N {
   [DllImport("user32.dll")] public static extern bool GetCursorPos(out POINT p);
   [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
   [DllImport("user32.dll")] public static extern void mouse_event(uint flags, uint dx, uint dy, uint data, UIntPtr extra);
+  [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr h, IntPtr after, int x, int y, int w, int ht, uint flags);
+  [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern int RegisterWindowMessage(string message);
+  [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h, int msg, IntPtr w, IntPtr l);
   [StructLayout(LayoutKind.Sequential)] public struct RECT { public int L, T, R, B; }
   [StructLayout(LayoutKind.Sequential)] public struct POINT { public int X, Y; }
 }
@@ -85,6 +90,14 @@ function Get-Window($name) {
 # By title: with the keyboard open, the process's main window handle can
 # point at the wrong window.
 $dash = Get-Window "UnboundKeys"
+if ($null -eq $dash) {
+  # Hidden to the tray: ask for it the way a second launch of the app does
+  # (see SingleInstance.cs), and give it a moment to appear.
+  $show = [N]::RegisterWindowMessage("UnboundKeys.ShowDashboard")
+  [void][N]::PostMessage([IntPtr]0xFFFF, $show, [IntPtr]::Zero, [IntPtr]::Zero)
+  for ($i = 0; $i -lt 10 -and $null -eq $dash; $i++) { Start-Sleep -Milliseconds 300; $dash = Get-Window "UnboundKeys" }
+  Log "dashboard was hidden; asked it to show"
+}
 if ($null -eq $dash) { throw "dashboard window not visible (say 'press menu')" }
 Log ("dashboard found, pid " + $proc.Id + ", keyboard size " + $originalSize + ", method " + $Method)
 
@@ -146,6 +159,17 @@ function Push-Key($win, $text, $settle = 900) {
   Start-Sleep -Milliseconds $settle
 }
 
+# Puts a window in front of the app's other window without moving it or
+# giving it focus. Both are always-on-top, and the pictures are copied from
+# the screen, so whichever is in front where they overlap is what shows:
+# the dashboard once covered the right-hand side of the keyboard picture
+# (and a covered Mini/Maxi key would take the click meant for it).
+function Raise-Window($el) {
+  $h = [IntPtr]$el.Current.NativeWindowHandle
+  [void][N]::SetWindowPos($h, [IntPtr](-1), 0, 0, 0, 0, 0x13)   # topmost; no move, no size, no activate
+  Start-Sleep -Milliseconds 300
+}
+
 # Copies the window's rectangle from the screen. $radius clears the
 # corners of a rounded window so the PNG shows nothing behind them.
 function Save-Window($el, $file, $radius = 0) {
@@ -177,6 +201,7 @@ function Save-Window($el, $file, $radius = 0) {
 }
 
 # The five pages and an editor. Choosing a rail item closes the editor.
+Raise-Window $dash
 Invoke-Button $dash "Mouse";    Save-Window $dash "UBK-Mouse.png"
 Invoke-Button $dash "Keyboard"; Save-Window $dash "UBK-Keyboard-Page.png"
 Invoke-Button $dash "Voice";    Save-Window $dash "UBK-Voice.png"
@@ -205,6 +230,7 @@ Invoke-Button $dash "Large" 900
 # From here on the keyboard is not as the user left it, so whatever
 # happens below, the size (and an opened keyboard) is put back in finally.
 try {
+  Raise-Window $kb
   $isMini = $null -ne (Find-Button $kb "Maxi")
   if ($isMini) { Save-Window $kb "UBK-Keyboard-Mini.png" 10 } else { Save-Window $kb "UBK-Keyboard.png" 10 }
   if ($Method -eq "sendinput") {
@@ -214,12 +240,14 @@ try {
       Push-Key $kb "Maxi"
       if (-not (Wait-Button $kb "Mini")) { Push-Key $kb "Maxi" }
       if (-not (Wait-Button $kb "Mini")) { throw "Maxi click did not switch the layout" }
+      Raise-Window $kb
       Save-Window $kb "UBK-Keyboard.png" 10
       Push-Key $kb "Mini"
     } else {
       Push-Key $kb "Mini"
       if (-not (Wait-Button $kb "Maxi")) { Push-Key $kb "Mini" }
       if (-not (Wait-Button $kb "Maxi")) { throw "Mini click did not switch the layout" }
+      Raise-Window $kb
       Save-Window $kb "UBK-Keyboard-Mini.png" 10
       Push-Key $kb "Maxi"
     }
@@ -228,6 +256,7 @@ try {
   Invoke-Button $dash $originalSize 600
   if ($opened) { Invoke-Button $dash "Show on-screen keyboard" 600 }
   Invoke-Button $dash "Mouse"
+  Raise-Window $dash
 }
 Log "done"
 } catch {
