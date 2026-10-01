@@ -13,8 +13,10 @@ namespace UnboundKeys.Wpf;
 // keys that mean something for a name are live too — Space, Backspace,
 // Shift, Caps, the punctuation, Enter for Done, Esc for Cancel, Del to
 // clear — and the rest (Tab, Ctrl, Win, Alt, the arrows) stay as quiet
-// outlines. Shift is one letter's worth and lights up at each word
-// start, so names come out capitalized on their own; Caps locks.
+// outlines. Shift is sticky, as on the on-screen keyboard: click it and
+// it stays lit for the next key typed (a held key keeps it for its whole
+// run), then lets go; Caps locks. Nothing is capitalized on its own
+// (Fizzil: Shift is there for whoever wants a capital).
 public partial class NameKeyboard
 {
     private const int MaxLength = 20;
@@ -51,7 +53,7 @@ public partial class NameKeyboard
         _text = initialText;
         _isAcceptable = isAcceptable;
         _caps = false;
-        _shift = AtWordStart();
+        _shift = false;
         RefreshCase();
         UpdatePreview();
     }
@@ -94,9 +96,9 @@ public partial class NameKeyboard
         switch (spec.Label)
         {
             case "":
-                return BuildOutlinedKey("", Space);
+                return BuildRepeatingKey("", Space);
             case "⌫":
-                return BuildOutlinedKey(spec.Label, Backspace);
+                return BuildRepeatingKey(spec.Label, Backspace);
             case "Del":
                 return BuildOutlinedKey(spec.Label, Clear);
             case "Enter":
@@ -122,7 +124,7 @@ public partial class NameKeyboard
                 return BuildInertKey(spec);
             default:
                 // Punctuation: the shifted glyph while Shift is lit.
-                return BuildOutlinedKey(spec.Label, () => TypePunctuation(spec));
+                return BuildRepeatingKey(spec.Label, () => TypePunctuation(spec), ReleaseShift);
         }
     }
 
@@ -135,7 +137,7 @@ public partial class NameKeyboard
         var key = BuildOutlinedKey(spec.Label.ToLowerInvariant(), out _, out var label);
         if (char.IsLetter(c))
             _letters.Add((label, c));
-        key.Click += (_, _) => Type(c);
+        WireRepeat(key, () => Type(c), ReleaseShift);
         return key;
     }
 
@@ -144,6 +146,58 @@ public partial class NameKeyboard
         var key = BuildOutlinedKey(label, out _, out _);
         key.Click += (_, _) => onClick();
         return key;
+    }
+
+    private static Button BuildRepeatingKey(string label, Action onPress, Action? onRelease = null)
+    {
+        var key = BuildOutlinedKey(label, out _, out _);
+        WireRepeat(key, onPress, onRelease);
+        return key;
+    }
+
+    // The keys that type (letters, digits, punctuation, Space, Backspace)
+    // act like the on-screen keyboard's (Fizzil): once on the way down,
+    // then again and again while held, on the same schedule
+    // (KeyExecutor.HoldRepeatDelayMs, then RepeatIntervalMs), so holding
+    // Backspace clears a name quickly and no typing key feels dead when
+    // held. Shift, Caps, Del, Enter and Esc switch or finish something, so
+    // they stay single clicks. Preview events rather than Click, which
+    // only fires on release. The button captures the mouse while pressed,
+    // so a release anywhere still reaches it; losing capture some other
+    // way must end the repeat too. onRelease runs once when the press
+    // ends: the keys that use Shift let it go there, not per press, so a
+    // held key keeps Shift for its whole run, as on the on-screen keyboard.
+    private static void WireRepeat(Button key, Action onPress, Action? onRelease = null)
+    {
+        System.Windows.Threading.DispatcherTimer? timer = null;
+        bool pressed = false;
+
+        void Release()
+        {
+            if (!pressed)
+                return;
+            pressed = false;
+            timer?.Stop();
+            timer = null;
+            onRelease?.Invoke();
+        }
+
+        key.PreviewMouseLeftButtonDown += (_, _) =>
+        {
+            Release();
+            pressed = true;
+            onPress();
+            var repeat = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(KeyExecutor.HoldRepeatDelayMs) };
+            repeat.Tick += (_, _) =>
+            {
+                repeat.Interval = TimeSpan.FromMilliseconds(KeyExecutor.RepeatIntervalMs);
+                onPress();
+            };
+            timer = repeat;
+            repeat.Start();
+        };
+        key.PreviewMouseLeftButtonUp += (_, _) => Release();
+        key.LostMouseCapture += (_, _) => Release();
     }
 
     // The Keyboard page's outlined key, as a button: the outline sits on
@@ -179,6 +233,12 @@ public partial class NameKeyboard
         };
         key.SetResourceReference(StyleProperty, "SecondaryButtonStyle");
         key.PreviewMouseLeftButtonDown += (_, _) => KeyClick.Play();
+        // The key under the pointer shows its character in white (Fizzil:
+        // to see where the mouse is on a keyboard of quiet outlines); off
+        // it, back to quiet, unless it is a lit Shift or Caps (see Light).
+        var keyText = text; // an out parameter cannot be captured
+        key.MouseEnter += (_, _) => Brighten(keyText, true);
+        key.MouseLeave += (_, _) => Brighten(keyText, keyText.Tag is true);
         return key;
     }
 
@@ -211,15 +271,7 @@ public partial class NameKeyboard
     {
         if (_text.Length >= MaxLength)
             return;
-        if (char.IsLetter(c))
-        {
-            _text += _shift ^ _caps ? char.ToUpperInvariant(c) : c;
-            ReleaseShift();
-        }
-        else
-        {
-            _text += c;
-        }
+        _text += char.IsLetter(c) && (_shift ^ _caps) ? char.ToUpperInvariant(c) : c;
         UpdatePreview();
     }
 
@@ -229,7 +281,6 @@ public partial class NameKeyboard
             return;
         string glyph = _shift && spec.ShiftLabel is { Length: 1 } shifted ? shifted : spec.Label;
         _text += glyph;
-        ReleaseShift();
         UpdatePreview();
     }
 
@@ -238,8 +289,6 @@ public partial class NameKeyboard
         if (_text.Length >= MaxLength || AtWordStart())
             return;
         _text += ' ';
-        _shift = true;
-        RefreshCase();
         UpdatePreview();
     }
 
@@ -248,16 +297,12 @@ public partial class NameKeyboard
         if (_text.Length == 0)
             return;
         _text = _text[..^1];
-        _shift = AtWordStart();
-        RefreshCase();
         UpdatePreview();
     }
 
     private void Clear()
     {
         _text = "";
-        _shift = true;
-        RefreshCase();
         UpdatePreview();
     }
 
@@ -267,7 +312,7 @@ public partial class NameKeyboard
             Done?.Invoke(_text.Trim());
     }
 
-    // Shift is one keystroke's worth.
+    // Shift lets go once the key that used it is released (see WireRepeat).
     private void ReleaseShift()
     {
         if (!_shift)
@@ -294,8 +339,15 @@ public partial class NameKeyboard
     private static void Light(Border outline, TextBlock text, bool on)
     {
         outline.SetResourceReference(Border.BorderBrushProperty, on ? "AccentBrush" : "CardBorderBrush");
-        text.SetResourceReference(TextBlock.ForegroundProperty, on ? "TextPrimaryBrush" : "TextSecondaryBrush");
-        text.Opacity = on ? 1.0 : 0.6;
+        text.Tag = on; // what the key goes back to when the pointer leaves it
+        Brighten(text, on || (outline.Parent as Button)?.IsMouseOver == true);
+    }
+
+    // A key's character: white and solid, or the quiet grey of the map.
+    private static void Brighten(TextBlock text, bool bright)
+    {
+        text.SetResourceReference(TextBlock.ForegroundProperty, bright ? "TextPrimaryBrush" : "TextSecondaryBrush");
+        text.Opacity = bright ? 1.0 : 0.6;
     }
 
     private void UpdatePreview()
