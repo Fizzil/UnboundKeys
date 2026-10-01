@@ -12,7 +12,17 @@ namespace UnboundKeys;
 // the mouse hook) from noticing the next command.
 internal static class KeyExecutor
 {
-    private const int RepeatIntervalMs = 100;
+    internal const int RepeatIntervalMs = 100;
+
+    // A key held on a real keyboard repeats: the keyboard sends its "down"
+    // again after a short delay and then at a steady rate until it is let
+    // go, which is what makes a held Backspace delete a run of letters or
+    // a held arrow walk the cursor. SendInput does none of that for a key
+    // a program holds, so a Hold used to be one press, held (one letter
+    // gone, Fizzil found). Hold now sends the last key's "down" again on
+    // the on-screen keyboard's hold-to-repeat schedule (the keyboard reads
+    // these two numbers) until it lets go.
+    internal const int HoldRepeatDelayMs = 450;
 
     // A timed Hold or Repeat only ever checked elapsed time, so "press
     // stop" had no way to interrupt one already in progress — it could take
@@ -89,11 +99,6 @@ internal static class KeyExecutor
         IsVirtualSource(word) ? _virtualState :
         _voiceState;
 
-    private static List<(ushort Vk, bool Extended)> GetAllKeysForWord(string word) =>
-        IsMouseSource(word) ? MouseMap.GetAllKeys(word) :
-        IsVirtualSource(word) ? VirtualKeyMap.GetAllKeys(word) :
-        KeyMap.GetAllKeys(word);
-
     // The window (and its title, at the time) that was focused when each
     // slot was engaged — e.g. the game. If focus moves to a different window
     // (alt-tabbing out, clicking elsewhere), or the SAME window's title
@@ -121,6 +126,12 @@ internal static class KeyExecutor
         foreach (var key in keys)
             NativeInput.KeyUp(key.Vk, key.Extended);
     }
+
+    // The key a Hold repeats while it lasts: the last one pressed, as on a
+    // real keyboard, where Ctrl stays down and X is what repeats. A mouse
+    // button never repeats (a real one doesn't either), so null for that.
+    private static (ushort Vk, bool Extended)? RepeatingKey(IReadOnlyList<(ushort Vk, bool Extended)> keys) =>
+        keys.Count > 0 && !NativeInput.IsMouseButtonVk(keys[^1].Vk) ? keys[^1] : null;
 
     // Repeat cycles through a word's keys one at a time instead of firing
     // them together — Key 1, then Key 2, then Key 3, then back to Key 1, for
@@ -325,8 +336,23 @@ internal static class KeyExecutor
 
             if (behavior.Hold)
             {
+                var end = DateTime.UtcNow.AddSeconds(behavior.DurationSeconds);
+                var repeating = RepeatingKey(keys);
                 PressAllDown(keys);
-                InterruptibleSleep((int)(behavior.DurationSeconds * 1000), token);
+                // Sleeps never run past the end, so the hold still lets go
+                // on time; the repeats (see HoldRepeatDelayMs) fill it.
+                int nextRepeatMs = HoldRepeatDelayMs;
+                while (!token.IsCancellationRequested)
+                {
+                    int leftMs = (int)(end - DateTime.UtcNow).TotalMilliseconds;
+                    if (leftMs <= 0)
+                        break;
+                    InterruptibleSleep(repeating == null ? leftMs : Math.Min(nextRepeatMs, leftMs), token);
+                    if (repeating == null || token.IsCancellationRequested || DateTime.UtcNow >= end)
+                        break;
+                    NativeInput.KeyDown(repeating.Value.Vk, repeating.Value.Extended);
+                    nextRepeatMs = RepeatIntervalMs;
+                }
                 ReleaseAllUp(keys);
             }
             else
@@ -379,21 +405,25 @@ internal static class KeyExecutor
         oldSignal.Cancel();
         oldSignal.Dispose();
 
-        List<string> engagedWords;
+        // Let go of what is actually held: each slot's HoldKeys, the keys
+        // its hold pressed, not the word's current mapping. A profile switch
+        // or an edit mid-hold makes those differ, and releasing the new
+        // keys left the old one stuck down (the harness caught exactly
+        // that). A repeat never leaves a key down, so nothing to send for one.
+        var held = new List<IReadOnlyList<(ushort Vk, bool Extended)>>();
         lock (_lock)
         {
-            engagedWords = new List<string>();
-            foreach (var (word, engaged) in _engaged)
-                if (engaged)
-                    engagedWords.Add(word);
+            foreach (var s in new[] { _voiceState, _mouseState, _virtualState })
+                if (s.HoldKeys != null)
+                    held.Add(s.HoldKeys);
             _engaged.Clear();
             ClearState(_voiceState);
             ClearState(_mouseState);
             ClearState(_virtualState);
         }
 
-        foreach (var word in engagedWords)
-            ReleaseAllUp(GetAllKeysForWord(word));
+        foreach (var keys in held)
+            ReleaseAllUp(keys);
 
         // A sticky Shift/Ctrl/Alt/Win held down from the virtual keyboard
         // isn't tracked in _engaged at all (see StickyModifiers) — this is
@@ -560,6 +590,28 @@ internal static class KeyExecutor
         else
         {
             PressAllDown(keys);
+
+            // Repeat the held key (see HoldRepeatDelayMs) until something
+            // ends the hold: the word again, another word taking the slot,
+            // a focus switch, ForceRelease or ReleaseAll. Each of those
+            // clears this word's hold under _lock BEFORE it sends the key
+            // up, and each repeat goes out under the same lock, so a repeat
+            // can never land after the key up and leave the key stuck down.
+            var repeating = RepeatingKey(keys);
+            if (repeating == null)
+                return;
+            var token = _stopSignal.Token;
+            InterruptibleSleep(HoldRepeatDelayMs, token);
+            while (!token.IsCancellationRequested)
+            {
+                lock (_lock)
+                {
+                    if (!(_engaged.TryGetValue(word, out var v) && v) || s.HoldWord != word)
+                        break;
+                    NativeInput.KeyDown(repeating.Value.Vk, repeating.Value.Extended);
+                }
+                InterruptibleSleep(RepeatIntervalMs, token);
+            }
         }
     }
 

@@ -28,8 +28,9 @@ public partial class VirtualKeyboardWindow
     private const double RowHeight = 44;
     private const double KeysWidth = 780; // the key area at full size; the grip sits beside it
     private const ushort VkCapital = 0x14;
-    private const int RepeatInitialDelayMs = 450;
-    private const int RepeatIntervalMs = 100; // matches KeyExecutor's own RepeatIntervalMs
+    // One schedule for a held key, whether held on screen or by a Hold mapping.
+    private const int RepeatInitialDelayMs = KeyExecutor.HoldRepeatDelayMs;
+    private const int RepeatIntervalMs = KeyExecutor.RepeatIntervalMs;
     private const int PanicTapWindowMs = 1000;
     // Approximate outer size, for keeping a remembered position on screen
     // before the window has measured itself.

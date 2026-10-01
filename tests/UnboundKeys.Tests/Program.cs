@@ -67,6 +67,7 @@ bool allPassed = true;
 allPassed &= Scenario("a tap with a 2.0 s pause", new KeyBehavior { Priority = true, PrioritySeconds = 2.0 }, expectedPause: 2.0);
 allPassed &= Scenario("Fizzil's recipe: Hold 1.0 s with a 1.0 s pause", new KeyBehavior { Hold = true, DurationSeconds = 1.0, Priority = true, PrioritySeconds = 1.0 }, expectedPause: 1.0);
 allPassed &= RotationScenario();
+allPassed &= HoldScenario();
 allPassed &= UnboundKeys.Tests.SettingsTests.Run(scratch);
 allPassed &= UnboundKeys.Tests.UpdaterTests.Run();
 allPassed &= UnboundKeys.Tests.SingleInstanceTests.Run();
@@ -120,7 +121,16 @@ bool Scenario(string name, KeyBehavior pause, double expectedPause)
     Console.WriteLine($"  {before.Count} repeat keys, then the pause key at {log[pauseIndex].T:0.000} s, then {after.Count} repeat keys");
     Check(before.Count >= 8, $"the repeat was running before it (got {before.Count} keys in a second)");
     Check(Math.Abs(log[pauseIndex].T - pressAt) < 0.15, $"the pause key went out at once: {log[pauseIndex].T - pressAt:0.000} s after the press");
-    Check(log.Count(e => e.Vk == F14) == 1, "it went out once (the repeat's gap is inside the queue window)");
+    if (pause.Hold)
+    {
+        // A held key repeats (see KeyExecutor.HoldRepeatDelayMs): every
+        // down must fall inside the hold.
+        var holdDowns = log.Where(e => e.Vk == F14).ToList();
+        double span = holdDowns[^1].T - holdDowns[0].T;
+        Check(holdDowns.Count >= 5 && span <= pause.DurationSeconds + 0.1, $"the held key repeated while held: {holdDowns.Count} downs over {span:0.00} s");
+    }
+    else
+        Check(log.Count(e => e.Vk == F14) == 1, "it went out once (the repeat's gap is inside the queue window)");
     Check(after.Count >= 1, "the repeat resumed");
     if (after.Count >= 1)
     {
@@ -177,4 +187,57 @@ bool RotationScenario()
         Check(period > 0.10 && period < 0.25, $"burst {b / 3 + 1} began {period * 1000:0} ms after the one before");
     }
     return ok;
+}
+
+// Hold repeats like a key held on a real keyboard (see
+// KeyExecutor.HoldRepeatDelayMs): the first down at once, the next after
+// the delay, then one every interval; nothing after the release, which
+// must leave the key up.
+bool HoldScenario()
+{
+    Console.WriteLine("--- hold: repeats like a held key, lets go clean ---");
+    lock (events)
+        events.Clear();
+
+    var hold = new KeyBehavior { Hold = true, Infinite = true };
+
+    clock.Restart();
+    var task = Task.Run(() => KeyExecutor.Execute("four", repeatKeys, hold));
+    Thread.Sleep(1500);
+    KeyExecutor.ReleaseAll();
+    double releasedAt = clock.Elapsed.TotalSeconds;
+    task.Wait(3000);
+    Thread.Sleep(300);
+
+    List<(double T, ushort Vk)> log;
+    lock (events)
+        log = new List<(double, ushort)>(events);
+
+    bool ok = true;
+    void Check(bool condition, string what)
+    {
+        Console.WriteLine($"  [{(condition ? "ok" : "FAIL")}] {what}");
+        ok &= condition;
+    }
+
+    var downs = log.Where(e => e.Vk == F13).ToList();
+    Console.WriteLine($"  {downs.Count} downs in 1.5 s");
+    Check(downs.Count >= 10 && downs.Count <= 14, $"one down, then one every 0.1 s after a 0.45 s delay (got {downs.Count})");
+    Check(downs.Count > 0 && downs[0].T < 0.15, "the first down went out at once");
+    if (downs.Count > 1)
+    {
+        double delay = downs[1].T - downs[0].T;
+        Check(delay > 0.40 && delay < 0.60, $"the first repeat came after the delay ({delay * 1000:0} ms)");
+    }
+    for (int i = 2; i < Math.Min(downs.Count, 6); i++)
+        Check(Math.Abs(downs[i].T - downs[i - 1].T - 0.1) < 0.08, $"repeat gap {i}: {(downs[i].T - downs[i - 1].T) * 1000:0} ms");
+    Check(downs.All(d => d.T <= releasedAt + 0.05), "nothing went out after the release");
+    Check((Keys.GetAsyncKeyState(F13) & 0x8000) == 0, "the key is up after the release");
+    return ok;
+}
+
+static class Keys
+{
+    [DllImport("user32.dll")]
+    public static extern short GetAsyncKeyState(int vKey);
 }

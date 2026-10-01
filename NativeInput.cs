@@ -174,7 +174,7 @@ internal static class NativeInput
         SendInput(1, new[] { up }, Marshal.SizeOf<INPUT>());
     }
 
-    private static bool IsMouseButtonVk(ushort vk) =>
+    internal static bool IsMouseButtonVk(ushort vk) =>
         vk is VK_LBUTTON or VK_RBUTTON or VK_MBUTTON or VK_XBUTTON1 or VK_XBUTTON2;
 
     // A click always lands wherever the real OS cursor currently is — same
