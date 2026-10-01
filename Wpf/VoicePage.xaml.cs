@@ -14,7 +14,6 @@ namespace UnboundKeys.Wpf;
 // map. Above them, the fixed commands that always work.
 public partial class VoicePage : IDashboardPage
 {
-    private const string MicrophoneGlyph = "";
 
     private readonly Dictionary<string, (Button Tile, TextBlock Mapping)> _tiles = new();
 
@@ -73,11 +72,12 @@ public partial class VoicePage : IDashboardPage
 
         // What the microphone just heard (Fizzil: "did it hear me?"), live
         // as the words come in, the command that fired in accent, then back
-        // to an idle line a few seconds later.
-        AddHeader("HEARD", topMargin: 16);
-        _heardLine = new TextBlock { FontSize = 13, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(12, 2, 12, 2) };
+        // to an idle line a few seconds later. Under the picture (Fizzil),
+        // beside the keypad rather than below it.
+        AddHeader("HEARD", topMargin: 16, into: Left);
+        _heardLine = new TextBlock { FontSize = 13, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 2) };
         _heardLine.SetResourceReference(TextBlock.ForegroundProperty, "TextSecondaryBrush");
-        Rows.Children.Add(_heardLine);
+        Left.Children.Add(_heardLine);
         _heardIdleTimer.Tick += (_, _) =>
         {
             _heardIdleTimer.Stop();
@@ -94,6 +94,7 @@ public partial class VoicePage : IDashboardPage
         Refresh();
     }
 
+    private readonly System.Collections.Generic.Dictionary<string, TextBlock> _badges = new();
     private TextBlock _heardLine = null!;
     private readonly System.Windows.Threading.DispatcherTimer _heardIdleTimer = new() { Interval = TimeSpan.FromSeconds(4) };
 
@@ -122,29 +123,26 @@ public partial class VoicePage : IDashboardPage
     {
         string spoken = $"\"press {word}\"";
 
-        var icon = new TextBlock
-        {
-            Text = MicrophoneGlyph,
-            FontFamily = new System.Windows.Media.FontFamily("Segoe MDL2 Assets"),
-            FontSize = 12,
-            Margin = new Thickness(0, 0, 6, 0),
-            VerticalAlignment = VerticalAlignment.Center,
-        };
-        icon.SetResourceReference(TextBlock.ForegroundProperty, "TextSecondaryBrush");
-        var phrase = new TextBlock { Text = spoken, FontSize = 13, VerticalAlignment = VerticalAlignment.Center };
-        var phraseLine = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal, HorizontalAlignment = System.Windows.HorizontalAlignment.Center };
-        phraseLine.Children.Add(icon);
-        phraseLine.Children.Add(phrase);
-
-        var mapping = new TextBlock { FontSize = 12, HorizontalAlignment = System.Windows.HorizontalAlignment.Center, Margin = new Thickness(0, 3, 0, 0), TextTrimming = TextTrimming.CharacterEllipsis };
+        // Three centred lines (Fizzil): the words to say, the modes set
+        // (see ModeGlyphs; the line folds away for a plain tap), then the
+        // first key or two with "…" for the rest (see KeysLine).
+        var phrase = new TextBlock { Text = spoken, FontSize = 13, HorizontalAlignment = System.Windows.HorizontalAlignment.Center };
+        var modes = new TextBlock { HorizontalAlignment = System.Windows.HorizontalAlignment.Center, Margin = new Thickness(0, 1, 0, 0), Visibility = Visibility.Collapsed };
+        modes.SetResourceReference(TextBlock.ForegroundProperty, "AccentBrush");
+        var mapping = new TextBlock { FontSize = 12, HorizontalAlignment = System.Windows.HorizontalAlignment.Center, Margin = new Thickness(0, 1, 0, 0), TextTrimming = TextTrimming.CharacterEllipsis };
 
         var content = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-        content.Children.Add(phraseLine);
+        content.Children.Add(phrase);
+        content.Children.Add(modes);
         content.Children.Add(mapping);
+        _badges[word] = modes;
 
-        var tile = new Button { Content = content, Height = 58, Margin = new Thickness(3), HorizontalContentAlignment = System.Windows.HorizontalAlignment.Center };
+        var tile = new Button { Content = content, Height = 72, Margin = new Thickness(3), HorizontalContentAlignment = System.Windows.HorizontalAlignment.Center };
         tile.SetResourceReference(StyleProperty, "KeyCapStyle");
         tile.Click += (_, _) => EditRequested?.Invoke(KeyMapSource.Instance, word, spoken);
+        // The tile has no width until it is laid out, so the keys line is
+        // measured again once it has one (and whenever that changes).
+        tile.SizeChanged += (_, _) => FillKeysLine(mapping, word, IsCustomized(word), tile.ActualWidth - 2 * KeysLineSidePadding);
         tile.MouseEnter += (_, _) =>
         {
             Diagram.SetSpeaking(true);
@@ -153,6 +151,49 @@ public partial class VoicePage : IDashboardPage
 
         _tiles[word] = (tile, mapping);
         return tile;
+    }
+
+    // The first key, the second too if it fits beside it, then "…" for
+    // any more (Fizzil): a tile has one line for keys, and a key name cut
+    // off mid-word read badly, so the second key is measured in the line's
+    // font against the room the tile has and left out when it would spill
+    // ("Backspace …" rather than "Backspace + Left Cl…"). The keys take
+    // the tile's colour; the plus and the "…" stay grey, like the plus
+    // between the mode glyphs.
+    private const double KeysLineSidePadding = 8;
+
+    private static void FillKeysLine(TextBlock target, string word, bool customized, double maxWidth)
+    {
+        target.Inlines.Clear();
+        string keyBrush = customized ? "AccentBrush" : "TextSecondaryBrush";
+        string primary = MappingRow.PrimaryOf(KeyMapSource.Instance, word);
+        AddRun(target, primary, keyBrush);
+        var extras = KeyMap.ExtraWords[word];
+        if (extras.Count == 0)
+            return;
+        string second = KeyCatalog.DisplayNameFor(extras[0]);
+        string more = extras.Count > 1 ? " …" : "";
+        if (TextWidth(target, $"{primary} + {second}{more}") <= maxWidth)
+        {
+            AddRun(target, " + ", "TextSecondaryBrush");
+            AddRun(target, second, keyBrush);
+            if (more.Length > 0)
+                AddRun(target, more, "TextSecondaryBrush");
+        }
+        else
+            AddRun(target, " …", "TextSecondaryBrush");
+    }
+
+    private static double TextWidth(TextBlock target, string text) =>
+        new System.Windows.Media.FormattedText(text, System.Globalization.CultureInfo.CurrentUICulture, System.Windows.FlowDirection.LeftToRight,
+            new System.Windows.Media.Typeface(target.FontFamily, target.FontStyle, target.FontWeight, target.FontStretch), target.FontSize,
+            System.Windows.Media.Brushes.Black, System.Windows.Media.VisualTreeHelper.GetDpi(target).PixelsPerDip).WidthIncludingTrailingWhitespace;
+
+    private static void AddRun(TextBlock target, string text, string brush)
+    {
+        var run = new System.Windows.Documents.Run(text);
+        run.SetResourceReference(System.Windows.Documents.TextElement.ForegroundProperty, brush);
+        target.Inlines.Add(run);
     }
 
     // A word counts as changed once its key, its extra keys, or how it is
@@ -169,16 +210,16 @@ public partial class VoicePage : IDashboardPage
         {
             bool customized = IsCustomized(word);
             tile.Tag = customized;
-            mapping.Text = MappingRow.ValueOf(KeyMapSource.Instance, word);
-            mapping.SetResourceReference(TextBlock.ForegroundProperty, customized ? "AccentBrush" : "TextSecondaryBrush");
+            FillKeysLine(mapping, word, customized, tile.ActualWidth - 2 * KeysLineSidePadding);
+            _badges[word].Visibility = ModeGlyphs.Fill(_badges[word], KeyMap.Behaviors[word], scale: 0.75) ? Visibility.Visible : Visibility.Collapsed;
         }
     }
 
-    private void AddHeader(string text, double topMargin)
+    private void AddHeader(string text, double topMargin, System.Windows.Controls.Panel? into = null)
     {
         var header = new TextBlock { Text = text, Margin = new Thickness(0, topMargin, 0, 4) };
         header.SetResourceReference(StyleProperty, "SectionHeaderStyle");
-        Rows.Children.Add(header);
+        (into ?? Rows).Children.Add(header);
     }
 
     private void AddCommandLine(string phrase, string effect)

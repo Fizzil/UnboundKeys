@@ -46,6 +46,7 @@ public partial class MousePage : IDashboardPage
             _labels[id] = button.Label;
 
             var row = new MappingRow(button.Label, MappingRow.ValueOf(MouseMapSource.Instance, id));
+            row.SetModeGlyphs(MappingRow.BehaviorOf(MouseMapSource.Instance, id));
             row.Clicked += () => EditRequested?.Invoke(MouseMapSource.Instance, id, button.Label);
             row.HoverChanged += hovered => Diagram.Highlight(hovered ? id : null);
             _rows[id] = row;
@@ -64,7 +65,10 @@ public partial class MousePage : IDashboardPage
     public void Refresh()
     {
         foreach (var (id, row) in _rows)
+        {
             row.SetChipText(MappingRow.ValueOf(MouseMapSource.Instance, id));
+            row.SetModeGlyphs(MappingRow.BehaviorOf(MouseMapSource.Instance, id));
+        }
     }
 
     private void AddGroupLabel(string text)

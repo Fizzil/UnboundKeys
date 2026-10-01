@@ -970,4 +970,28 @@
         </Setter>
     </Style>
 
+    <!-- Tooltips: above what they name, so the pointer never sits on top
+         of them (Fizzil), on the app's own surface rather than WPF's
+         white box. -->
+    <Style TargetType="ToolTip">
+        <Setter Property="Placement" Value="Top"/>
+        <Setter Property="VerticalOffset" Value="-6"/>
+        <Setter Property="Background" Value="{DynamicResource HoverBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="FontFamily" Value="Segoe UI"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Padding" Value="10,6,10,6"/>
+        <Setter Property="HasDropShadow" Value="False"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToolTip">
+                    <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
 </ResourceDictionary>

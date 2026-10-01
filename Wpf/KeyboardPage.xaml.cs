@@ -8,13 +8,13 @@ using Button = System.Windows.Controls.Button;
 namespace UnboundKeys.Wpf;
 
 // A remappable key is a real KeyCapStyle key (click → editor); once
-// customized it wears the same accent wash as on the keyboard itself,
-// the Tag underline, and its new mapping in small accent text. Every
-// other key is a non-interactive outline, so the map reads as "the
-// keyboard, with the changeable keys lit".
+// customized it wears the same accent wash as on the keyboard itself and
+// the Tag underline (how it is pressed is in its tooltip; a key is too
+// small for more, Fizzil). Every other key is a non-interactive outline,
+// so the map reads as "the keyboard, with the changeable keys lit".
 public partial class KeyboardPage : IDashboardPage
 {
-    private readonly Dictionary<string, (Button Tile, Border Wash, TextBlock Mapping)> _keys = new();
+    private readonly Dictionary<string, (Button Tile, Border Wash)> _keys = new();
     private readonly Dictionary<Button, double> _scaleOf;
 
     internal event Action<IRemapSource, string, string>? EditRequested;
@@ -49,6 +49,8 @@ public partial class KeyboardPage : IDashboardPage
         Refresh();
     }
 
+    private readonly System.Collections.Generic.Dictionary<string, string> _labels = new();
+
     private Grid BuildRow(KeySpec[] specs)
     {
         var row = new Grid { Height = 36 };
@@ -73,23 +75,19 @@ public partial class KeyboardPage : IDashboardPage
         var wash = new Border { CornerRadius = new CornerRadius(4), Opacity = 0.24, Visibility = Visibility.Collapsed, IsHitTestVisible = false };
         wash.SetResourceReference(Border.BackgroundProperty, "AccentBrush");
 
-        var labelText = new TextBlock { Text = label, FontSize = 13, HorizontalAlignment = System.Windows.HorizontalAlignment.Center };
-        var mapping = new TextBlock { FontSize = 9, HorizontalAlignment = System.Windows.HorizontalAlignment.Center, Margin = new Thickness(0, -1, 0, 0), TextTrimming = TextTrimming.CharacterEllipsis };
-        mapping.SetResourceReference(TextBlock.ForegroundProperty, "AccentBrush");
-
-        var stack = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-        stack.Children.Add(labelText);
-        stack.Children.Add(mapping);
+        var labelText = new TextBlock { Text = label, FontSize = 13, HorizontalAlignment = System.Windows.HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
 
         var content = new Grid();
         content.Children.Add(wash);
-        content.Children.Add(stack);
+        content.Children.Add(labelText);
+
+        _labels[id] = label;
 
         var tile = new Button { Content = content, ToolTip = $"Remap {label}" };
         tile.SetResourceReference(StyleProperty, "KeyCapStyle");
         tile.Click += (_, _) => EditRequested?.Invoke(VirtualKeyMapSource.Instance, id, $"Key {label}");
 
-        _keys[id] = (tile, wash, mapping);
+        _keys[id] = (tile, wash);
         return tile;
     }
 
@@ -147,12 +145,15 @@ public partial class KeyboardPage : IDashboardPage
 
     public void Refresh()
     {
-        foreach (var (id, (tile, wash, mapping)) in _keys)
+        foreach (var (id, (tile, wash)) in _keys)
         {
             bool customized = VirtualKeyMap.IsCustomized(id);
             tile.Tag = customized;
             wash.Visibility = customized ? Visibility.Visible : Visibility.Collapsed;
-            mapping.Text = customized ? MappingRow.ValueOf(VirtualKeyMapSource.Instance, id, "+") : "";
+            // No room on a key this small for glyphs or what it sends
+            // (Fizzil): the tooltip names the modes (see ModeGlyphs.Describe).
+            string modes = ModeGlyphs.Describe(VirtualKeyMap.Behaviors[id]);
+            tile.ToolTip = modes.Length > 0 ? $"Remap {_labels[id]}: {modes}" : $"Remap {_labels[id]}";
         }
     }
 }
