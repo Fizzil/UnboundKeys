@@ -92,7 +92,7 @@ internal static class SettingsTests
     }
 
     // The words typed on the on-screen keyboard are the user's to keep or
-    // not (Keyboard page > Remember words I type frequently): off, nothing is learned,
+    // not (Keyboard page > Smart predictive text): off, nothing is learned,
     // saved or suggested; Clear the list deletes what was kept. On a
     // scratch file, never the real list; a made-up word, so the built-in
     // list cannot supply it.

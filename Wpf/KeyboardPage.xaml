@@ -23,9 +23,9 @@
              is about what the app keeps of your typing, with a way to see
              and edit what was kept and a way to forget it (Fizzil: people
              will not be happy with an app recording what they type). -->
-        <Button x:Name="RememberWordsToggle" Content="Remember words I type frequently" FontWeight="Bold"
+        <Button x:Name="RememberWordsToggle" Content="Smart predictive text" FontWeight="Bold"
                 Style="{StaticResource RailToggleStyle}" Margin="4,4,4,0"/>
-        <TextBlock Text="Off by default. While it is off, nothing you type is kept and the predictive text uses the built-in word list only. While it is on, the words you type on the on-screen keyboard are kept in a file on this PC, so they come first in the predictive text."
+        <TextBlock Text="Off by default. While it is off, it uses the built-in word list only. While it is on, it learns words you type so they come up first in the predictive text. All learnt words are kept in the list below. Add, edit or delete to your heart's content."
                    FontSize="11" TextWrapping="Wrap" Margin="16,0,12,4" Foreground="{DynamicResource TextSecondaryBrush}"/>
         <Grid Height="44" Margin="4,0,4,0">
             <Grid.ColumnDefinitions>

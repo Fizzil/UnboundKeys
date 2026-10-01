@@ -50,7 +50,7 @@ public partial class HelpPage : IDashboardPage
         AddHeader("ON-SCREEN KEYBOARD", topMargin: 6);
         AddLine("Shift, Ctrl, Alt, Win", "stick: click one, then the key to combine it with.");
         AddLine("Hold a key", "to repeat it.");
-        AddLine("Word suggestions", "finish the word when clicked. With \"Remember words I type frequently\" on (Keyboard page, off by default) your own words come first; \"Open the list\" lets you read and edit them, \"Clear the list\" forgets them.");
+        AddLine("Word suggestions", "finish the word when clicked. With \"Smart predictive text\" on (Keyboard page, off by default) your own words come first; \"Open the list\" lets you read and edit them, \"Clear the list\" forgets them.");
         AddLine("Menu, Fade, Mini, Maxi", "show or hide this dashboard, dim it, collapse it to a strip, bring it back. Drag it by the grip on its right edge.");
         AddLine("Remapping a key", "happens on the Keyboard page. A remapped key is caught on a real keyboard too.");
 
@@ -62,7 +62,7 @@ public partial class HelpPage : IDashboardPage
         AddLine("Action logger", "in Settings, off by default, is used for debugging and for building new features. While it is on, the app notes its starts, errors and the changes you make here; while it is off, nothing is written.");
         AddLine("Updates", "are checked only when you click Check for updates in Settings, and can be installed from there. A shortcut you made to the app is pointed at the newest version each time it starts.");
         // In bold (Fizzil): what the app keeps on the PC should be plain to see.
-        AddLine("Everything is saved in", @"%AppData%\UnboundKeys: your profiles and mappings in settings.json (with a backup beside it), the words kept by ""Remember words I type frequently"" in learned-words.txt if you switch that on, and the action logger's notes in log.txt if you switch that on. The full manual is in the GitHub repository.", bold: true);
+        AddLine("Everything is saved in", @"%AppData%\UnboundKeys: your profiles and mappings in settings.json (with a backup beside it), the words kept by ""Smart predictive text"" in learned-words.txt if you switch that on, and the action logger's notes in log.txt if you switch that on. The full manual is in the GitHub repository.", bold: true);
     }
 
     // Nothing on this page changes underneath it.

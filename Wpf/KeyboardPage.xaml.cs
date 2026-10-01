@@ -47,7 +47,7 @@ public partial class KeyboardPage : IDashboardPage
             KeyClick.Play(); // a sample of what was just switched on (silent when off)
         };
 
-        // Remember words I type frequently (see WordPredictor.Remember): off unless
+        // Smart predictive text (see WordPredictor.Remember): off unless
         // switched on here. Switching it off keeps what was learned so far
         // on disk, unused, until Clear the list, which takes two clicks
         // like every other delete.

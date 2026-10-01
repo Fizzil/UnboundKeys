@@ -13,7 +13,7 @@ namespace UnboundKeys;
 // subtitles skew conversational, which suits chat while gaming), and the
 // words the user has actually typed, which rank first. Everything is
 // offline. The typed words are kept only while Remember is on (the
-// Keyboard page's "Remember words I type frequently", off by default; Fizzil: people
+// Keyboard page's "Smart predictive text", off by default; Fizzil: people
 // will not be happy with an app recording what they type). Off, nothing
 // is learned, saved or suggested from them; ClearLearned deletes what was
 // kept.

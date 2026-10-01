@@ -29,7 +29,7 @@ Remap mouse buttons, spoken words and an on-screen keyboard to keyboard keys, wi
 - **Built for a mouse** — everything works with left-click alone (no right-click, no scroll wheel, no keyboard), so it keeps working even when those are remapped, and the dashboard never takes focus away from your game.
 - **Safety nets** — click Stop on the rail, say "press stop", or click the on-screen keyboard's Caps twice quickly, to release anything held or repeating. "Press menu" shows or hides the dashboard and "press fade" lifts Fade, both hands-free.
 - **Runs fully offline** — speech recognition ([Vosk](https://alphacephei.com/vosk/)) and word suggestions happen entirely on your machine. Nothing is sent anywhere. The one exception is Settings → Check for updates, which asks GitHub for the newest release only when you click it.
-- **Keeps nothing you didn't ask for** — the action logger (for debugging) and the keyboard's memory of words you type are both off until you switch them on, and the word list can be opened, edited or cleared at any time.
+- **Keeps nothing you didn't ask for** — the action logger (for debugging) and the keyboard's smart predictive text, which learns the words you type, are both off until you switch them on, and its word list can be opened, edited or cleared at any time.
 
 See [MANUAL.md](MANUAL.md) for the full details — every command, how each setting behaves, and what the dashboard does.
 
