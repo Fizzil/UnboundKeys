@@ -8,7 +8,7 @@
          bright keys are the ones you can change) — then the on-screen
          keyboard's own switch and size, which DashboardShell acts on. -->
     <StackPanel>
-        <TextBlock Text="The bright keys are the ones you can remap — click one. A key that's been changed shows what it sends now."
+        <TextBlock Text="The bright keys are the ones you can remap — click one. A key that's been changed is lit; hover it to see how it's pressed."
                    FontSize="11" TextWrapping="Wrap" Margin="12,4,12,8" Foreground="{DynamicResource TextSecondaryBrush}"/>
         <StackPanel x:Name="KeyRows" Margin="2,0,2,0"/>
 
