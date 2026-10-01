@@ -25,6 +25,16 @@ Notes for a future session — not urgent.
   strip was that typing the next letter of a *different* suggested word
   narrows, and a dedicated key accepts — worth trying once the click-to-
   accept version has been lived with.
+- **Combos survive Repeat** (2026-10-01, Fizzil wants it saved for later).
+  Today Repeat and Rotation tap a mapping's keys one at a time, so
+  Ctrl + X on Repeat sends a lone Ctrl, then a lone X, and types "x"
+  (found when "press one" was left on Repeat). Idea: in Repeat and
+  Rotation, Ctrl, Shift, Alt and Win are held down around every step
+  instead of being steps of their own, so Repeat Ctrl + X cuts over and
+  over and Shift + 1 works as a rotation step. No new setting. There is
+  no way to spam a combo today: the Mode buttons are one at a time, and
+  Hold presses the combo down once (Windows does not auto-repeat a key a
+  program holds down).
 
 ## Deliberately not on this list
 

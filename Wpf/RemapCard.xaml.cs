@@ -345,16 +345,27 @@ public partial class RemapCard
     // rows (Duration, Infinite, Infinite pause).
     private void SetMode(bool repeat, bool hold, bool rotation = false)
     {
-        if (_repeatOn == repeat && _holdOn == hold && _rotation == rotation)
+        // Infinite and Infinite pause live under the timing rows, so Tap
+        // (which hides them) switches both off rather than leaving them set
+        // out of sight: an unseen Infinite made a "Tap" hold its key for
+        // good, since the executor looks at Infinite first. A second click
+        // on Tap clears them too, for a mapping saved that way before.
+        bool tap = !repeat && !hold;
+        bool clearing = tap && (_infiniteOn || _priorityOn);
+        if (_repeatOn == repeat && _holdOn == hold && _rotation == rotation && !clearing)
             return;
         _repeatOn = repeat;
         _holdOn = hold;
         _rotation = rotation;
         UpdateModeVisuals();
         SetElementVisible(TimingPanel, _repeatOn || _holdOn, animate: true);
-        // Infinite pause lives under the timing rows, so Tap (which hides
-        // them) switches it off rather than leaving it set out of sight.
-        if (!_repeatOn && !_holdOn && _priorityOn)
+        if (tap && _infiniteOn)
+        {
+            _infiniteOn = false;
+            InfiniteButton.Tag = false;
+            UpdateDurationText();
+        }
+        if (tap && _priorityOn)
         {
             _priorityOn = false;
             _prioritySeconds = 0.0;
@@ -369,10 +380,10 @@ public partial class RemapCard
         RepeatButton.Tag = _repeatOn && !_rotation;
         RotationButton.Tag = _repeatOn && _rotation;
         HoldButton.Tag = _holdOn;
-        ModeHint.Text = _holdOn ? "Keeps the keys pressed for the duration below."
-            : _repeatOn && _rotation ? "Presses every key in order each tick, Key 1 first; the game takes the first that is ready. Leave anything you want to press yourself off the list."
-            : _repeatOn ? "Taps the keys again and again for the duration below."
-            : "Presses the keys once each time.";
+        ModeHint.Text = _holdOn ? "Holds all the keys down together for the duration below, then lets go. Repeats while held, like a key held on a real keyboard."
+            : _repeatOn && _rotation ? "About ten times a second, presses Key 1, Key 2, Key 3 and so on in a quick row. The game uses the first one that's ready and ignores the rest, so put your most important ability on Key 1. Leave off anything you want to time yourself."
+            : _repeatOn ? "Presses the keys one at a time, ten times a second: Key 1, Key 2 and so on, then back to Key 1, for the duration below. Never together, so use Tap for shortcuts like Ctrl + X."
+            : "Presses all the keys together, once. Right for shortcuts like Ctrl + X.";
     }
 
     // ---- Duration / Infinite ----
@@ -396,12 +407,23 @@ public partial class RemapCard
         SaveBehavior();
     }
 
+    // Infinite and Infinite pause are either/or (Fizzil): the pause key is
+    // the one that cuts into infinite repeats, so it cannot itself be one.
+    // Switching either on switches the other off.
     private void InfiniteButton_Click(object sender, RoutedEventArgs e)
     {
         _infiniteOn = !_infiniteOn;
         InfiniteButton.Tag = _infiniteOn;
         if (_infiniteOn)
+        {
             _duration = 0.0;
+            if (_priorityOn)
+            {
+                _priorityOn = false;
+                _prioritySeconds = 0.0;
+                RefreshPauseRows(animate: true);
+            }
+        }
         UpdateDurationText();
         SaveBehavior();
     }
@@ -422,6 +444,13 @@ public partial class RemapCard
     {
         _priorityOn = !_priorityOn;
         _prioritySeconds = _priorityOn ? (_prioritySeconds >= 0.1 ? _prioritySeconds : DefaultPauseSeconds) : 0.0;
+        if (_priorityOn && _infiniteOn)
+        {
+            // Either/or with Infinite (see InfiniteButton_Click).
+            _infiniteOn = false;
+            InfiniteButton.Tag = false;
+            UpdateDurationText();
+        }
         RefreshPauseRows(animate: true);
         SaveBehavior();
     }

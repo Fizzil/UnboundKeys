@@ -64,7 +64,7 @@
                 <Button x:Name="InfiniteButton" Click="InfiniteButton_Click" Style="{StaticResource RailToggleStyle}" Height="48" Margin="4,0,4,0">
                     <StackPanel>
                         <TextBlock Text="Infinite"/>
-                        <TextBlock Text="Keeps going until you trigger it again" Style="{StaticResource InlineHintStyle}"/>
+                        <TextBlock Text="Keeps pressing the keys repeatedly, or holding them, until you say or press it again" Style="{StaticResource InlineHintStyle}"/>
                     </StackPanel>
                 </Button>
 
@@ -97,7 +97,7 @@
                             <Button Content="Reset" Click="PauseResetButton_Click" Style="{StaticResource StepButtonStyle}"/>
                         </StackPanel>
                     </Grid>
-                    <TextBlock Text="One to two seconds usually does it; a channelled ability wants its cast time. Reset goes back to 1.0 s. Set this key's Mode to Hold for the same time and it lands every time."
+                    <TextBlock Text="Pauses every infinite repeat for the time above. Then set this key's Mode to Repeat or Hold for the same time, so it actually presses the key during the pause: Repeat for an instant ability, Hold for a cast or a channel. One to two seconds usually does it; Reset goes back to 1.0 s."
                                Style="{StaticResource RowHintStyle}" Margin="28,0,12,8"/>
                 </StackPanel>
 

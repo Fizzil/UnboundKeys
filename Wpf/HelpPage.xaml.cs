@@ -29,13 +29,13 @@ public partial class HelpPage : IDashboardPage
         AddLine("Listening switch", "pauses the voice keys only. Mouse buttons and both keyboards keep working.");
 
         AddHeader("REMAPPING MODES", topMargin: 6);
-        AddLine("Tap", "presses the keys once.");
-        AddLine("Repeat", "taps them again and again for the duration. With several keys it cycles through them one at a time.");
-        AddLine("Hold", "keeps them pressed for the duration. With several keys it holds them all together, as a combo.");
-        AddLine("Rotation", "presses all the keys in order every tick, a few milliseconds apart, so the game takes the first that is ready: a one-button rotation in your own priority order, Key 1 first, with no cooldown numbers to enter.");
-        AddLine("Infinite", "runs until you say the word or press the button again.");
+        AddLine("Tap", "presses all the keys together, once. Right for shortcuts like Ctrl + X.");
+        AddLine("Repeat", "presses the keys one at a time, ten times a second: Key 1, Key 2 and so on, then back to Key 1, for the duration. Never together, so use Tap for shortcuts.");
+        AddLine("Rotation", "about ten times a second, presses Key 1, Key 2, Key 3 and so on in a quick row. The game uses the first one that's ready and ignores the rest, so your most important ability goes on Key 1: a one-button rotation with no cooldown numbers to enter.");
+        AddLine("Hold", "holds all the keys down together for the duration, then lets go. Repeats while held, like a key held on a real keyboard, so a held Backspace deletes a run.");
+        AddLine("Infinite", "keeps pressing the keys repeatedly, or holding them, until you say the word or press the button again.");
         AddLine("Say or press it again", "to stop a Repeat or Hold early, Infinite or not.");
-        AddLine("Infinite pause", "in the editor, under Infinite, for a key that must cut into an infinite repeat: every infinite repeat pauses for the time you set (1.0 s to start) while the key fires, then resumes. Set that key's Mode to Hold for the same time and, with the game's press-and-hold casting on, it lands whatever the cooldown.");
+        AddLine("Infinite pause", "in the editor, under Infinite: pauses every infinite repeat for the time you set (1.0 s to start) while this key fires, then they resume. Then set the key's Mode to Repeat or Hold for the same time, so it actually presses the key during the pause: Repeat for an instant ability, Hold for a cast or a channel.");
 
         AddHeader("SAFETY NETS", topMargin: 6);
         AddLine("Stop, on the rail", "lets go of everything, whatever is mapped, with one click.");
