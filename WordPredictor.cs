@@ -11,15 +11,33 @@ namespace UnboundKeys;
 // 20,000 most frequent English words (Assets/words-en.txt, from Hermit
 // Dave's OpenSubtitles-based FrequencyWords, CC BY-SA 4.0 — film
 // subtitles skew conversational, which suits chat while gaming), and the
-// words Fizzil has actually typed, which rank first. Everything is
-// offline.
+// words the user has actually typed, which rank first. Everything is
+// offline. The typed words are kept only while Remember is on (the
+// Keyboard page's "Remember words I type frequently", off by default; Fizzil: people
+// will not be happy with an app recording what they type). Off, nothing
+// is learned, saved or suggested from them; ClearLearned deletes what was
+// kept.
 public static class WordPredictor
 {
     public const int MaxSuggestions = 8;
 
-    private static readonly string LearnedPath = Path.Combine(
+    private static string LearnedPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "UnboundKeys", "learned-words.txt");
+
+    // Set from the saved setting at startup (Program.cs) and by the
+    // Keyboard page's switch.
+    public static bool Remember { get; set; }
+
+    // For the harness in tests/ only, so it never touches the real list.
+    internal static void UseScratchFile(string path)
+    {
+        LearnedPath = path;
+        _words = null;
+        _learned.Clear();
+        _learnedDirty = false;
+        _learnedRead = false;
+    }
 
     private static string[]? _words;
     private static readonly Dictionary<string, int> _learned = new(StringComparer.OrdinalIgnoreCase);
@@ -37,12 +55,17 @@ public static class WordPredictor
 
         var results = new List<string>(MaxSuggestions);
 
-        foreach (var (word, _) in _learned.OrderByDescending(entry => entry.Value))
+        // The user's own words, only while they asked for them to be
+        // remembered: kept words must not surface on screen otherwise.
+        if (Remember)
         {
-            if (results.Count >= MaxSuggestions)
-                break;
-            if (word.Length > prefix.Length && word.StartsWith(prefix, StringComparison.Ordinal))
-                results.Add(word);
+            foreach (var (word, _) in _learned.OrderByDescending(entry => entry.Value))
+            {
+                if (results.Count >= MaxSuggestions)
+                    break;
+                if (word.Length > prefix.Length && word.StartsWith(prefix, StringComparison.Ordinal))
+                    results.Add(word);
+            }
         }
 
         foreach (var word in _words!)
@@ -61,6 +84,8 @@ public static class WordPredictor
     // — so a stray "asd" doesn't start showing up as a suggestion.
     public static void Learn(string word)
     {
+        if (!Remember)
+            return;
         EnsureLoaded();
         word = word.ToLowerInvariant();
         if (word.Length < 3 || !word.All(char.IsAsciiLetter))
@@ -75,6 +100,7 @@ public static class WordPredictor
     // disk mid-typing.
     public static void Save()
     {
+        EnsureLoaded(); // a hand edit since the last save wins (see EnsureLoaded)
         if (!_learnedDirty)
             return;
         try
@@ -82,6 +108,7 @@ public static class WordPredictor
             Directory.CreateDirectory(Path.GetDirectoryName(LearnedPath)!);
             File.WriteAllLines(LearnedPath, _learned.Select(entry => $"{entry.Key}\t{entry.Value}"));
             _learnedDirty = false;
+            _learnedStamp = StampOfFile();
         }
         catch (Exception ex)
         {
@@ -91,23 +118,85 @@ public static class WordPredictor
         }
     }
 
+    // How many words are kept, for the Keyboard page to say so. Counted
+    // whether or not Remember is on: what is on disk is what matters.
+    public static int LearnedCount
+    {
+        get
+        {
+            EnsureLoaded();
+            return _learned.Count;
+        }
+    }
+
+    // Forgets every learned word, in memory and on disk.
+    public static void ClearLearned()
+    {
+        EnsureLoaded();
+        _learned.Clear();
+        _learnedDirty = false;
+        try
+        {
+            File.Delete(LearnedPath);
+        }
+        catch (Exception ex)
+        {
+            Log.Error("clearing learned words", ex);
+        }
+        _learnedStamp = StampOfFile();
+    }
+
+    // The list's file, for the Keyboard page to open in a text editor
+    // (Fizzil: to view it, edit it, add to it). What is in memory is
+    // written out first, and an empty file is made if there is none, so
+    // there is always something to open and add to.
+    public static string EnsureListFile()
+    {
+        Save();
+        Directory.CreateDirectory(Path.GetDirectoryName(LearnedPath)!);
+        if (!File.Exists(LearnedPath))
+            File.WriteAllText(LearnedPath, "");
+        return LearnedPath;
+    }
+
+    private static bool _learnedRead;
+    // The file's last write time when it was last read or written here;
+    // MinValue while there is no file.
+    private static DateTime _learnedStamp;
+
+    private static DateTime StampOfFile() =>
+        File.Exists(LearnedPath) ? File.GetLastWriteTimeUtc(LearnedPath) : DateTime.MinValue;
+
+    // Loads the built-in list once, and the learned words whenever their
+    // file has changed since this class last read or wrote it. The file is
+    // the user's to edit, so it is the truth: an edited file replaces what
+    // is in memory, words learned since the last save included. A line is
+    // "word<TAB>count" as Save writes it, or just a word, as someone adding
+    // one by hand would type it.
     private static void EnsureLoaded()
     {
-        if (_words != null)
-            return;
-
-        _words = LoadBuiltInWords();
+        _words ??= LoadBuiltInWords();
 
         try
         {
-            if (File.Exists(LearnedPath))
+            DateTime stamp = StampOfFile();
+            if (_learnedRead && stamp == _learnedStamp)
+                return;
+
+            _learned.Clear();
+            _learnedDirty = false;
+            _learnedRead = true;
+            _learnedStamp = stamp;
+            if (stamp == DateTime.MinValue)
+                return;
+
+            foreach (var line in File.ReadAllLines(LearnedPath))
             {
-                foreach (var line in File.ReadAllLines(LearnedPath))
-                {
-                    int tab = line.IndexOf('\t');
-                    if (tab > 0 && int.TryParse(line[(tab + 1)..], out int count))
-                        _learned[line[..tab]] = count;
-                }
+                int tab = line.IndexOf('\t');
+                string word = (tab < 0 ? line : line[..tab]).Trim().ToLowerInvariant();
+                if (word.Length == 0)
+                    continue;
+                _learned[word] = tab >= 0 && int.TryParse(line[(tab + 1)..].Trim(), out int count) && count > 0 ? count : 1;
             }
         }
         catch (Exception ex)

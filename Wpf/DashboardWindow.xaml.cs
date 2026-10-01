@@ -50,6 +50,8 @@ public partial class DashboardWindow
         Loaded += (_, _) => KeepOnScreen();
         IsVisibleChanged += (_, _) =>
         {
+            // In the log beside the mapping changes (see RemapStore.LogChange).
+            Log.Info(IsVisible ? "dashboard shown" : "dashboard hidden");
             if (!IsVisible)
                 SavePlacement();
         };

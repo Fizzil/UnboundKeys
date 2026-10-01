@@ -63,10 +63,32 @@ internal sealed class RemapStore
         _save = save;
     }
 
+    // One log line per change to a mapping, saying which, where and to
+    // what. Fizzil found a keyboard key on Repeat that nobody had set, more
+    // than once; with these (and the shell's "editor opened" line) a stray
+    // change has a time and a sequence to be traced by.
+    // Nothing is even put together while the logger is off: the line costs
+    // a read of the settings file for the sub-profile's name.
+    private static void LogChange(string id, string what)
+    {
+        if (Log.Enabled)
+            Log.Info($"mapping {id} ({KeyMap.ActiveProfile} / {Settings.LoadActiveSubProfile(KeyMap.ActiveProfile)}): {what}");
+    }
+
+    private static string Describe(KeyBehavior b)
+    {
+        var invariant = System.Globalization.CultureInfo.InvariantCulture;
+        string mode = b.Repeat ? (b.Rotation ? "Rotation" : "Repeat") : b.Hold ? "Hold" : "Tap";
+        string time = b.Infinite ? ", Infinite" : b.DurationSeconds > 0 ? $", {b.DurationSeconds.ToString("0.0", invariant)} s" : "";
+        string pause = b.Priority ? $", pause {b.PrioritySeconds.ToString("0.0", invariant)} s" : "";
+        return mode + time + pause;
+    }
+
     public void Rebind(string id, ushort vkCode)
     {
         Words[id] = vkCode;
         Save();
+        LogChange(id, $"key 1 = {KeyCatalog.DisplayNameFor(vkCode)}");
     }
 
     // How many keys can fire alongside an id's main key — six keys in all
@@ -83,6 +105,7 @@ internal sealed class RemapStore
 
         ExtraWords[id].Add(vkCode);
         Save();
+        LogChange(id, $"key {ExtraWords[id].Count + 1} added = {KeyCatalog.DisplayNameFor(vkCode)}");
     }
 
     public void SetExtraKey(string id, int index, ushort vkCode)
@@ -93,6 +116,7 @@ internal sealed class RemapStore
 
         extras[index] = vkCode;
         Save();
+        LogChange(id, $"key {index + 2} = {KeyCatalog.DisplayNameFor(vkCode)}");
     }
 
     public void RemoveExtraKey(string id, int index)
@@ -103,6 +127,7 @@ internal sealed class RemapStore
 
         extras.RemoveAt(index);
         Save();
+        LogChange(id, $"key {index + 2} removed");
     }
 
     // The full set of keys an id should press — its main key followed by
@@ -124,6 +149,7 @@ internal sealed class RemapStore
     {
         Behaviors[id] = behavior;
         Save();
+        LogChange(id, Describe(behavior));
     }
 
     // The empty starting points every source hands to Settings.Load*: no
@@ -154,6 +180,7 @@ internal sealed class RemapStore
         ExtraWords[id].Clear();
         Behaviors[id] = new KeyBehavior();
         Save();
+        LogChange(id, "reset to default");
     }
 
     // Every id at once, one save at the end instead of one per id.
@@ -166,6 +193,8 @@ internal sealed class RemapStore
             Behaviors[id] = new KeyBehavior();
         }
         Save();
+        if (Log.Enabled)
+            Log.Info($"mappings reset to default: {Words.Count} of them ({KeyMap.ActiveProfile} / {Settings.LoadActiveSubProfile(KeyMap.ActiveProfile)})");
     }
 
     public void Save() => _save(Words, ExtraWords, Behaviors);

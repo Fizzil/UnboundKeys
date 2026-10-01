@@ -46,6 +46,43 @@ public partial class KeyboardPage : IDashboardPage
             KeyClickToggle.Tag = KeyClick.Enabled;
             KeyClick.Play(); // a sample of what was just switched on (silent when off)
         };
+
+        // Remember words I type frequently (see WordPredictor.Remember): off unless
+        // switched on here. Switching it off keeps what was learned so far
+        // on disk, unused, until Clear the list, which takes two clicks
+        // like every other delete.
+        RememberWordsToggle.Tag = WordPredictor.Remember;
+        RememberWordsToggle.Click += (_, _) =>
+        {
+            bool on = !(RememberWordsToggle.Tag is true);
+            if (!on)
+                WordPredictor.Save();
+            Settings.SaveRememberTypedWords(on);
+            WordPredictor.Remember = on;
+            RememberWordsToggle.Tag = on;
+        };
+        UnboundKeys.Themes.ConfirmDeleteBehavior.AttachTo(ClearWordsButton, () =>
+        {
+            WordPredictor.ClearLearned();
+            ShowLearnedCount();
+        });
+        // Open the list: the kept words in the PC's own text editor, to
+        // read, change or add to (Fizzil). WordPredictor notices the file
+        // changing and takes the edited version; the count catches up when
+        // the pointer comes back to this page.
+        OpenWordsButton.Click += (_, _) =>
+        {
+            try
+            {
+                string path = WordPredictor.EnsureListFile();
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                Log.Error("opening the word list", ex);
+            }
+        };
+        MouseEnter += (_, _) => ShowLearnedCount();
         Refresh();
     }
 
@@ -117,6 +154,14 @@ public partial class KeyboardPage : IDashboardPage
 
     public void SetKeyboardShown(bool shown) => ShowKeyboardToggle.Tag = shown;
 
+    // How many typed words are kept, and nothing to clear when there are none.
+    private void ShowLearnedCount()
+    {
+        int count = WordPredictor.LearnedCount;
+        LearnedCountText.Text = count == 0 ? "No words are kept." : count == 1 ? "1 word is kept." : $"{count} words are kept.";
+        ClearWordsButton.IsEnabled = count > 0;
+    }
+
     private void SizeButton_Click(object sender, RoutedEventArgs e)
     {
         double scale = _scaleOf[(Button)sender];
@@ -145,6 +190,7 @@ public partial class KeyboardPage : IDashboardPage
 
     public void Refresh()
     {
+        ShowLearnedCount();
         foreach (var (id, (tile, wash)) in _keys)
         {
             bool customized = VirtualKeyMap.IsCustomized(id);

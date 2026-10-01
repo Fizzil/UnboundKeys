@@ -187,6 +187,15 @@ internal static class Settings
         // The Mouse page start card has been read (Got it clicked) once.
         public bool StartCardDismissed { get; set; }
 
+        // Whether the app keeps a log (see Log). Off unless switched on in
+        // Settings > Action logger.
+        public bool WriteLog { get; set; }
+
+        // Whether the on-screen keyboard keeps the words typed on it for
+        // its suggestions (see WordPredictor.Remember). Off unless switched
+        // on, on the Keyboard page.
+        public bool RememberTypedWords { get; set; }
+
         // Where the dashboard window was last left — null until it has
         // been moved, in which case it opens centered.
         public double? DashboardLeft { get; set; }
@@ -516,6 +525,24 @@ internal static class Settings
     {
         var saved = Read();
         saved.KeyClickSound = on;
+        Write(saved);
+    }
+
+    public static bool LoadWriteLog() => Read().WriteLog;
+
+    public static void SaveWriteLog(bool on)
+    {
+        var saved = Read();
+        saved.WriteLog = on;
+        Write(saved);
+    }
+
+    public static bool LoadRememberTypedWords() => Read().RememberTypedWords;
+
+    public static void SaveRememberTypedWords(bool on)
+    {
+        var saved = Read();
+        saved.RememberTypedWords = on;
         Write(saved);
     }
 

@@ -19,8 +19,14 @@ static class Program
         if (!SingleInstance.Claim())
             return;
 
-        // From here on, anything that goes wrong leaves a line in the log
-        // (see Log), including the errors nothing else catches.
+        // The log is the user's choice (Settings > Action logger), off unless they
+        // switched it on. While it is on, anything that goes wrong from
+        // here leaves a line in it (see Log), including the errors nothing
+        // else catches.
+        Log.Enabled = Settings.LoadWriteLog();
+        // Likewise the words typed on the on-screen keyboard: kept only if
+        // the user switched that on (see WordPredictor.Remember).
+        WordPredictor.Remember = Settings.LoadRememberTypedWords();
         Log.Info($"started {typeof(Program).Assembly.GetName().Version} on {Environment.OSVersion.VersionString}");
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
         {

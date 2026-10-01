@@ -24,6 +24,8 @@ internal static class SettingsTests
 
         Section("settings: a first start", FirstStart);
         Section("settings: mappings survive a save", Mappings);
+        Section("the log: off unless switched on", LogSwitch);
+        Section("the keyboard's learned words: off unless switched on", LearnedWords);
         Section("settings: games (profiles)", Games);
         Section("settings: sub-profiles", SubProfiles);
         Section("settings: files from older versions", OlderFiles);
@@ -37,7 +39,89 @@ internal static class SettingsTests
         Check(Settings.LoadActiveProfileName() == "Default", "and it is the active one");
         Check(Same(Settings.LoadSubProfileNames("Default"), "Default"), "with one sub-profile, Default");
         Check(Settings.LoadKeyMap("Default", Words())["one"] == 0x31, "mappings are the app's defaults");
+        Check(!Settings.LoadWriteLog(), "the log is off until it is switched on");
+        Check(!Settings.LoadRememberTypedWords(), "so is remembering typed words");
         Check(!File.Exists(_file), "reading alone writes nothing to disk");
+    }
+
+    // The log is the user's choice (Settings > Action logger): off writes nothing
+    // at all, errors and crashes included; on writes. Left on at the end,
+    // as the damaged-file checks further down read the log.
+    private static void LogSwitch()
+    {
+        Settings.SaveWriteLog(true);
+        Check(Settings.LoadWriteLog(), "the switch is saved on");
+        Settings.SaveWriteLog(false);
+        Check(!Settings.LoadWriteLog(), "and off again");
+
+        Log.Enabled = false;
+        long before = File.Exists(_log) ? new FileInfo(_log).Length : 0;
+        Log.Info("a line while off");
+        Log.Error("an error while off");
+        Log.Crash("a crash while off", new InvalidOperationException("test"));
+        long after = File.Exists(_log) ? new FileInfo(_log).Length : 0;
+        Check(after == before, "switched off, nothing is written, errors and crashes included");
+
+        Log.Enabled = true;
+        Log.Info("a line while on");
+        Check(File.Exists(_log) && File.ReadAllText(_log).Contains("a line while on"), "switched on, a line is written");
+    }
+
+    // The words typed on the on-screen keyboard are the user's to keep or
+    // not (Keyboard page > Remember words I type frequently): off, nothing is learned,
+    // saved or suggested; Clear the list deletes what was kept. On a
+    // scratch file, never the real list; a made-up word, so the built-in
+    // list cannot supply it.
+    private static void LearnedWords()
+    {
+        const string word = "qwxzvord";
+        string file = Path.Combine(Path.GetDirectoryName(_file)!, "learned-words.txt");
+        WordPredictor.UseScratchFile(file);
+        bool Suggested() => string.Join(",", WordPredictor.Suggest("qwxz")).Contains(word);
+
+        Settings.SaveRememberTypedWords(true);
+        Check(Settings.LoadRememberTypedWords(), "the switch is saved on");
+        Settings.SaveRememberTypedWords(false);
+        Check(!Settings.LoadRememberTypedWords(), "and off again");
+
+        WordPredictor.Remember = false;
+        WordPredictor.Learn(word);
+        WordPredictor.Save();
+        Check(!File.Exists(file), "switched off, a typed word is not kept");
+        Check(!Suggested(), "nor suggested");
+
+        WordPredictor.Remember = true;
+        WordPredictor.Learn(word);
+        WordPredictor.Save();
+        Check(File.Exists(file) && File.ReadAllText(file).Contains(word), "switched on, it is kept");
+        var first = WordPredictor.Suggest("qwxz");
+        Check(first.Count > 0 && first[0] == word, "and comes first in the suggestions");
+        Check(WordPredictor.LearnedCount == 1, "the count says one word");
+
+        WordPredictor.Remember = false;
+        Check(!Suggested(), "switched off again, it is no longer suggested");
+        Check(File.Exists(file) && WordPredictor.LearnedCount == 1, "but stays on disk, and counted, until cleared");
+
+        WordPredictor.ClearLearned();
+        Check(!File.Exists(file) && WordPredictor.LearnedCount == 0, "Clear the list deletes the file and the words");
+        WordPredictor.Remember = true;
+        Check(!Suggested(), "and they do not come back when switched on again");
+
+        // The list is the user's to edit (Open the list shows it in a text
+        // editor): the file is the truth, and a line can be just a word.
+        Check(WordPredictor.EnsureListFile() == file && File.Exists(file), "Open the list makes an empty file to add to when there is none");
+        File.WriteAllText(file, "handmadeqz\r\n" + word + "\t5\r\n");
+        File.SetLastWriteTimeUtc(file, DateTime.UtcNow.AddSeconds(5)); // a later save, whatever the clock's resolution
+        Check(WordPredictor.LearnedCount == 2, "an edit made by hand is picked up while the app runs");
+        var handmade = WordPredictor.Suggest("handm");
+        Check(handmade.Count > 0 && handmade[0] == "handmadeqz", "a word added on its own line is suggested");
+        WordPredictor.Learn("anotherqzword");
+        WordPredictor.Save();
+        string saved = File.ReadAllText(file);
+        Check(saved.Contains("handmadeqz\t1") && saved.Contains(word + "\t5") && saved.Contains("anotherqzword"), "and a later save keeps the hand-made words beside the new one");
+
+        WordPredictor.ClearLearned();
+        WordPredictor.Remember = false;
     }
 
     private static void Mappings()

@@ -159,6 +159,9 @@ public partial class DashboardShell
     // nothing can be stale.
     private void OpenEditor(IRemapSource source, string id, string title)
     {
+        // Logged with the mapping changes (see RemapStore.LogChange), so a
+        // change nobody meant can be traced to the editor it came through.
+        Log.Info($"editor opened: {title} ({id})");
         var card = new RemapCard(source, id);
         card.ResetAllRequested += ResetAllMappings;
         _editor = card;
@@ -189,6 +192,8 @@ public partial class DashboardShell
         if (name == KeyMap.ActiveProfile)
             return;
 
+        if (Log.Enabled)
+            Log.Info($"profile: {name} / {Settings.LoadActiveSubProfile(name)}");
         KeyMap.SwitchProfile(name);
         MouseMap.SwitchProfile(name);
         VirtualKeyMap.SwitchProfile(name);
@@ -220,6 +225,7 @@ public partial class DashboardShell
             SwitchToProfile(game);
             return;
         }
+        Log.Info($"profile: {game} / {sub}");
         KeyMap.SwitchProfile(game);
         MouseMap.SwitchProfile(game);
         VirtualKeyMap.SwitchProfile(game);

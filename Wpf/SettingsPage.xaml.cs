@@ -74,13 +74,33 @@ public partial class SettingsPage : IDashboardPage
         NameGrid.Cancelled += EndRename;
         ConfirmDeleteBehavior.AttachTo(ResetAllButton, () => ResetAllRequested?.Invoke());
         ConfirmDeleteBehavior.AttachTo(QuitButton, () => QuitRequested?.Invoke());
-        // About: the log, selected in Explorer (see Log.cs).
+        // The action logger is the user's choice, off unless switched on
+        // here (Fizzil). The switch takes effect at once; the lines it
+        // writes mark where a stretch of logging begins and ends.
+        WriteLogToggle.Tag = Settings.LoadWriteLog();
+        LoggerFold.Summary = WriteLogToggle.Tag is true ? "On" : "Off";
+        WriteLogToggle.Click += (_, _) =>
+        {
+            bool on = !(WriteLogToggle.Tag is true);
+            if (!on)
+                Log.Info("action logger switched off");
+            Settings.SaveWriteLog(on);
+            Log.Enabled = on;
+            WriteLogToggle.Tag = on;
+            LoggerFold.Summary = on ? "On" : "Off";
+            if (on)
+                Log.Info($"action logger switched on, {typeof(SettingsPage).Assembly.GetName().Version}");
+        };
+        // The log selected in Explorer, or just its folder while there is
+        // no log file yet (the log off since the start).
         OpenLogButton.Click += (_, _) =>
         {
             try
             {
-                Log.Info("log folder opened from Settings"); // also makes sure the file exists to select
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", $"/select,\"{Log.FilePath}\"") { UseShellExecute = true });
+                string folder = System.IO.Path.GetDirectoryName(Log.FilePath)!;
+                System.IO.Directory.CreateDirectory(folder);
+                string target = System.IO.File.Exists(Log.FilePath) ? $"/select,\"{Log.FilePath}\"" : $"\"{folder}\"";
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", target) { UseShellExecute = true });
             }
             catch (Exception ex)
             {

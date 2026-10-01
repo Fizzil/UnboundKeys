@@ -18,6 +18,28 @@
         <TextBlock Text="Drag it by the handle on its right edge. Mini collapses it to a single strip, Maxi brings it back, Fade dims it along with this dashboard, and Menu shows or hides the dashboard."
                    FontSize="11" TextWrapping="Wrap" Margin="16,0,12,4" Foreground="{DynamicResource TextSecondaryBrush}"/>
 
+        <!-- The suggestions' own words (see WordPredictor.Remember): the
+             user's choice, off unless switched on here, in bold because it
+             is about what the app keeps of your typing, with a way to see
+             and edit what was kept and a way to forget it (Fizzil: people
+             will not be happy with an app recording what they type). -->
+        <Button x:Name="RememberWordsToggle" Content="Remember words I type frequently" FontWeight="Bold"
+                Style="{StaticResource RailToggleStyle}" Margin="4,4,4,0"/>
+        <TextBlock Text="Off by default. While it is on, the words you type on the on-screen keyboard are kept in a file on this PC, so they come first in its suggestions. While it is off, nothing you type is kept and the suggestions use the built-in word list only."
+                   FontSize="11" TextWrapping="Wrap" Margin="16,0,12,4" Foreground="{DynamicResource TextSecondaryBrush}"/>
+        <Grid Height="44" Margin="4,0,4,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock x:Name="LearnedCountText" FontSize="12" VerticalAlignment="Center" Margin="12,0,12,0" Foreground="{DynamicResource TextSecondaryBrush}"/>
+            <Button x:Name="OpenWordsButton" Grid.Column="1" Content="Open the list" Height="36" Padding="12,0,12,0" FontSize="13"
+                    Margin="0,0,6,0" Style="{StaticResource SecondaryButtonStyle}"/>
+            <Button x:Name="ClearWordsButton" Grid.Column="2" Content="Clear the list" Width="120" Height="36" FontSize="13"
+                    Margin="0,0,8,0" Style="{StaticResource ToggleFillButtonStyle}"/>
+        </Grid>
+
         <!-- The click each key makes (see KeyClick), on the on-screen
              keyboard and the rename keyboard alike. -->
         <Button x:Name="KeyClickToggle" Content="Key click sound"

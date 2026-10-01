@@ -11,7 +11,7 @@ Remap mouse buttons, spoken words and an on-screen keyboard to keyboard keys, wi
 </p>
 <p float="left">
   <img src="Assets/screenshots/UBK-Editor.png" width="32%" alt="A mapping editor: its keys, Tap / Repeat / Rotation / Hold, duration, Infinite and the Infinite pause" />
-  <img src="Assets/screenshots/UBK-Settings.png" width="32%" alt="Settings: seven fold-away sections, each summarising its state while closed" />
+  <img src="Assets/screenshots/UBK-Settings.png" width="32%" alt="Settings: eight fold-away sections, each summarising its state while closed" />
   <img src="Assets/screenshots/UBK-Help.png" width="32%" alt="The Help page: the manual in one page, one fold per topic" />
 </p>
 
@@ -22,13 +22,14 @@ Remap mouse buttons, spoken words and an on-screen keyboard to keyboard keys, wi
 
 - **Voice keys** — say "press one" through "press ten" to send a key. Each word can send any key, or a combo of up to six, tapped once, held down, or repeated — for a set time, or until you say it again.
 - **Mouse keys** — remap Right Click, Middle Click, Mouse 4/5 and Wheel Up/Down the same way. Left Click is never remapped, so you can always click.
-- **On-screen keyboard** — a full keyboard you type on with the mouse: sticky Shift/Ctrl/Alt/Win for combos, hold a key to repeat it, a strip of word suggestions above the keys that learns the words you use, a collapsible Mini strip, and Fade and Menu keys. Its letter and number keys can be remapped too, and remapping one also catches that key on a real keyboard. Every key clicks as it is pressed; the Keyboard page can switch that off. Leave it open when you quit and it's back where it was on the next start.
+- **On-screen keyboard** — a full keyboard you type on with the mouse: sticky Shift/Ctrl/Alt/Win for combos, hold a key to repeat it, a strip of word suggestions above the keys (it can learn the words you use, if you switch that on), a collapsible Mini strip, and Fade and Menu keys. Its letter and number keys can be remapped too, and remapping one also catches that key on a real keyboard. Every key clicks as it is pressed; the Keyboard page can switch that off. Leave it open when you quit and it's back where it was on the next start.
 - **Profiles** — up to ten, one per game, each with its own color theme and up to ten sub-profiles for classes or loadouts, switched from the dashboard. New ones are named with the mouse; no typing needed anywhere in the app.
 - **Rotation** — a Mode that presses all of a mapping's keys in order every tick, so the game takes the first that's ready: a one-button rotation in your own priority order, with no cooldown data to maintain.
 - **Infinite pause** — for a key that must cut into an infinite repeat: every infinite repeat pauses for a time you set while the key fires, then carries on.
 - **Built for a mouse** — everything works with left-click alone (no right-click, no scroll wheel, no keyboard), so it keeps working even when those are remapped, and the dashboard never takes focus away from your game.
 - **Safety nets** — click Stop on the rail, say "press stop", or click the on-screen keyboard's Caps twice quickly, to release anything held or repeating. "Press menu" shows or hides the dashboard and "press fade" lifts Fade, both hands-free.
 - **Runs fully offline** — speech recognition ([Vosk](https://alphacephei.com/vosk/)) and word suggestions happen entirely on your machine. Nothing is sent anywhere. The one exception is Settings → Check for updates, which asks GitHub for the newest release only when you click it.
+- **Keeps nothing you didn't ask for** — the action logger (for debugging) and the keyboard's memory of words you type are both off until you switch them on, and the word list can be opened, edited or cleared at any time.
 
 See [MANUAL.md](MANUAL.md) for the full details — every command, how each setting behaves, and what the dashboard does.
 

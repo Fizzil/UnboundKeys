@@ -47,7 +47,7 @@ public partial class HelpPage : IDashboardPage
         AddHeader("ON-SCREEN KEYBOARD", topMargin: 6);
         AddLine("Shift, Ctrl, Alt, Win", "stick: click one, then the key to combine it with.");
         AddLine("Hold a key", "to repeat it.");
-        AddLine("Word suggestions", "finish the word when clicked, and learn the words you type.");
+        AddLine("Word suggestions", "finish the word when clicked. With \"Remember words I type frequently\" on (Keyboard page, off by default) your own words come first; \"Open the list\" lets you read and edit them, \"Clear the list\" forgets them.");
         AddLine("Menu, Fade, Mini, Maxi", "show or hide this dashboard, dim it, collapse it to a strip, bring it back. Drag it by the grip on its right edge.");
         AddLine("Remapping a key", "happens on the Keyboard page. A remapped key is caught on a real keyboard too.");
 
@@ -56,7 +56,8 @@ public partial class HelpPage : IDashboardPage
         AddLine("The permission prompt", "appears because UnboundKeys runs as administrator, so its key presses reach games that run elevated. Start with Windows, in Settings, starts it that way at sign-in with no prompt.");
         AddLine("Profiles", "are games, each with a theme and up to ten sub-profiles for classes or loadouts. Switch either from the chip at the bottom left.");
         AddLine("Updates", "are checked only when you click Check for updates in Settings, and can be installed from there. A shortcut you made to the app is pointed at the newest version each time it starts.");
-        AddLine("Everything is saved", @"in %AppData%\UnboundKeys. The full manual is in the GitHub repository.");
+        // In bold (Fizzil): what the app keeps on the PC should be plain to see.
+        AddLine("Everything is saved in", @"%AppData%\UnboundKeys: your profiles and mappings in settings.json (with a backup beside it), the words kept by ""Remember words I type frequently"" in learned-words.txt if you switch that on, and the action logger's notes in log.txt if you switch that on. The full manual is in the GitHub repository.", bold: true);
     }
 
     // Nothing on this page changes underneath it.
@@ -71,10 +72,12 @@ public partial class HelpPage : IDashboardPage
         _body = body;
     }
 
-    private void AddLine(string lead, string explanation)
+    private void AddLine(string lead, string explanation, bool bold = false)
     {
         var line = new TextBlock { FontSize = 12, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(12, 3, 12, 3) };
         var leadRun = new Run(lead);
+        if (bold)
+            leadRun.FontWeight = FontWeights.Bold;
         leadRun.SetResourceReference(TextElement.ForegroundProperty, "TextPrimaryBrush");
         line.Inlines.Add(leadRun);
         line.Inlines.Add(new Run("  " + explanation));

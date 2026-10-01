@@ -37,6 +37,25 @@
             <local:UpdatePanel x:Name="Updates"/>
         </local:FoldSection>
 
+        <!-- The action logger (see Log.cs): for debugging and for building
+             new features. The user's choice, off unless switched on here,
+             and its own section rather than a line under About (Fizzil). -->
+        <local:FoldSection x:Name="LoggerFold" Title="ACTION LOGGER">
+            <StackPanel>
+                <Button x:Name="WriteLogToggle" Content="Action logger" Style="{StaticResource RailToggleStyle}" Margin="4,0,4,0"/>
+                <TextBlock Text="Off by default. Used for debugging and for building new features: while it is on, the app notes its starts, errors and the changes you make in this dashboard (a mapping's keys or mode, the profile) in a text file on this PC. While it is off, nothing is written."
+                           FontSize="11" TextWrapping="Wrap" Margin="16,0,12,4" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                <Grid Height="44" Margin="4,0,4,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="The log file sits beside your settings." FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" Margin="8,0,8,0" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    <Button x:Name="OpenLogButton" Grid.Column="1" Content="Open log folder" Height="36" Padding="12,0,12,0" FontSize="13" Style="{StaticResource SecondaryButtonStyle}"/>
+                </Grid>
+            </StackPanel>
+        </local:FoldSection>
+
         <local:FoldSection x:Name="ResetFold" Title="RESET">
             <Grid Height="48">
                 <Grid.ColumnDefinitions>
@@ -68,16 +87,6 @@
         <local:FoldSection x:Name="AboutFold" Title="ABOUT">
             <StackPanel>
                 <TextBlock x:Name="AboutText" FontSize="12" Margin="12,0,12,8" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}"/>
-                <!-- The log (see Log.cs): where to look when something went
-                     wrong on a machine that is not the author's. -->
-                <Grid Height="44" Margin="4,0,4,4">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="A small log of starts and errors is kept beside your settings." FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" Margin="8,0,8,0" Foreground="{DynamicResource TextSecondaryBrush}"/>
-                    <Button x:Name="OpenLogButton" Grid.Column="1" Content="Open log folder" Height="36" Padding="12,0,12,0" FontSize="13" Style="{StaticResource SecondaryButtonStyle}"/>
-                </Grid>
             </StackPanel>
         </local:FoldSection>
     </StackPanel>

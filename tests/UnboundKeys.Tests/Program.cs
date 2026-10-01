@@ -23,6 +23,9 @@ string scratch = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "UnboundKe
 System.IO.Directory.CreateDirectory(scratch);
 Settings.UseScratchFile(System.IO.Path.Combine(scratch, "settings.json"));
 Log.UseScratchFile(System.IO.Path.Combine(scratch, "log.txt"));
+// The log is off unless switched on (see SettingsTests.LogSwitch); the
+// checks below that read it need it on.
+Log.Enabled = true;
 
 // "--online" runs only the one check that needs the internet (see
 // UpdaterTests.RunOnline); everything else stays on this machine.

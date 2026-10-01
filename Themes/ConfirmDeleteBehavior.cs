@@ -35,7 +35,12 @@ internal static class ConfirmDeleteBehavior
                 return;
             }
 
+            // Disarmed again before acting: a button that outlives its own
+            // action (Reset All, Clear the list) would otherwise stay armed
+            // and do it again on a single click.
             timer.Stop();
+            armed = false;
+            button.Tag = false;
             onConfirmed();
         };
     }

@@ -58,7 +58,7 @@ The **Keyboard** page shows a map of the keyboard: the lit keys — the digits a
 - Click a key to press it; hold it to repeat. Its letter and number keys send whatever they've been remapped to.
 - **Shift, Ctrl, Alt, Win** are sticky: click one (it lights up), then click the key it should combine with — everything lets go together. Click a lit modifier again to cancel it.
 - **Caps** stays lit while Caps Lock is on, and the letters show as capitals. Two quick clicks of Caps is the panic button: it releases everything and lifts Fade.
-- **Word suggestions** appear above the keys as you type; click one to type the rest of the word plus a space. Words you type are remembered and float to the top over time. Like Windows' own on-screen keyboard, it loses track of the word if you click somewhere else or use the arrow keys, and picks up again at your next word.
+- **Word suggestions** appear above the keys as you type; click one to type the rest of the word plus a space. With **Remember words I type frequently** switched on (Keyboard page; it is off by default), the words you type are kept on this PC and float to the top over time; beside it, **Open the list** shows them in a text editor, where you can change them or add your own (one word per line), and **Clear the list** forgets them all. While it is off, nothing you type is kept. Like Windows' own on-screen keyboard, it loses track of the word if you click somewhere else or use the arrow keys, and picks up again at your next word.
 - **Mini** collapses it to a single strip of the essential keys; **Maxi** brings it back. **Fade** dims it along with the dashboard. **Menu** shows the dashboard, or hides it again, no microphone or taskbar needed. Those keys and the drag grip on the right edge sit in the same corner in both layouts, so nothing moves out from under your mouse.
 - Drag it by the grip on its right edge. It remembers its position and its Mini state.
 - **Keyboard size** (on the Keyboard page) is Small, Medium or Large; Small is about the size of Windows' own on-screen keyboard.
@@ -88,7 +88,7 @@ A profile is a game. Each one has its own colour theme and up to ten **sub-profi
 - Switch from the **profile chip** in the bottom-left corner of the dashboard: the flyout lists the profiles and, under the active one, its sub-profiles. Or from Settings: click the PROFILES heading to open the list, click a profile to show its sub-profiles, and click a sub-profile to switch to it, even one under another profile.
 - **Add Profile** (in Settings) creates a fresh game named "Profile 1", "Profile 2"... with one sub-profile, Default: the words at their default keys and the mouse buttons unmapped.
 - **Add sub-profile**, under a profile in Settings, starts as a copy of the sub-profile that profile is on, so a second class only needs the few keys that differ changed. It becomes active straight away.
-- **Rename** opens an on-screen keyboard: type the name with the mouse, then **Done**. The first letter of each word comes out capitalized on its own (Shift lights up at a word start; click it off if you want lowercase), and Caps locks capitals. Enter is Done, Esc is Cancel and Del clears the name. Profiles and sub-profiles rename the same way.
+- **Rename** opens an on-screen keyboard: type the name with the mouse, then **Done**. The key under the pointer lights up, and a key held down repeats, so holding ⌫ clears a name quickly. Nothing is capitalized for you: click **Shift** for a capital (it stays lit for the next key you type, then lets go), or **Caps** to lock capitals. Enter is Done, Esc is Cancel and Del clears the name. Profiles and sub-profiles rename the same way.
 - The **✕** deletes a profile or a sub-profile: click it once to arm, then again. Deleting the active profile switches you to Default; deleting the active sub-profile moves you to the first remaining one. A profile always keeps at least one sub-profile.
 - **Default** always exists and cannot be renamed or deleted.
 
@@ -105,9 +105,9 @@ Every section here folds under its heading and, while closed, shows a one-line s
 
 ## Saved data
 
-Everything is saved to `%AppData%\UnboundKeys\settings.json` — profiles and mappings, the active profile and theme, the dashboard's and keyboard's positions and the keyboard's size — and reloaded next launch. Each save writes a new file and swaps it in, keeping the previous one as `settings.json.bak`; if `settings.json` is ever unreadable, the backup is used instead. The keyboard's learned words are in `%AppData%\UnboundKeys\learned-words.txt`.
+Everything is saved to `%AppData%\UnboundKeys\settings.json` — profiles and mappings, the active profile and theme, the dashboard's and keyboard's positions and the keyboard's size — and reloaded next launch. Each save writes a new file and swaps it in, keeping the previous one as `settings.json.bak`; if `settings.json` is ever unreadable, the backup is used instead. If you switch on **Remember words I type frequently**, the keyboard's learned words are in `%AppData%\UnboundKeys\learned-words.txt`, until you clear the list.
 
-A small log of starts, stops and errors is kept in `%AppData%\UnboundKeys\log.txt` (Settings → About → **Open log folder**). Nothing you type, say or map is written to it. If something goes wrong, that file is the first thing to look at, or to send along.
+UnboundKeys has an **action logger**, used for debugging and for building new features. It is **off** unless you switch it on in Settings → **Action logger**, and while it is off nothing is written at all. While it is on, the app notes its starts, stops, errors and the changes you make in the dashboard (a mapping's keys or mode, the profile) in `%AppData%\UnboundKeys\log.txt`; nothing you type or say is ever written there. If something goes wrong, switch it on, make it happen again, and that file (**Open log folder**) is the first thing to look at, or to send along.
 
 ## Troubleshooting
 

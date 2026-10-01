@@ -2,18 +2,26 @@ using System.IO;
 
 namespace UnboundKeys;
 
-// A small log beside the settings file, so a problem on someone else's
-// machine leaves something to look at (a professional review's first red
-// flag: errors were swallowed without a trace). The app still keeps going
-// wherever it did before; it now also writes down what went wrong.
-// %AppData%\UnboundKeys\log.txt, plain text, one line per event; at 256 KB
-// it rolls over to log.txt.old, so it can never grow without bound. Nothing
-// typed, spoken or mapped is ever written here: only starts, stops and
-// errors.
+// The action logger: a small log beside the settings file, used for
+// debugging and for building new features (a professional review's first
+// red flag: errors were swallowed without a trace). OFF unless the user
+// switches it on (Settings > Action logger; Fizzil: an app should not keep
+// a file about what you do unless you asked it to), and every line goes
+// through Write below, so while it is off nothing at all is written,
+// errors and crashes included. %AppData%\UnboundKeys\log.txt, plain text,
+// one line per event; at 256 KB it rolls over to log.txt.old, so it can
+// never grow without bound. What goes in: starts, stops, errors, and the
+// changes made in the dashboard (a mapping's keys or mode, the profile,
+// the dashboard shown or hidden). Never what is typed or said.
 public static class Log
 {
     private const long MaxBytes = 256 * 1024;
     private static readonly object Gate = new();
+
+    // Set from the saved setting at startup (Program.cs) and by the
+    // Settings switch. Not read from Settings here: Settings logs its own
+    // errors, and the two must not wait on each other to initialize.
+    public static bool Enabled { get; set; }
 
     public static string FilePath { get; private set; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -37,6 +45,8 @@ public static class Log
 
     private static void Write(string level, string message)
     {
+        if (!Enabled)
+            return;
         try
         {
             lock (Gate)
