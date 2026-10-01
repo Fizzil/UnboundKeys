@@ -30,6 +30,7 @@ internal static class SettingsTests
         Section("settings: sub-profiles", SubProfiles);
         Section("settings: files from older versions", OlderFiles);
         Section("settings: damaged files", DamagedFiles);
+        Section("reset app: everything the app keeps is deleted", ResetApp);
         return _ok;
     }
 
@@ -65,6 +66,29 @@ internal static class SettingsTests
         Log.Enabled = true;
         Log.Info("a line while on");
         Check(File.Exists(_log) && File.ReadAllText(_log).Contains("a line while on"), "switched on, a line is written");
+    }
+
+    // Reset app (Settings > Reset) deletes the settings with their backup
+    // and the log (the kept words are ClearLearned, checked above), and
+    // leaves a fresh default settings file rather than none, so the old
+    // VoicePress settings are not imported again on the next start.
+    private static void ResetApp()
+    {
+        Settings.SaveProfile("Default", new() { ["one"] = 0x41 }, new(), new());
+        Settings.SaveKeyboardScale(0.8); // a second save, so there is a backup too
+        Settings.SaveWriteLog(true);
+        Check(File.Exists(_file) && File.Exists(_backup), "before it, a settings file and its backup");
+
+        Settings.DeleteEverything();
+        Check(!File.Exists(_backup), "the backup is deleted");
+        Check(File.Exists(_file), "a fresh settings file is left in place of the old one");
+        Check(Settings.LoadKeyMap("Default", Words())["one"] == 0x31 && !Settings.LoadWriteLog() && Same(Settings.LoadProfileNames(), "Default"),
+            "and it reads as a fresh install: default mappings, one game, the switches off");
+
+        Log.Info("a line before the reset");
+        Log.DeleteFiles();
+        Check(!File.Exists(_log) && !Log.Enabled, "the log is deleted and logging is off");
+        Log.Enabled = true; // the suites after this one may log
     }
 
     // The words typed on the on-screen keyboard are the user's to keep or

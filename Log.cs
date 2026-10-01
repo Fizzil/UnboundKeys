@@ -31,6 +31,25 @@ public static class Log
     // the real log.
     internal static void UseScratchFile(string path) => FilePath = path;
 
+    // Reset app (Settings > Reset): the log and its rolled-over copy are
+    // deleted, and logging stops with them.
+    public static void DeleteFiles()
+    {
+        Enabled = false;
+        try
+        {
+            lock (Gate)
+            {
+                File.Delete(FilePath);
+                File.Delete(FilePath + ".old");
+            }
+        }
+        catch
+        {
+            // The log must never be the thing that breaks the app.
+        }
+    }
+
     public static void Info(string message) => Write("info ", message);
 
     public static void Error(string message) => Write("error", message);

@@ -12,35 +12,58 @@ namespace UnboundKeys.Themes;
 // label and decide, without being a race. A plain static helper rather
 // than an attached property like HoverFadeBehavior, since this needs a
 // per-button Click handler and timer wired up explicitly.
+//
+// armedLabel, when given, is what the button says while armed ("Are you
+// sure?", Fizzil's wording, as on the rail's Quit); its own label comes
+// back when it disarms.
 internal static class ConfirmDeleteBehavior
 {
-    public static void AttachTo(Button button, Action onConfirmed)
+    // A double click is one decision, not two: the confirming click must
+    // come at least this long after the arming one, or it is ignored. With
+    // Reset app behind one of these, a slip of the mouse must not be a yes.
+    private const int MinConfirmDelayMs = 400;
+
+    public static void AttachTo(Button button, Action onConfirmed, string? armedLabel = null)
     {
         bool armed = false;
+        object? restLabel = null;
+        DateTime armedAt = DateTime.MinValue;
         var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
-        timer.Tick += (_, _) =>
+
+        void Disarm()
         {
-            armed = false;
             timer.Stop();
+            armed = false;
             button.Tag = false;
-        };
+            if (armedLabel != null && restLabel != null)
+                button.Content = restLabel;
+        }
+
+        timer.Tick += (_, _) => Disarm();
         button.Click += (_, _) =>
         {
             if (!armed)
             {
                 armed = true;
+                armedAt = DateTime.UtcNow;
+                if (armedLabel != null)
+                {
+                    restLabel = button.Content;
+                    button.Content = armedLabel;
+                }
                 button.Tag = true;
                 timer.Stop();
                 timer.Start();
                 return;
             }
 
+            if ((DateTime.UtcNow - armedAt).TotalMilliseconds < MinConfirmDelayMs)
+                return;
+
             // Disarmed again before acting: a button that outlives its own
-            // action (Reset All, Clear the list) would otherwise stay armed
-            // and do it again on a single click.
-            timer.Stop();
-            armed = false;
-            button.Tag = false;
+            // action (Reset profile, Clear the list) would otherwise stay
+            // armed and do it again on a single click.
+            Disarm();
             onConfirmed();
         };
     }

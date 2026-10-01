@@ -27,6 +27,7 @@ public partial class HelpPage : IDashboardPage
         AddLine($"\"press {VoiceEngine.MenuWord}\"", "shows this dashboard, or hides it again.");
         AddLine($"\"press {VoiceEngine.FadeWord}\"", "turns Fade on or off.");
         AddLine("Listening switch", "pauses the voice keys only. Mouse buttons and both keyboards keep working.");
+        AddLine("Heard, on the Voice page", "shows what the microphone just heard, and marks the command it sent.");
 
         AddHeader("REMAPPING MODES", topMargin: 6);
         AddLine("Tap", "presses all the keys together, once. Right for shortcuts like Ctrl + X.");
@@ -36,6 +37,8 @@ public partial class HelpPage : IDashboardPage
         AddLine("Infinite", "keeps pressing the keys repeatedly, or holding them, until you say the word or press the button again.");
         AddLine("Say or press it again", "to stop a Repeat or Hold early, Infinite or not.");
         AddLine("Infinite pause", "in the editor, under Infinite: pauses every infinite repeat for the time you set (1.0 s to start) while this key fires, then they resume. Then set the key's Mode to Repeat or Hold for the same time, so it actually presses the key during the pause: Repeat for an instant ability, Hold for a cast or a channel.");
+
+        AddLine("The small signs beside a mapping", "say how it is pressed: R for Repeat, a circling arrow for Rotation, H for Hold, ∞ for Infinite, P for Infinite pause. A plain Tap shows none. Hover one for its name; on the Keyboard page, hover a lit key.");
 
         AddHeader("SAFETY NETS", topMargin: 6);
         AddLine("Stop, on the rail", "lets go of everything, whatever is mapped, with one click.");
@@ -54,7 +57,9 @@ public partial class HelpPage : IDashboardPage
         AddHeader("GOOD TO KNOW", topMargin: 6);
         AddLine("Closing this window", "hides it. UnboundKeys keeps running in the tray by the clock; click the icon there, press Menu on the on-screen keyboard, double-tap Caps Lock on a real keyboard, or say \"press menu\". Quit is at the bottom of the rail, two clicks to confirm (and in Settings).");
         AddLine("The permission prompt", "appears because UnboundKeys runs as administrator, so its key presses reach games that run elevated. Start with Windows, in Settings, starts it that way at sign-in with no prompt.");
-        AddLine("Profiles", "are games, each with a theme and up to ten sub-profiles for classes or loadouts. Switch either from the chip at the bottom left.");
+        AddLine("Profiles", "are games, each with a theme and up to ten sub-profiles for classes or loadouts. Switch either from the chip at the bottom left. Rename one in Settings with the on-screen name keyboard: hold a key to repeat it, click Shift for a capital.");
+        AddLine("Reset, in Settings", "has two buttons, each asking \"Are you sure?\" first. Reset profile puts the active profile's mappings back to default. Reset app deletes everything the app keeps and starts it again as new; that cannot be undone.");
+        AddLine("Action logger", "in Settings, off by default, is used for debugging and for building new features. While it is on, the app notes its starts, errors and the changes you make here; while it is off, nothing is written.");
         AddLine("Updates", "are checked only when you click Check for updates in Settings, and can be installed from there. A shortcut you made to the app is pointed at the newest version each time it starts.");
         // In bold (Fizzil): what the app keeps on the PC should be plain to see.
         AddLine("Everything is saved in", @"%AppData%\UnboundKeys: your profiles and mappings in settings.json (with a backup beside it), the words kept by ""Remember words I type frequently"" in learned-words.txt if you switch that on, and the action logger's notes in log.txt if you switch that on. The full manual is in the GitHub repository.", bold: true);

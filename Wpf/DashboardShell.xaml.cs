@@ -32,6 +32,7 @@ public partial class DashboardShell
     public event Action? MinimizeRequested;
     public event Action? CloseRequested;
     public event Action? QuitRequested;
+    public event Action? ResetAppRequested;
     // The keyboard Menu key: the window shows or hides itself (Fizzil: one
     // key, both ways, like the tray icon).
     public event Action? ToggleRequested;
@@ -59,6 +60,7 @@ public partial class DashboardShell
         settingsPage.SubProfileSelected += SwitchToSubProfile;
         settingsPage.ResetAllRequested += ResetAllMappings;
         settingsPage.QuitRequested += () => QuitRequested?.Invoke();
+        settingsPage.ResetAppRequested += () => ResetAppRequested?.Invoke();
         _pages[DashboardSection.Settings] = settingsPage;
         _pages[DashboardSection.Help] = new HelpPage();
 

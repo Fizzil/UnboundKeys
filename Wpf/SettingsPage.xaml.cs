@@ -47,6 +47,9 @@ public partial class SettingsPage : IDashboardPage
     // (profile, sub-profile) — the profile may not be the active one.
     public event Action<string, string>? SubProfileSelected;
     public event Action? ResetAllRequested;
+    // Reset app: everything the app keeps goes and it starts again as new
+    // (see Program.cs).
+    public event Action? ResetAppRequested;
     public event Action? QuitRequested;
 
     public string Title => "Settings";
@@ -72,8 +75,10 @@ public partial class SettingsPage : IDashboardPage
 
         NameGrid.Done += OnNameDone;
         NameGrid.Cancelled += EndRename;
-        ConfirmDeleteBehavior.AttachTo(ResetAllButton, () => ResetAllRequested?.Invoke());
-        ConfirmDeleteBehavior.AttachTo(QuitButton, () => QuitRequested?.Invoke());
+        // "Are you sure?" while armed: Fizzil's wording, as on the rail's Quit.
+        ConfirmDeleteBehavior.AttachTo(ResetAllButton, () => ResetAllRequested?.Invoke(), "Are you sure?");
+        ConfirmDeleteBehavior.AttachTo(ResetAppButton, () => ResetAppRequested?.Invoke(), "Are you sure?");
+        ConfirmDeleteBehavior.AttachTo(QuitButton, () => QuitRequested?.Invoke(), "Are you sure?");
         // The action logger is the user's choice, off unless switched on
         // here (Fizzil). The switch takes effect at once; the lines it
         // writes mark where a stretch of logging begins and ends.
@@ -115,7 +120,7 @@ public partial class SettingsPage : IDashboardPage
         AutoStartPausedToggle.Tag = Settings.LoadAutoStartPaused();
         AutoStartPausedToggle.IsEnabled = Settings.LoadStartWithWindows();
         RefreshStartupSummary();
-        UpdatesFold.Summary = "Only when you click";
+        UpdatesFold.Summary = "Only if you want it";
         ResetFold.Summary = "Two clicks to confirm";
         QuitFold.Summary = "Two clicks to confirm";
         StartWithWindowsToggle.Click += (_, _) => ToggleStartWithWindows();

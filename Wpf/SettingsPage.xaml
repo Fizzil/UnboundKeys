@@ -56,18 +56,36 @@
             </StackPanel>
         </local:FoldSection>
 
+        <!-- Two resets (Fizzil): the active profile's mappings, and the
+             whole app back to a fresh install. Each button asks "Are you
+             sure?" before its second click acts (ConfirmDeleteBehavior). -->
         <local:FoldSection x:Name="ResetFold" Title="RESET">
-            <Grid Height="48">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock Text="Put every mapping in this profile back to its default. Click twice to confirm."
-                           FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" Margin="12,0,12,0"
-                           Foreground="{DynamicResource TextSecondaryBrush}"/>
-                <Button x:Name="ResetAllButton" Grid.Column="1" Content="Reset All" Width="120" Height="36" FontSize="13"
-                        Margin="0,0,8,0" Style="{StaticResource ToggleFillButtonStyle}"/>
-            </Grid>
+            <StackPanel>
+                <Grid MinHeight="48">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" Margin="12,4,12,4"
+                               Foreground="{DynamicResource TextSecondaryBrush}">
+                        <Run Text="Reset your active profile" Foreground="{DynamicResource TextPrimaryBrush}"/><LineBreak/><Run Text="Every mouse, voice and keyboard mapping in its current sub-profile goes back to default."/>
+                    </TextBlock>
+                    <Button x:Name="ResetAllButton" Grid.Column="1" Content="Reset profile" Width="120" Height="36" FontSize="13"
+                            Margin="0,0,8,0" Style="{StaticResource ToggleFillButtonStyle}"/>
+                </Grid>
+                <Grid MinHeight="48" Margin="0,4,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" Margin="12,4,12,4"
+                               Foreground="{DynamicResource TextSecondaryBrush}">
+                        <Run Text="Reset the entire app" Foreground="{DynamicResource TextPrimaryBrush}"/><LineBreak/><Run Text="Every profile, setting, kept word and log entry is deleted, and the app starts again as new. This cannot be undone."/>
+                    </TextBlock>
+                    <Button x:Name="ResetAppButton" Grid.Column="1" Content="Reset app" Width="120" Height="36" FontSize="13"
+                            Margin="0,0,8,0" Style="{StaticResource ToggleFillButtonStyle}"/>
+                </Grid>
+            </StackPanel>
         </local:FoldSection>
 
         <local:FoldSection x:Name="QuitFold" Title="QUIT">

@@ -157,6 +157,15 @@ static class Program
 
         tray.Clicked += dashboard.ToggleVisible;
         dashboard.QuitRequested += () => app.Shutdown();
+        // Reset app (Settings > Reset): quit, and once everything has shut
+        // down and saved for the last time, delete what the app keeps and
+        // start it again as a fresh install (see the end of Main).
+        bool resetApp = false;
+        dashboard.ResetAppRequested += () =>
+        {
+            resetApp = true;
+            app.Shutdown();
+        };
         // The first X click: the tray icon says the app is still running.
         dashboard.HiddenByClose += tray.SayStillRunningOnce;
 
@@ -191,5 +200,35 @@ static class Program
         KeyExecutor.ReleaseAll();
         voice.Dispose();
         Log.Info("quit");
+
+        if (resetApp)
+            ResetEverythingAndRestart();
+    }
+
+    // Everything the app keeps goes: the sign-in task, the keyboard's kept
+    // words, the settings (every profile, mapping and switch) with their
+    // backup, and the log. Done here, after the windows have closed and
+    // saved for the last time, so nothing writes the old state back. The
+    // app then starts again and finds a fresh install. UpdateChecker.Launch
+    // because this process is elevated and the new one must be too; the new
+    // copy waits for this one to leave (see SingleInstance).
+    private static void ResetEverythingAndRestart()
+    {
+        try
+        {
+            StartupTask.Unregister();
+        }
+        catch
+        {
+            // It would not go; the wiped settings no longer ask for it, and
+            // the Settings switch can remove it later.
+        }
+        WordPredictor.ClearLearned();
+        Settings.DeleteEverything();
+        Log.DeleteFiles();
+
+        string? exe = Environment.ProcessPath;
+        if (exe != null)
+            UpdateChecker.Launch(exe);
     }
 }

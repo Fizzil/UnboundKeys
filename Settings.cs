@@ -546,6 +546,28 @@ internal static class Settings
         Write(saved);
     }
 
+    // Reset app (Settings > Reset): the settings file and its backup are
+    // deleted and a fresh default file is written in their place. A file
+    // rather than none, because with none the one-time migration above
+    // would bring old VoicePress settings back on the next start, which is
+    // no fresh install. Called by Program once everything else has shut
+    // down and saved for the last time.
+    public static void DeleteEverything()
+    {
+        foreach (string path in new[] { FilePath, BackupPath, FilePath + ".tmp" })
+        {
+            try
+            {
+                File.Delete(path);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("resetting the app", ex);
+            }
+        }
+        Write(new SavedData());
+    }
+
     public static bool LoadStartWithWindows() => Read().StartWithWindows;
     public static bool LoadAutoStartPaused() => Read().AutoStartPaused;
 

@@ -8,7 +8,7 @@
          bright keys are the ones you can change) — then the on-screen
          keyboard's own switch and size, which DashboardShell acts on. -->
     <StackPanel>
-        <TextBlock Text="The bright keys are the ones you can remap — click one. A key that's been changed is lit; hover it to see how it's pressed."
+        <TextBlock Text="Remap your physical keyboard. The numbers and letters below can be remapped to anything you could think of — click one. A key that's been changed is lit; hover it to see how it's pressed."
                    FontSize="11" TextWrapping="Wrap" Margin="12,4,12,8" Foreground="{DynamicResource TextSecondaryBrush}"/>
         <StackPanel x:Name="KeyRows" Margin="2,0,2,0"/>
 
@@ -25,7 +25,7 @@
              will not be happy with an app recording what they type). -->
         <Button x:Name="RememberWordsToggle" Content="Remember words I type frequently" FontWeight="Bold"
                 Style="{StaticResource RailToggleStyle}" Margin="4,4,4,0"/>
-        <TextBlock Text="Off by default. While it is on, the words you type on the on-screen keyboard are kept in a file on this PC, so they come first in its suggestions. While it is off, nothing you type is kept and the suggestions use the built-in word list only."
+        <TextBlock Text="Off by default. While it is off, nothing you type is kept and the predictive text uses the built-in word list only. While it is on, the words you type on the on-screen keyboard are kept in a file on this PC, so they come first in the predictive text."
                    FontSize="11" TextWrapping="Wrap" Margin="16,0,12,4" Foreground="{DynamicResource TextSecondaryBrush}"/>
         <Grid Height="44" Margin="4,0,4,0">
             <Grid.ColumnDefinitions>
