@@ -26,6 +26,7 @@ internal static class SettingsTests
         Section("settings: mappings survive a save", Mappings);
         Section("the log: off unless switched on", LogSwitch);
         Section("the keyboard's learned words: off unless switched on", LearnedWords);
+        Section("mouse: a button reset to Not Mapped stays that way after a restart", MouseReset);
         Section("settings: games (profiles)", Games);
         Section("settings: sub-profiles", SubProfiles);
         Section("settings: files from older versions", OlderFiles);
@@ -66,6 +67,47 @@ internal static class SettingsTests
         Log.Enabled = true;
         Log.Info("a line while on");
         Check(File.Exists(_log) && File.ReadAllText(_log).Contains("a line while on"), "switched on, a line is written");
+    }
+
+    // "Reset this mapping" on a mouse button used to save before switching
+    // the button off, so the file kept it mapped with no key; after the
+    // next start its click was swallowed and nothing sent (Fizzil's right
+    // click, dead after every restart). The file is what a restart reads,
+    // so it is what these check; and a file already written that way must
+    // load as unmapped.
+    private static void MouseReset()
+    {
+        Dictionary<string, bool> AllOff()
+        {
+            var map = new Dictionary<string, bool>();
+            foreach (var id in MouseMap.ButtonIds)
+                map[id] = false;
+            return map;
+        }
+        bool SavedAsMapped(string id) => Settings.LoadMouseEnabled("Default", AllOff())[id];
+
+        MouseMap.SwitchProfile("Default");
+        MouseMap.Rebind("right", 0x41);
+        Check(MouseMap.Enabled["right"] && SavedAsMapped("right"), "a key picked for the right button saves it as mapped");
+
+        MouseMap.ResetToDefault("right");
+        Check(!MouseMap.Enabled["right"], "reset, it is unmapped in memory");
+        Check(!SavedAsMapped("right"), "and unmapped in the file, so it still is after a restart");
+
+        var enabled = AllOff();
+        enabled["right"] = true;
+        var keys = new Dictionary<string, ushort>();
+        var extras = new Dictionary<string, List<ushort>>();
+        var behaviors = new Dictionary<string, KeyBehavior>();
+        foreach (var id in MouseMap.ButtonIds)
+        {
+            keys[id] = 0;
+            extras[id] = new List<ushort>();
+            behaviors[id] = new KeyBehavior();
+        }
+        Settings.SaveMouseProfile("Default", enabled, keys, extras, behaviors);
+        MouseMap.SwitchProfile("Default");
+        Check(SavedAsMapped("right") && !MouseMap.Enabled["right"], "a file left mapped with no key by the old reset loads as unmapped");
     }
 
     // Reset app (Settings > Reset) deletes the settings with their backup

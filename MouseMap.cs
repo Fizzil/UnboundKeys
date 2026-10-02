@@ -100,11 +100,30 @@ public static class MouseMap
 
     // Puts a button back to fully unmapped — no key, no extras, default
     // behavior, and (unlike a word's ResetToDefault) switched back off, so
-    // its click passes through normally again.
+    // its click passes through normally again. Enabled is cleared FIRST,
+    // as in ResetAll: the store's reset saves, and the save must write the
+    // switched-off state. The other order saved "mapped, with no key", and
+    // after the next start the button's click was swallowed with nothing
+    // sent in its place (Fizzil's right click, dead after every restart).
     public static void ResetToDefault(string id)
     {
-        _store.ResetToDefault(id);
         Enabled[id] = false;
+        _store.ResetToDefault(id);
+    }
+
+    // A button saved as mapped but with no key is not a mapping. Files
+    // written by the old ResetToDefault can hold that, so it is read as
+    // unmapped, here at startup and on every profile switch; the file
+    // itself is put right by the next save.
+    static MouseMap() => DropEmptyMappings();
+
+    private static void DropEmptyMappings()
+    {
+        foreach (var id in ButtonIds)
+        {
+            if (Enabled.TryGetValue(id, out bool on) && on && Words.TryGetValue(id, out ushort vk) && vk == 0)
+                Enabled[id] = false;
+        }
     }
 
     // The dashboard's Reset All — every button back to unmapped. Enabled
@@ -128,5 +147,6 @@ public static class MouseMap
             Enabled[id] = enabled;
 
         _store.SwitchProfile(profileName);
+        DropEmptyMappings();
     }
 }
