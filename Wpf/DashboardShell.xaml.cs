@@ -186,7 +186,6 @@ public partial class DashboardShell
     private FrameworkElement BuildGestureEditor(IRemapSource source, string id, string title)
     {
         var (baseId, gesture) = Gestures.Split(id);
-        string what = source is MouseMapSource ? "button" : "key";
         var page = new StackPanel();
 
         var group = new Border
@@ -201,7 +200,8 @@ public partial class DashboardShell
 
         var hint = new TextBlock
         {
-            Text = $"Two mappings on one {what}: a single press starts the first and stops it again; a double press does the same for the second, and starting one stops the other.",
+            // Fizzil's wording.
+            Text = "A single press can start and stop your first mapping. Double tapping can start and stop your second mapping.",
         };
         hint.SetResourceReference(StyleProperty, "RowHintStyle");
         page.Children.Add(hint);
