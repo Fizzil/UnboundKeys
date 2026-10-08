@@ -6,9 +6,12 @@ namespace UnboundKeys;
 // low-level mouse hook (see LowLevelHook — the P/Invoke/lifecycle
 // machinery lives there; this class owns only the actual mouse-specific
 // logic), and — for whichever of the six remappable buttons (see
-// MouseCatalog) currently has a key assigned in MouseMap — swallows the
-// real click and fires ButtonPressed instead, so Program.cs can run it
-// through KeyExecutor exactly like a recognized voice word.
+// MouseCatalog) currently has a key assigned in MouseMap, for any way of
+// pressing it — swallows the real click and hands the down or up to
+// MouseGestures, which decides whether that was a single, a double or a
+// long press and fires ButtonPressed with that mapping's id, so
+// Program.cs can run it through KeyExecutor exactly like a recognized
+// voice word.
 //
 // Left Button is never touched anywhere in this file, deliberately: it isn't
 // one of MouseCatalog's six buttons, so it can never be looked up as
@@ -16,10 +19,19 @@ namespace UnboundKeys;
 // always available as an escape hatch, no matter what this class does.
 public sealed class MouseInputWatcher : IDisposable
 {
-    // Fired with the button's MouseCatalog id (e.g. "middle") whenever an
-    // enabled button is pressed — never fired for a button with no key
-    // assigned, since those aren't intercepted at all.
+    // Fired with the mapping's id (e.g. "middle", or "middle.double" for a
+    // double press; see MouseCatalog.IdFor) once a press is decided —
+    // never for a way of pressing that has no key assigned.
     public event Action<string>? ButtonPressed;
+
+    private readonly MouseGestures _gestures;
+
+    public MouseInputWatcher()
+    {
+        _gestures = new MouseGestures(
+            id => MouseMap.Enabled.TryGetValue(id, out bool on) && on,
+            id => ButtonPressed?.Invoke(id));
+    }
 
     private const int WH_MOUSE_LL = 14;
     private const int WM_RBUTTONDOWN = 0x0204;
@@ -90,9 +102,15 @@ public sealed class MouseInputWatcher : IDisposable
             _ => null,
         };
 
-        if (downId != null && MouseMap.Enabled.TryGetValue(downId, out var downEnabled) && downEnabled)
+        // A button with a key on any way of pressing it is taken over
+        // whole: its ordinary click can no longer pass through, because
+        // which way of pressing this is cannot be known until it is over.
+        if (downId != null && MouseMap.AnyGestureEnabled(downId))
         {
-            ButtonPressed?.Invoke(downId);
+            if (MouseCatalog.IsWheel(downId))
+                _gestures.Notch(downId);
+            else
+                _gestures.Down(downId);
             return (IntPtr)1;
         }
 
@@ -110,11 +128,18 @@ public sealed class MouseInputWatcher : IDisposable
             WM_XBUTTONUP when highWord == XBUTTON2 => "x2",
             _ => null,
         };
-        if (upId != null && MouseMap.Enabled.TryGetValue(upId, out var upEnabled) && upEnabled)
+        if (upId != null && MouseMap.AnyGestureEnabled(upId))
+        {
+            _gestures.Up(upId);
             return (IntPtr)1;
+        }
 
         return _hook.CallNext(nCode, wParam, lParam);
     }
 
-    public void Dispose() => _hook.Dispose();
+    public void Dispose()
+    {
+        _gestures.Dispose();
+        _hook.Dispose();
+    }
 }

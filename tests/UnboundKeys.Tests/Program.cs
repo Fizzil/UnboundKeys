@@ -71,6 +71,8 @@ allPassed &= Scenario("a tap with a 2.0 s pause", new KeyBehavior { Priority = t
 allPassed &= Scenario("Fizzil's recipe: Hold 1.0 s with a 1.0 s pause", new KeyBehavior { Hold = true, DurationSeconds = 1.0, Priority = true, PrioritySeconds = 1.0 }, expectedPause: 1.0);
 allPassed &= RotationScenario();
 allPassed &= HoldScenario();
+allPassed &= GesturesScenario();
+allPassed &= OneButtonScenario();
 allPassed &= UnboundKeys.Tests.SettingsTests.Run(scratch);
 allPassed &= UnboundKeys.Tests.UpdaterTests.Run();
 allPassed &= UnboundKeys.Tests.SingleInstanceTests.Run();
@@ -236,6 +238,177 @@ bool HoldScenario()
         Check(Math.Abs(downs[i].T - downs[i - 1].T - 0.1) < 0.08, $"repeat gap {i}: {(downs[i].T - downs[i - 1].T) * 1000:0} ms");
     Check(downs.All(d => d.T <= releasedAt + 0.05), "nothing went out after the release");
     Check((Keys.GetAsyncKeyState(F13) & 0x8000) == 0, "the key is up after the release");
+    return ok;
+}
+
+// MouseGestures (see its comment): fed downs and ups as the hook feeds
+// it, with which mappings exist decided here, it must fire the right id
+// at the right moment.
+bool GesturesScenario()
+{
+    Console.WriteLine("--- mouse gestures: single, double and long press ---");
+    bool ok = true;
+    void Check(bool condition, string what)
+    {
+        Console.WriteLine($"  [{(condition ? "ok" : "FAIL")}] {what}");
+        ok &= condition;
+    }
+
+    var fired = new List<(double T, string Id)>();
+    var enabled = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    var sw = Stopwatch.StartNew();
+    using var gestures = new MouseGestures(id => enabled.Contains(id), id => { lock (fired) fired.Add((sw.Elapsed.TotalSeconds, id)); });
+    List<(double T, string Id)> Fired() { lock (fired) return new(fired); }
+    void Fresh() { lock (fired) fired.Clear(); sw.Restart(); }
+    string Names(List<(double T, string Id)> list) => list.Count == 0 ? "nothing" : string.Join(", ", list.Select(f => $"{f.Id} at {f.T:0.00} s"));
+
+    // Only a single press set: on the down, at once.
+    enabled.Add("middle");
+    Fresh();
+    gestures.Down("middle");
+    gestures.Up("middle");
+    Thread.Sleep(50);
+    var got = Fired();
+    Check(got.Count == 1 && got[0].Id == "middle" && got[0].T < 0.03, $"single press alone: fires on the down, at once ({Names(got)})");
+
+    // A double press set too: a lone tap waits out the window, then the
+    // single press fires; two taps fire the double press, once, on the
+    // second down.
+    enabled.Add("middle.double");
+    Fresh();
+    gestures.Down("middle");
+    gestures.Up("middle");
+    Thread.Sleep(150);
+    Check(Fired().Count == 0, "with a double press set, a lone tap fires nothing yet");
+    Thread.Sleep(300);
+    got = Fired();
+    Check(got.Count == 1 && got[0].Id == "middle" && got[0].T > 0.25 && got[0].T < 0.45, $"then the single press fires once the window is over ({Names(got)})");
+    Fresh();
+    gestures.Down("middle");
+    gestures.Up("middle");
+    Thread.Sleep(120);
+    gestures.Down("middle");
+    gestures.Up("middle");
+    Thread.Sleep(450);
+    got = Fired();
+    Check(got.Count == 1 && got[0].Id == "middle.double" && got[0].T > 0.10 && got[0].T < 0.20, $"two taps: the double press, on the second down, and no single ({Names(got)})");
+
+    // A long press set, no double: held past the clock, the long press
+    // fires while still down and the up is nothing; a short press fires
+    // the single press on the up.
+    enabled.Remove("middle.double");
+    enabled.Add("middle.long");
+    Fresh();
+    gestures.Down("middle");
+    Thread.Sleep(800);
+    gestures.Up("middle");
+    Thread.Sleep(50);
+    got = Fired();
+    Check(got.Count == 1 && got[0].Id == "middle.long" && got[0].T > 0.45 && got[0].T < 0.65, $"held: the long press fires at the clock, nothing on the up ({Names(got)})");
+    Fresh();
+    gestures.Down("middle");
+    Thread.Sleep(100);
+    gestures.Up("middle");
+    Thread.Sleep(50);
+    got = Fired();
+    Check(got.Count == 1 && got[0].Id == "middle" && got[0].T > 0.08 && got[0].T < 0.20, $"a short press: the single press, on the up ({Names(got)})");
+
+    // All three set: tap, then a press is the double press however long
+    // the second is held; a lone short press is the single press, a
+    // window after the up.
+    enabled.Add("middle.double");
+    Fresh();
+    gestures.Down("middle");
+    Thread.Sleep(100);
+    gestures.Up("middle");
+    Thread.Sleep(100);
+    gestures.Down("middle");
+    Thread.Sleep(700);
+    gestures.Up("middle");
+    Thread.Sleep(100);
+    got = Fired();
+    Check(got.Count == 1 && got[0].Id == "middle.double", $"all three set, tap then a held press: the double press alone ({Names(got)})");
+    Fresh();
+    gestures.Down("middle");
+    Thread.Sleep(100);
+    gestures.Up("middle");
+    Thread.Sleep(500);
+    got = Fired();
+    Check(got.Count == 1 && got[0].Id == "middle" && got[0].T > 0.35 && got[0].T < 0.55, $"a lone short press: the single press, a window after the up ({Names(got)})");
+
+    // The wheel: notches, no up; two within the window are the double.
+    enabled.Add("wheelup");
+    enabled.Add("wheelup.double");
+    Fresh();
+    gestures.Notch("wheelup");
+    Thread.Sleep(100);
+    gestures.Notch("wheelup");
+    Thread.Sleep(400);
+    got = Fired();
+    Check(got.Count == 1 && got[0].Id == "wheelup.double", $"two wheel notches: the double press ({Names(got)})");
+    Fresh();
+    gestures.Notch("wheelup");
+    Thread.Sleep(450);
+    got = Fired();
+    Check(got.Count == 1 && got[0].Id == "wheelup" && got[0].T > 0.25, $"one notch: the single press, after the window ({Names(got)})");
+
+    // Single press Not Mapped, the others set: a lone tap sends nothing.
+    enabled.Remove("middle");
+    Fresh();
+    gestures.Down("middle");
+    Thread.Sleep(100);
+    gestures.Up("middle");
+    Thread.Sleep(450);
+    Check(Fired().Count == 0, "with Single press Not Mapped, a lone tap sends nothing");
+    return ok;
+}
+
+// One button, one thing at a time (see Program.cs): a press stops what the
+// button's other ways of pressing started, then runs its own, with
+// KeyExecutor.Stop as Program.cs uses it. The single press holds F13
+// (Infinite), the double press holds F14 (Infinite), the long press holds
+// F15 for 1.0 s.
+bool OneButtonScenario()
+{
+    Console.WriteLine("--- one button, one thing at a time ---");
+    bool ok = true;
+    void Check(bool condition, string what)
+    {
+        Console.WriteLine($"  [{(condition ? "ok" : "FAIL")}] {what}");
+        ok &= condition;
+    }
+    static bool Down(ushort vk) => (Keys.GetAsyncKeyState(vk) & 0x8000) != 0;
+
+    var single = new KeyBehavior { Hold = true, Infinite = true };
+    var longPress = new KeyBehavior { Hold = true, DurationSeconds = 1.0 };
+    var longKeys = new List<(ushort Vk, bool Extended)> { (F15, false) };
+    Task Press(string id, List<(ushort Vk, bool Extended)> keys, KeyBehavior behavior) => Task.Run(() =>
+    {
+        foreach (var sibling in MouseCatalog.SiblingIds(id))
+            KeyExecutor.Stop(sibling);
+        KeyExecutor.Execute(id, keys, behavior);
+    });
+
+    var a = Press("middle", repeatKeys, single);
+    Thread.Sleep(300);
+    Check(Down(F13), "a single press holds its key");
+    var b = Press("middle.double", pauseKeys, single);
+    Thread.Sleep(300);
+    Check(!Down(F13) && Down(F14), "a double press lets go of it and holds its own");
+    Check(a.Wait(2000), "and the single press's run ended");
+    var c = Press("middle.long", longKeys, longPress);
+    Thread.Sleep(300);
+    Check(!Down(F14) && Down(F15), "a long press lets go of that and holds its own");
+    Check(b.Wait(2000), "and the double press's run ended");
+    var d = Press("middle", repeatKeys, single);
+    Thread.Sleep(300);
+    Check(!Down(F15) && Down(F13), "a single press cuts the long press's timed hold short and holds its own");
+    Check(c.Wait(2000), "and that run ended");
+    var e = Press("middle", repeatKeys, single);
+    Thread.Sleep(300);
+    Check(!Down(F13), "the same press again stops it");
+    Check(d.Wait(2000) && e.Wait(2000), "every run ended");
+    KeyExecutor.ReleaseAll();
     return ok;
 }
 

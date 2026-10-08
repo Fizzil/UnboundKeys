@@ -164,13 +164,75 @@ public partial class DashboardShell
         // Logged with the mapping changes (see RemapStore.LogChange), so a
         // change nobody meant can be traced to the editor it came through.
         Log.Info($"editor opened: {title} ({id})");
-        var card = new RemapCard(source, id);
-        card.ResetAllRequested += ResetAllMappings;
-        _editor = card;
+        _editor = source is MouseMapSource ? BuildMouseEditor(id) : NewCard(source, id);
         BackButton.Visibility = Visibility.Visible;
         PageTitle.Text = title;
-        PageHost.Content = card;
+        PageHost.Content = _editor;
         Body.ScrollToTop();
+    }
+
+    private RemapCard NewCard(IRemapSource source, string id)
+    {
+        var card = new RemapCard(source, id);
+        card.ResetAllRequested += ResetAllMappings;
+        return card;
+    }
+
+    // A mouse button's editor (Fizzil, 2026-10-08, after Helldivers 2): a
+    // row of segments for the ways of pressing it — Single press, Double
+    // press, Long press; the wheel has the first two (see
+    // MouseCatalog.Gesture) — each a whole mapping of its own, with its
+    // card below. Opens on the way the clicked row or hotspot was for.
+    private FrameworkElement BuildMouseEditor(string id)
+    {
+        var (buttonId, gesture) = MouseCatalog.Split(id);
+        var page = new StackPanel();
+
+        var group = new Border
+        {
+            Margin = new Thickness(8, 0, 0, 6),
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Left,
+        };
+        group.SetResourceReference(StyleProperty, "SegmentGroupStyle");
+        var segments = new System.Windows.Controls.Primitives.UniformGrid { Rows = 1 };
+        group.Child = segments;
+        page.Children.Add(group);
+
+        var hint = new TextBlock
+        {
+            Text = "Three mappings on one button. A single press starts the first and stops it again; a double press and a long press do the same for theirs, and starting one stops the others.",
+        };
+        hint.SetResourceReference(StyleProperty, "RowHintStyle");
+        page.Children.Add(hint);
+
+        var host = new ContentControl { HorizontalContentAlignment = System.Windows.HorizontalAlignment.Stretch };
+        page.Children.Add(host);
+
+        var buttons = new Dictionary<MouseCatalog.Gesture, Button>();
+        void Select(MouseCatalog.Gesture chosen)
+        {
+            foreach (var (other, button) in buttons)
+                button.Tag = other == chosen;
+            string gestureId = MouseCatalog.IdFor(buttonId, chosen);
+            if (Log.Enabled && gestureId != id)
+                Log.Info($"editor opened: {MouseCatalog.LabelFor(buttonId)} ({gestureId})");
+            host.Content = NewCard(MouseMapSource.Instance, gestureId);
+        }
+
+        foreach (var way in MouseCatalog.Gestures)
+        {
+            if (!MouseCatalog.Has(buttonId, way))
+                continue;
+            var button = new Button { Content = MouseCatalog.GestureLabel(way) };
+            button.SetResourceReference(StyleProperty, "SegmentButtonStyle");
+            var mine = way;
+            button.Click += (_, _) => Select(mine);
+            segments.Children.Add(button);
+            buttons[way] = button;
+        }
+        segments.Width = 128 * buttons.Count;
+        Select(gesture);
+        return page;
     }
 
     private void CloseEditor()

@@ -33,6 +33,8 @@ Three commands always work, whatever's mapped:
 
 Right Click, Middle Click, Mouse 4, Mouse 5, Wheel Up and Wheel Down can each send a key too. On the **Mouse** page, click a button on the drawn mouse — or its row — to change it. A button starts unmapped (a normal click) until you assign it a key; once mapped, pressing it sends the key instead of the usual click.
 
+**One button, three things.** At the top of a mouse button's editor are **Single press**, **Double press** and **Long press** (the wheel has the first two). Each is a complete mapping of its own — keys, Mode, Infinite and all — started by its own way of pressing and stopped by the same way again: single press to start the first, single press to stop it; double press for the second; hold the button for half a second for the third. One button does one thing at a time: starting one stops the others, so a single press while the double press's mapping is holding a key switches to the single press's. Timing: with a double press set, a single press lands a moment late (0.3 s), once it's clear no second press is coming; with a long press set, a single press lands when you let go. A button with a double or long press set is taken over whole: its ordinary click no longer passes through, even while its Single press is Not Mapped. Under the button's row, the Mouse page lists its double and long press while they have a key.
+
 Left Click is never remappable: it's the one button that always works as a click, so no mapping can ever lock you out of the app.
 
 ## Editing a mapping

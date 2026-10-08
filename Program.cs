@@ -105,11 +105,23 @@ static class Program
         mouse.ButtonPressed += id =>
         {
             // KeyExecutor tracks in-flight/engaged state per word string —
-            // a mouse button id (e.g. "middle") is just as valid a key into
-            // that as a spoken word, and the two never collide.
+            // a mapping id (e.g. "middle", or "middle.double" for a double
+            // press; see MouseCatalog.Gesture) is just as valid a key into
+            // that as a spoken word, and the two never collide. One button
+            // does one thing at a time (Fizzil): whatever its other ways
+            // of pressing started is stopped first, so a single press
+            // while the double press's mapping is holding a key switches
+            // to the single press's. The same way of pressing again is
+            // Execute's own "again to stop".
             var keys = MouseMap.GetAllKeys(id);
             var behavior = MouseMap.Behaviors[id];
-            Task.Run(() => KeyExecutor.Execute(id, keys, behavior));
+            var siblings = MouseCatalog.SiblingIds(id);
+            Task.Run(() =>
+            {
+                foreach (var sibling in siblings)
+                    KeyExecutor.Stop(sibling);
+                KeyExecutor.Execute(id, keys, behavior);
+            });
         };
 
         // Two rapid Caps Lock taps on a real keyboard: a panic button that

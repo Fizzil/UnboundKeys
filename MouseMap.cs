@@ -1,14 +1,18 @@
 namespace UnboundKeys;
 
 // Same idea as KeyMap, but for the six remappable mouse buttons (see
-// MouseCatalog) instead of the ten spoken words. The one real difference: a
+// MouseCatalog) instead of the ten spoken words — three mappings per
+// button, one per way of pressing it (single, double, long press; see
+// MouseCatalog.Gesture), each under its own id. The one real difference: a
 // word always has some key ("one" presses "1" unless you change it), but a
-// mouse button has no natural default — every button starts unmapped, and
-// Enabled tracks which ones the user has actually assigned a key to. An
-// unmapped button's click passes through to Windows completely untouched
-// (see MouseInputWatcher); only an enabled one gets intercepted.
+// mouse button has no natural default — every mapping starts unmapped, and
+// Enabled tracks which ones the user has actually assigned a key to. A
+// button with none of its ways mapped passes its click through to Windows
+// completely untouched (see MouseInputWatcher); one with any gets
+// intercepted.
 public static class MouseMap
 {
+    // Every mapping id: "right", "right.double", "right.long", "middle", ...
     public static readonly string[] ButtonIds = BuildButtonIds();
 
     // Shares the same active profile as KeyMap — switching profiles swaps
@@ -36,12 +40,16 @@ public static class MouseMap
     public static Dictionary<string, List<ushort>> ExtraWords => _store.ExtraWords;
     public static Dictionary<string, KeyBehavior> Behaviors => _store.Behaviors;
 
-    private static string[] BuildButtonIds()
+    private static string[] BuildButtonIds() => (string[])MouseCatalog.AllIds.Clone();
+
+    // Whether any way of pressing a physical button has a key — the
+    // hook's test for taking the button over (see MouseInputWatcher).
+    public static bool AnyGestureEnabled(string buttonId)
     {
-        var ids = new string[MouseCatalog.Buttons.Length];
-        for (int i = 0; i < ids.Length; i++)
-            ids[i] = MouseCatalog.Buttons[i].Id;
-        return ids;
+        foreach (var gesture in MouseCatalog.Gestures)
+            if (MouseCatalog.Has(buttonId, gesture) && Enabled.TryGetValue(MouseCatalog.IdFor(buttonId, gesture), out bool on) && on)
+                return true;
+        return false;
     }
 
     private static Dictionary<string, bool> FreshDefaultEnabled()

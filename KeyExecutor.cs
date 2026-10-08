@@ -295,12 +295,22 @@ internal static class KeyExecutor
     // anything early. Tracked separately from _engaged/InfiniteState above,
     // since those are Infinite-only — this applies to plain timed
     // Hold/Repeat instead.
-    private static readonly Dictionary<string, CancellationTokenSource> _activeTimedRuns = new();
+    private sealed class TimedRun
+    {
+        public readonly CancellationTokenSource Cts = new();
+
+        // Completes once the run has let go and left, so Stop can hand
+        // another mapping the keys after this one's are up (both may hold
+        // Shift: it must go up, then down, in that order).
+        public readonly TaskCompletionSource Done = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    }
+
+    private static readonly Dictionary<string, TimedRun> _activeTimedRuns = new();
 
     private static void ExecuteTimed(string word, IReadOnlyList<(ushort Vk, bool Extended)> keys, KeyBehavior behavior)
     {
-        CancellationTokenSource? toCancel = null;
-        CancellationTokenSource? mine = null;
+        TimedRun? toCancel = null;
+        TimedRun? mine = null;
 
         lock (_lock)
         {
@@ -311,7 +321,7 @@ internal static class KeyExecutor
             }
             else
             {
-                mine = new CancellationTokenSource();
+                mine = new TimedRun();
                 _activeTimedRuns[word] = mine;
             }
         }
@@ -325,13 +335,13 @@ internal static class KeyExecutor
             // Dispose is safe to call from two threads at once, so letting
             // exactly one owner (the run itself) be the one to dispose it
             // avoids that race entirely.
-            toCancel.Cancel();
+            toCancel.Cts.Cancel();
             return;
         }
 
         try
         {
-            using var linked = CancellationTokenSource.CreateLinkedTokenSource(mine!.Token, _stopSignal.Token);
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(mine!.Cts.Token, _stopSignal.Token);
             var token = linked.Token;
 
             if (behavior.Hold)
@@ -390,8 +400,31 @@ internal static class KeyExecutor
                 if (_activeTimedRuns.TryGetValue(word, out var current) && current == mine)
                     _activeTimedRuns.Remove(word);
             }
-            mine!.Dispose();
+            mine!.Cts.Dispose();
+            mine.Done.TrySetResult();
         }
+    }
+
+    // Ends whatever a word is doing, whichever way it runs: its infinite
+    // hold or repeat (ForceRelease), or its timed run, waiting for that to
+    // let go so a mapping started in its place sends its keys after this
+    // one's are up. A no-op for a word doing nothing. Program.cs calls it
+    // for a mouse button's other ways of pressing (Fizzil: one button does
+    // one thing at a time — a single press while the double press's
+    // mapping is running switches to the single press's, and so on round).
+    public static void Stop(string word)
+    {
+        ForceRelease(word);
+        TimedRun? run = null;
+        lock (_lock)
+        {
+            if (_activeTimedRuns.TryGetValue(word, out run))
+                _activeTimedRuns.Remove(word);
+        }
+        if (run == null)
+            return;
+        run.Cts.Cancel();
+        run.Done.Task.Wait(1000);
     }
 
     // If the app closes while a key is being held/repeated indefinitely, this
