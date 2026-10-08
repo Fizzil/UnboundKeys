@@ -23,7 +23,8 @@
 param(
   [string]$Out = (Join-Path $PSScriptRoot "..\Assets\screenshots"),
   [string]$Method = "sendinput",  # "manual": Mini/Maxi were clicked by hand; capture what shows
-  [string]$Only = ""              # comma-separated picture names; empty takes them all
+  [string]$Only = "",             # comma-separated picture names; empty takes them all
+  [string]$EditorChip = "W"       # the Mouse-page chip whose editor is pictured (its text is what the button sends)
 )
 $wanted = @($Only.Split(',') | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 function Want($name) { return ($wanted.Count -eq 0) -or ($wanted -contains $name) }
@@ -231,8 +232,18 @@ if (Want "Mouse")         { Invoke-Button $dash "Mouse";    Save-Window $dash "U
 if (Want "Keyboard-Page") { Invoke-Button $dash "Keyboard"; Save-Window $dash "UBK-Keyboard-Page.png" }
 if (Want "Voice")         { Invoke-Button $dash "Voice";    Save-Window $dash "UBK-Voice.png" }
 if (Want "Editor") {
-  Invoke-Button $dash "Voice"
-  Invoke-Button $dash '"press one"'
+  # A mouse button's editor, for its Single press / Double press segments
+  # and Reset both (4.10.0): the Mouse-page chip named by -EditorChip, the
+  # Middle Button's "W" in Fizzil's play profile. The voice word's editor
+  # as before if no such chip is showing.
+  Invoke-Button $dash "Mouse"
+  if ($null -ne (Find-Button $dash $EditorChip)) {
+    Invoke-Button $dash $EditorChip 900
+  } else {
+    Log "no chip named $EditorChip on the Mouse page; picturing the voice word's editor"
+    Invoke-Button $dash "Voice"
+    Invoke-Button $dash '"press one"'
+  }
   # A plain Tap shows only a few rows; for the picture, Repeat reveals the
   # duration, Infinite and Infinite pause rows, then Tap puts it back.
   $wasTap = ($null -eq (Find-Text $dash "Duration"))

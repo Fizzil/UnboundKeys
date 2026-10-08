@@ -10,7 +10,7 @@ Remap mouse buttons, spoken words and an on-screen keyboard to keyboard keys, wi
   <img src="Assets/screenshots/UBK-Voice.png" width="32%" alt="The Voice page: the always-available commands and the ten spoken words as a keypad" />
 </p>
 <p float="left">
-  <img src="Assets/screenshots/UBK-Editor.png" width="32%" alt="A mapping editor: its keys, Tap / Repeat / Rotation / Hold, duration, Infinite and the Infinite pause" />
+  <img src="Assets/screenshots/UBK-Editor.png" width="32%" alt="A mouse button's editor: Single press and Double press, its keys, Tap / Repeat / Rotation / Hold, duration, Infinite, the Infinite pause, and Reset both" />
   <img src="Assets/screenshots/UBK-Settings.png" width="32%" alt="Settings: eight fold-away sections, each summarising its state while closed" />
   <img src="Assets/screenshots/UBK-Help.png" width="32%" alt="The Help page: the manual in one page, one fold per topic" />
 </p>
