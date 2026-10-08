@@ -102,26 +102,26 @@ static class Program
             Task.Run(() => KeyExecutor.Execute(word, keys, behavior));
         };
 
+        // Runs a mouse button's or a Keyboard-page key's mapping, after
+        // stopping whatever the other way of pressing it started (see
+        // Gestures). One button does one thing at a time (Fizzil): a single
+        // press while the double press's mapping is holding a key switches
+        // to the single press's. The same way of pressing again is
+        // Execute's own "again to stop".
+        static void RunMapping(string id, List<(ushort Vk, bool Extended)> keys, KeyBehavior behavior) =>
+            Task.Run(() =>
+            {
+                KeyExecutor.Stop(Gestures.Sibling(id));
+                KeyExecutor.Execute(id, keys, behavior);
+            });
+
         mouse.ButtonPressed += id =>
         {
             // KeyExecutor tracks in-flight/engaged state per word string —
             // a mapping id (e.g. "middle", or "middle.double" for a double
-            // press; see MouseCatalog.Gesture) is just as valid a key into
-            // that as a spoken word, and the two never collide. One button
-            // does one thing at a time (Fizzil): whatever its other ways
-            // of pressing started is stopped first, so a single press
-            // while the double press's mapping is holding a key switches
-            // to the single press's. The same way of pressing again is
-            // Execute's own "again to stop".
-            var keys = MouseMap.GetAllKeys(id);
-            var behavior = MouseMap.Behaviors[id];
-            var siblings = MouseCatalog.SiblingIds(id);
-            Task.Run(() =>
-            {
-                foreach (var sibling in siblings)
-                    KeyExecutor.Stop(sibling);
-                KeyExecutor.Execute(id, keys, behavior);
-            });
+            // press) is just as valid a key into that as a spoken word,
+            // and the two never collide.
+            RunMapping(id, MouseMap.GetAllKeys(id), MouseMap.Behaviors[id]);
         };
 
         // Two rapid Caps Lock taps on a real keyboard: a panic button that
@@ -138,12 +138,12 @@ static class Program
             FadeMode.TurnOff();
             app.Dispatcher.InvokeAsync(dashboard.ToggleVisible);
         };
-        physical.VirtualKeyPressed += id =>
-        {
-            var keys = VirtualKeyMap.GetAllKeys(id);
-            var behavior = VirtualKeyMap.Behaviors[id];
-            Task.Run(() => KeyExecutor.Execute(id, keys, behavior));
-        };
+        // A Keyboard-page key, from the real keyboard here and from the
+        // on-screen one in VirtualKeyboardWindow, goes through KeyPresses,
+        // which tells a single press from a double one and names the
+        // mapping to run.
+        physical.VirtualKeyPressed += KeyPresses.Press;
+        KeyPresses.Pressed += id => RunMapping(id, VirtualKeyMap.GetAllKeys(id), VirtualKeyMap.Behaviors[id]);
 
         // The dashboard rail Listening switch pauses the voice keys only.
         // Fizzil wants the mouse buttons and both keyboards to keep working

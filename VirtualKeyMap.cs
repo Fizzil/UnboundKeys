@@ -30,19 +30,20 @@ public static class VirtualKeyMap
     public static Dictionary<string, List<ushort>> ExtraWords => _store.ExtraWords;
     public static Dictionary<string, KeyBehavior> Behaviors => _store.Behaviors;
 
-    private static string[] BuildKeyIds()
-    {
-        var ids = new string[VirtualKeyCatalog.Keys.Length];
-        for (int i = 0; i < ids.Length; i++)
-            ids[i] = VirtualKeyCatalog.Keys[i].Id;
-        return ids;
-    }
+    // Every mapping id: each key's own ("va") and its double press's
+    // ("va.double"; see Gestures).
+    private static string[] BuildKeyIds() => Gestures.AllIds(VirtualKeyCatalog.Keys.Select(k => k.Id));
 
+    // A key's own default is its real key; its double press's is 0, "Not
+    // Mapped", as a mouse button's is (see IsMapped).
     private static Dictionary<string, ushort> BuildDefaultMap()
     {
         var map = new Dictionary<string, ushort>(StringComparer.OrdinalIgnoreCase);
         foreach (var key in VirtualKeyCatalog.Keys)
+        {
             map[key.Id] = key.DefaultVk;
+            map[Gestures.IdFor(key.Id, Gesture.Double)] = 0;
+        }
         return map;
     }
 
@@ -80,6 +81,17 @@ public static class VirtualKeyMap
         Words[id] != DefaultWords[id] ||
         ExtraWords[id].Count > 0 ||
         !Behaviors[id].IsPlainTap();
+
+    // Whether an id sends anything: a key's own mapping always does; its
+    // double press's only once a key is picked for it (0 is "Not Mapped").
+    // What PressGestures asks before it fires an id.
+    public static bool IsMapped(string id) => Words.TryGetValue(id, out ushort vk) && vk != 0;
+
+    // Whether a key is taken over on the real keyboard (PhysicalKeyWatcher)
+    // and lit on the Keyboard page: its own mapping is customized, or its
+    // double press's is.
+    public static bool IsIntercepted(string keyId) =>
+        IsCustomized(keyId) || IsCustomized(Gestures.IdFor(keyId, Gesture.Double));
 
     public static void SetBehavior(string id, KeyBehavior behavior) => _store.SetBehavior(id, behavior);
 

@@ -15,7 +15,8 @@ namespace UnboundKeys;
 //
 // 2. Mirroring the virtual on-screen keyboard's remappable digits/letters
 //    (see VirtualKeyCatalog) onto the real keyboard — but ONLY for a key
-//    that's actually been customized there (see VirtualKeyMap.IsCustomized).
+//    that's actually been customized there, or given a double press (see
+//    VirtualKeyMap.IsIntercepted).
 //    An untouched letter/digit passes through completely untouched, so
 //    normal typing elsewhere is never affected; only the specific keys
 //    you've remapped on the on-screen keyboard get intercepted and
@@ -39,9 +40,10 @@ public sealed class PhysicalKeyWatcher : IDisposable
     // Fired with the VirtualKeyCatalog id (e.g. "vr") of a customized
     // digit/letter when its real physical key is pressed — never fired
     // for one still at its own default, since those aren't intercepted at
-    // all. Program.cs runs this through KeyExecutor exactly like a
-    // recognized voice word, a mapped mouse button, or a click on the
-    // virtual keyboard itself.
+    // all. Program.cs hands it to KeyPresses, which tells a single press
+    // from a double one, and runs the mapping through KeyExecutor exactly
+    // like a recognized voice word, a mapped mouse button, or a click on
+    // the virtual keyboard itself.
     public event Action<string>? VirtualKeyPressed;
 
     private const int WH_KEYBOARD_LL = 13;
@@ -157,7 +159,7 @@ public sealed class PhysicalKeyWatcher : IDisposable
         }
 
         if ((msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN) && VkToId.TryGetValue(vk, out var downId)
-            && VirtualKeyMap.IsCustomized(downId))
+            && VirtualKeyMap.IsIntercepted(downId))
         {
             if (_heldMirroredKeys.Add(vk))
                 VirtualKeyPressed?.Invoke(downId);

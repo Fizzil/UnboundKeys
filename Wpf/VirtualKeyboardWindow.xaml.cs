@@ -193,7 +193,9 @@ public partial class VirtualKeyboardWindow
             {
                 case KeyKind.Remappable:
                     string id = spec.Id!;
-                    Task.Run(() => KeyExecutor.Execute(id, VirtualKeyMap.GetAllKeys(id), VirtualKeyMap.Behaviors[id]));
+                    // Told apart as a single or a double press, then run
+                    // by Program.cs (see KeyPresses).
+                    KeyPresses.Press(id);
                     TrackRemappableKey(id, spec.Label);
                     break;
                 case KeyKind.Plain:
@@ -213,11 +215,13 @@ public partial class VirtualKeyboardWindow
         // repeatedly"; a remappable key only auto-repeats while its own
         // mapping has no Repeat/Hold/Infinite — if it does, one press
         // already runs that whole behavior, and a mechanical repeat on top
-        // would just fight it.
+        // would just fight it — and no double press, which a repeat would
+        // read as.
         bool CanRepeat() => spec.Kind switch
         {
             KeyKind.Plain => spec.Vk != VkCapital,
-            KeyKind.Remappable => VirtualKeyMap.Behaviors[spec.Id!] is { Repeat: false, Hold: false, Infinite: false },
+            KeyKind.Remappable => VirtualKeyMap.Behaviors[spec.Id!] is { Repeat: false, Hold: false, Infinite: false }
+                && !VirtualKeyMap.IsMapped(Gestures.IdFor(spec.Id!, Gesture.Double)),
             _ => false,
         };
 

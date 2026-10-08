@@ -7,10 +7,7 @@ namespace UnboundKeys.Wpf;
 
 public partial class MousePage : IDashboardPage
 {
-    // One row per mapping id: a button's single press, and under it its
-    // double and long press while they have a key (see MouseCatalog.Gesture).
     private readonly Dictionary<string, MappingRow> _rows = new();
-    private readonly Dictionary<string, string> _buttonOf = new();
     private readonly Dictionary<string, string> _labels = new();
 
     internal event Action<IRemapSource, string, string>? EditRequested;
@@ -45,55 +42,33 @@ public partial class MousePage : IDashboardPage
             if (button.Id == "wheelup")
                 AddGroupLabel("SCROLL WHEEL");
 
-            _labels[button.Id] = button.Label;
-            AddRow(button.Id, button.Id, button.Label, indented: false);
+            string id = button.Id;
+            _labels[id] = button.Label;
 
-            // The other ways of pressing it, indented under it, shown
-            // while they are mapped (Refresh keeps that up to date); the
-            // editor's segments are where they are set up.
-            foreach (var gesture in MouseCatalog.Gestures)
-            {
-                if (gesture == MouseCatalog.Gesture.Single || !MouseCatalog.Has(button.Id, gesture))
-                    continue;
-                AddRow(MouseCatalog.IdFor(button.Id, gesture), button.Id, MouseCatalog.GestureLabel(gesture), indented: true);
-            }
+            var row = new MappingRow(button.Label, MappingRow.ValueOf(MouseMapSource.Instance, id));
+            row.SetModeGlyphs(MappingRow.BehaviorOf(MouseMapSource.Instance, id));
+            row.Clicked += () => EditRequested?.Invoke(MouseMapSource.Instance, id, button.Label);
+            row.HoverChanged += hovered => Diagram.Highlight(hovered ? id : null);
+            _rows[id] = row;
+            Rows.Children.Add(row);
         }
 
         Diagram.HotspotHovered += id =>
         {
             foreach (var (rowId, row) in _rows)
-                row.SetLinked(_buttonOf[rowId] == id);
+                row.SetLinked(rowId == id);
             Diagram.Highlight(id);
         };
         Diagram.HotspotClicked += id => EditRequested?.Invoke(MouseMapSource.Instance, id, _labels[id]);
     }
 
-    private void AddRow(string id, string buttonId, string label, bool indented)
-    {
-        var row = new MappingRow(label, MappingRow.ValueOf(MouseMapSource.Instance, id));
-        if (indented)
-            row.Margin = new Thickness(20, 0, 0, 4);
-        row.SetModeGlyphs(MappingRow.BehaviorOf(MouseMapSource.Instance, id));
-        row.Clicked += () => EditRequested?.Invoke(MouseMapSource.Instance, id, _labels[buttonId]);
-        row.HoverChanged += hovered => Diagram.Highlight(hovered ? buttonId : null);
-        _rows[id] = row;
-        _buttonOf[id] = buttonId;
-        Rows.Children.Add(row);
-        RefreshRow(id, row);
-    }
-
     public void Refresh()
     {
         foreach (var (id, row) in _rows)
-            RefreshRow(id, row);
-    }
-
-    private static void RefreshRow(string id, MappingRow row)
-    {
-        row.SetChipText(MappingRow.ValueOf(MouseMapSource.Instance, id));
-        row.SetModeGlyphs(MappingRow.BehaviorOf(MouseMapSource.Instance, id));
-        if (MouseCatalog.Split(id).Gesture != MouseCatalog.Gesture.Single)
-            row.Visibility = MouseMap.Enabled.TryGetValue(id, out bool on) && on ? Visibility.Visible : Visibility.Collapsed;
+        {
+            row.SetChipText(MappingRow.ValueOf(MouseMapSource.Instance, id));
+            row.SetModeGlyphs(MappingRow.BehaviorOf(MouseMapSource.Instance, id));
+        }
     }
 
     private void AddGroupLabel(string text)

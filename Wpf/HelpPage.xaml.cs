@@ -29,9 +29,9 @@ public partial class HelpPage : IDashboardPage
         AddLine("Listening switch", "pauses the voice keys only. Mouse buttons and both keyboards keep working.");
         AddLine("Heard, on the Voice page", "shows what the microphone just heard, and marks the command it sent.");
 
-        AddHeader("MOUSE BUTTONS", topMargin: 6);
-        AddLine("Three things per button", "at the top of a button's editor: Single press, Double press and Long press, each a mapping of its own. Each way of pressing starts its mapping and stops it again, and starting one stops the others. The wheel has the first two.");
-        AddLine("Timing", "with a double press set, a single press lands a moment later, once no second press is coming; with a long press set, a single press lands when you let go, and half a second held is a long press.");
+        AddHeader("DOUBLE PRESS", topMargin: 6);
+        AddLine("Two things per button or key", "at the top of a mouse button's or a keyboard key's editor: Single press and Double press, each a mapping of its own. Each way of pressing starts its mapping and stops it again, and starting one stops the other.");
+        AddLine("Timing", "with a double press set, a single press lands a moment later, once no second press is coming. A button or key with no double press set is as quick as ever.");
 
         AddHeader("REMAPPING MODES", topMargin: 6);
         AddLine("Tap", "presses all the keys together, once. Right for shortcuts like Ctrl + X.");

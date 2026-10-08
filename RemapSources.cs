@@ -85,6 +85,9 @@ internal sealed class VirtualKeyMapSource : IRemapSource
     public void SetBehavior(string id, KeyBehavior behavior) => VirtualKeyMap.SetBehavior(id, behavior);
     public void ResetToDefault(string id) => VirtualKeyMap.ResetToDefault(id);
 
-    public string KeyLabelFor(string id) => $"Key 1: {KeyCatalog.DisplayNameFor(VirtualKeyMap.Words[id])}";
-    public ushort AddKeySeed(string id) => VirtualKeyMap.Words[id];
+    // A key's own mapping always has a real key; its double press starts
+    // "Not Mapped" (0), as a mouse button does (see VirtualKeyMap.IsMapped).
+    public string KeyLabelFor(string id) =>
+        VirtualKeyMap.IsMapped(id) ? $"Key 1: {KeyCatalog.DisplayNameFor(VirtualKeyMap.Words[id])}" : "Key 1: Not Mapped";
+    public ushort AddKeySeed(string id) => VirtualKeyMap.IsMapped(id) ? VirtualKeyMap.Words[id] : (ushort)0x41;
 }

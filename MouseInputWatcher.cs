@@ -6,12 +6,11 @@ namespace UnboundKeys;
 // low-level mouse hook (see LowLevelHook — the P/Invoke/lifecycle
 // machinery lives there; this class owns only the actual mouse-specific
 // logic), and — for whichever of the six remappable buttons (see
-// MouseCatalog) currently has a key assigned in MouseMap, for any way of
-// pressing it — swallows the real click and hands the down or up to
-// MouseGestures, which decides whether that was a single, a double or a
-// long press and fires ButtonPressed with that mapping's id, so
-// Program.cs can run it through KeyExecutor exactly like a recognized
-// voice word.
+// MouseCatalog) currently has a key assigned in MouseMap, for either way
+// of pressing it — swallows the real click and hands the press to
+// PressGestures, which decides whether it was a single or a double press
+// and fires ButtonPressed with that mapping's id, so Program.cs can run
+// it through KeyExecutor exactly like a recognized voice word.
 //
 // Left Button is never touched anywhere in this file, deliberately: it isn't
 // one of MouseCatalog's six buttons, so it can never be looked up as
@@ -20,15 +19,15 @@ namespace UnboundKeys;
 public sealed class MouseInputWatcher : IDisposable
 {
     // Fired with the mapping's id (e.g. "middle", or "middle.double" for a
-    // double press; see MouseCatalog.IdFor) once a press is decided —
-    // never for a way of pressing that has no key assigned.
+    // double press; see Gestures) once a press is decided — never for a
+    // way of pressing that has no key assigned.
     public event Action<string>? ButtonPressed;
 
-    private readonly MouseGestures _gestures;
+    private readonly PressGestures _gestures;
 
     public MouseInputWatcher()
     {
-        _gestures = new MouseGestures(
+        _gestures = new PressGestures(
             id => MouseMap.Enabled.TryGetValue(id, out bool on) && on,
             id => ButtonPressed?.Invoke(id));
     }
@@ -102,15 +101,12 @@ public sealed class MouseInputWatcher : IDisposable
             _ => null,
         };
 
-        // A button with a key on any way of pressing it is taken over
+        // A button with a key on either way of pressing it is taken over
         // whole: its ordinary click can no longer pass through, because
-        // which way of pressing this is cannot be known until it is over.
+        // whether a double press is coming cannot be known yet.
         if (downId != null && MouseMap.AnyGestureEnabled(downId))
         {
-            if (MouseCatalog.IsWheel(downId))
-                _gestures.Notch(downId);
-            else
-                _gestures.Down(downId);
+            _gestures.Press(downId);
             return (IntPtr)1;
         }
 
@@ -129,10 +125,7 @@ public sealed class MouseInputWatcher : IDisposable
             _ => null,
         };
         if (upId != null && MouseMap.AnyGestureEnabled(upId))
-        {
-            _gestures.Up(upId);
             return (IntPtr)1;
-        }
 
         return _hook.CallNext(nCode, wParam, lParam);
     }

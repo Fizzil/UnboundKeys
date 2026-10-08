@@ -193,12 +193,17 @@ public partial class KeyboardPage : IDashboardPage
         ShowLearnedCount();
         foreach (var (id, (tile, wash)) in _keys)
         {
-            bool customized = VirtualKeyMap.IsCustomized(id);
+            // Lit for its own mapping or its double press's (see Gestures).
+            bool customized = VirtualKeyMap.IsIntercepted(id);
             tile.Tag = customized;
             wash.Visibility = customized ? Visibility.Visible : Visibility.Collapsed;
             // No room on a key this small for glyphs or what it sends
-            // (Fizzil): the tooltip names the modes (see ModeGlyphs.Describe).
+            // (Fizzil): the tooltip names the modes (see ModeGlyphs.Describe)
+            // and what a double press sends.
             string modes = ModeGlyphs.Describe(VirtualKeyMap.Behaviors[id]);
+            string doubleId = Gestures.IdFor(id, Gesture.Double);
+            if (VirtualKeyMap.IsMapped(doubleId))
+                modes = (modes.Length > 0 ? modes + "; " : "") + "double press: " + MappingRow.ValueOf(VirtualKeyMapSource.Instance, doubleId);
             tile.ToolTip = modes.Length > 0 ? $"Remap {_labels[id]}: {modes}" : $"Remap {_labels[id]}";
         }
     }

@@ -164,7 +164,7 @@ public partial class DashboardShell
         // Logged with the mapping changes (see RemapStore.LogChange), so a
         // change nobody meant can be traced to the editor it came through.
         Log.Info($"editor opened: {title} ({id})");
-        _editor = source is MouseMapSource ? BuildMouseEditor(id) : NewCard(source, id);
+        _editor = source is MouseMapSource or VirtualKeyMapSource ? BuildGestureEditor(source, id, title) : NewCard(source, id);
         BackButton.Visibility = Visibility.Visible;
         PageTitle.Text = title;
         PageHost.Content = _editor;
@@ -178,14 +178,15 @@ public partial class DashboardShell
         return card;
     }
 
-    // A mouse button's editor (Fizzil, 2026-10-08, after Helldivers 2): a
-    // row of segments for the ways of pressing it — Single press, Double
-    // press, Long press; the wheel has the first two (see
-    // MouseCatalog.Gesture) — each a whole mapping of its own, with its
-    // card below. Opens on the way the clicked row or hotspot was for.
-    private FrameworkElement BuildMouseEditor(string id)
+    // A mouse button's or a Keyboard-page key's editor (Fizzil, 2026-10-08,
+    // after Helldivers 2): a row of two segments for the ways of pressing
+    // it, Single press and Double press (see Gestures), each a whole
+    // mapping of its own, with its card below. Opens on the way the
+    // clicked row, hotspot or key was for.
+    private FrameworkElement BuildGestureEditor(IRemapSource source, string id, string title)
     {
-        var (buttonId, gesture) = MouseCatalog.Split(id);
+        var (baseId, gesture) = Gestures.Split(id);
+        string what = source is MouseMapSource ? "button" : "key";
         var page = new StackPanel();
 
         var group = new Border
@@ -194,13 +195,13 @@ public partial class DashboardShell
             HorizontalAlignment = System.Windows.HorizontalAlignment.Left,
         };
         group.SetResourceReference(StyleProperty, "SegmentGroupStyle");
-        var segments = new System.Windows.Controls.Primitives.UniformGrid { Rows = 1 };
+        var segments = new System.Windows.Controls.Primitives.UniformGrid { Rows = 1, Width = 256 };
         group.Child = segments;
         page.Children.Add(group);
 
         var hint = new TextBlock
         {
-            Text = "Three mappings on one button. A single press starts the first and stops it again; a double press and a long press do the same for theirs, and starting one stops the others.",
+            Text = $"Two mappings on one {what}: a single press starts the first and stops it again; a double press does the same for the second, and starting one stops the other.",
         };
         hint.SetResourceReference(StyleProperty, "RowHintStyle");
         page.Children.Add(hint);
@@ -208,29 +209,26 @@ public partial class DashboardShell
         var host = new ContentControl { HorizontalContentAlignment = System.Windows.HorizontalAlignment.Stretch };
         page.Children.Add(host);
 
-        var buttons = new Dictionary<MouseCatalog.Gesture, Button>();
-        void Select(MouseCatalog.Gesture chosen)
+        var buttons = new Dictionary<Gesture, Button>();
+        void Select(Gesture chosen)
         {
             foreach (var (other, button) in buttons)
                 button.Tag = other == chosen;
-            string gestureId = MouseCatalog.IdFor(buttonId, chosen);
+            string gestureId = Gestures.IdFor(baseId, chosen);
             if (Log.Enabled && gestureId != id)
-                Log.Info($"editor opened: {MouseCatalog.LabelFor(buttonId)} ({gestureId})");
-            host.Content = NewCard(MouseMapSource.Instance, gestureId);
+                Log.Info($"editor opened: {title} ({gestureId})");
+            host.Content = NewCard(source, gestureId);
         }
 
-        foreach (var way in MouseCatalog.Gestures)
+        foreach (var way in Gestures.All)
         {
-            if (!MouseCatalog.Has(buttonId, way))
-                continue;
-            var button = new Button { Content = MouseCatalog.GestureLabel(way) };
+            var button = new Button { Content = Gestures.Label(way) };
             button.SetResourceReference(StyleProperty, "SegmentButtonStyle");
             var mine = way;
             button.Click += (_, _) => Select(mine);
             segments.Children.Add(button);
             buttons[way] = button;
         }
-        segments.Width = 128 * buttons.Count;
         Select(gesture);
         return page;
     }

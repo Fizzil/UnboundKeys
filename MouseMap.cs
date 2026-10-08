@@ -1,18 +1,17 @@
 namespace UnboundKeys;
 
 // Same idea as KeyMap, but for the six remappable mouse buttons (see
-// MouseCatalog) instead of the ten spoken words — three mappings per
-// button, one per way of pressing it (single, double, long press; see
-// MouseCatalog.Gesture), each under its own id. The one real difference: a
-// word always has some key ("one" presses "1" unless you change it), but a
-// mouse button has no natural default — every mapping starts unmapped, and
-// Enabled tracks which ones the user has actually assigned a key to. A
-// button with none of its ways mapped passes its click through to Windows
-// completely untouched (see MouseInputWatcher); one with any gets
-// intercepted.
+// MouseCatalog) instead of the ten spoken words — two mappings per button,
+// one per way of pressing it (a single and a double press; see Gestures),
+// each under its own id. The one real difference: a word always has some
+// key ("one" presses "1" unless you change it), but a mouse button has no
+// natural default — every mapping starts unmapped, and Enabled tracks
+// which ones the user has actually assigned a key to. A button with
+// neither way mapped passes its click through to Windows completely
+// untouched (see MouseInputWatcher); one with either gets intercepted.
 public static class MouseMap
 {
-    // Every mapping id: "right", "right.double", "right.long", "middle", ...
+    // Every mapping id: "right", "right.double", "middle", "middle.double", ...
     public static readonly string[] ButtonIds = BuildButtonIds();
 
     // Shares the same active profile as KeyMap — switching profiles swaps
@@ -42,12 +41,12 @@ public static class MouseMap
 
     private static string[] BuildButtonIds() => (string[])MouseCatalog.AllIds.Clone();
 
-    // Whether any way of pressing a physical button has a key — the
+    // Whether either way of pressing a physical button has a key — the
     // hook's test for taking the button over (see MouseInputWatcher).
     public static bool AnyGestureEnabled(string buttonId)
     {
-        foreach (var gesture in MouseCatalog.Gestures)
-            if (MouseCatalog.Has(buttonId, gesture) && Enabled.TryGetValue(MouseCatalog.IdFor(buttonId, gesture), out bool on) && on)
+        foreach (var gesture in Gestures.All)
+            if (Enabled.TryGetValue(Gestures.IdFor(buttonId, gesture), out bool on) && on)
                 return true;
         return false;
     }
