@@ -76,6 +76,10 @@ public partial class RemapCard
         UpdateDurationText();
         SetElementVisible(TimingPanel, _repeatOn || _holdOn, animate: false);
         RefreshPauseRows(animate: false);
+
+        // Only a mouse button or a Keyboard-page key has another way of
+        // pressing to reset along with this one (see Gestures).
+        ResetBothButton.Visibility = source is MouseMapSource or VirtualKeyMapSource ? Visibility.Visible : Visibility.Collapsed;
     }
 
     // Every "Key N: X" string IRemapSource builds follows the same
@@ -525,6 +529,15 @@ public partial class RemapCard
             _resetTapCount = 0;
             ResetAllButton.Visibility = Visibility.Visible;
         }
+    }
+
+    // "Reset both" (Fizzil): this mapping and the other way of pressing the
+    // same button or key, in one click. The other way's card is not on
+    // screen; a fresh one reads the reset state when its segment is picked.
+    private void ResetBothButton_Click(object sender, RoutedEventArgs e)
+    {
+        _source.ResetToDefault(Gestures.Sibling(_id));
+        ResetCard();
     }
 
     // This card resets itself; the host (DashboardShell) resets every
