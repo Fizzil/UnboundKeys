@@ -46,7 +46,7 @@ public partial class MousePage : IDashboardPage
             _labels[id] = button.Label;
 
             var row = new MappingRow(button.Label, MappingRow.ValueOf(MouseMapSource.Instance, id));
-            row.SetModeGlyphs(MappingRow.BehaviorOf(MouseMapSource.Instance, id));
+            row.SetModeGlyphs(MappingRow.BehaviorOf(MouseMapSource.Instance, id), DoublePressOf(id));
             row.Clicked += () => EditRequested?.Invoke(MouseMapSource.Instance, id, button.Label);
             row.HoverChanged += hovered => Diagram.Highlight(hovered ? id : null);
             _rows[id] = row;
@@ -67,8 +67,16 @@ public partial class MousePage : IDashboardPage
         foreach (var (id, row) in _rows)
         {
             row.SetChipText(MappingRow.ValueOf(MouseMapSource.Instance, id));
-            row.SetModeGlyphs(MappingRow.BehaviorOf(MouseMapSource.Instance, id));
+            row.SetModeGlyphs(MappingRow.BehaviorOf(MouseMapSource.Instance, id), DoublePressOf(id));
         }
+    }
+
+    // What a button's double press sends, or null when it has none: the
+    // row's D (see ModeGlyphs).
+    private static string? DoublePressOf(string id)
+    {
+        string doubleId = Gestures.IdFor(id, Gesture.Double);
+        return MouseMapSource.Instance.IsMapped(doubleId) ? MappingRow.ValueOf(MouseMapSource.Instance, doubleId) : null;
     }
 
     private void AddGroupLabel(string text)

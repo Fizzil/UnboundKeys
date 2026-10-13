@@ -103,11 +103,26 @@
 
             </StackPanel>
 
+            <!-- Double press (Fizzil, 2026-10-13): few people need it, so it
+                 sits at the bottom, off, on a mouse button's or a keyboard
+                 key's card only. On, the editor shows its Single press /
+                 Double press tabs (see DashboardShell.BuildGestureEditor);
+                 off clears the double press. The hint is Fizzil's wording,
+                 long enough to wrap rather than trail off. -->
+            <Button x:Name="DoublePressButton" Click="DoublePressButton_Click" Style="{StaticResource RailToggleStyle}"
+                    Height="Auto" MinHeight="48" Padding="12,6,12,6" Margin="4,0,4,0" Visibility="Collapsed">
+                <StackPanel>
+                    <TextBlock Text="Double press"/>
+                    <TextBlock Text="A single press can start and stop your first mapping. Double tapping can start and stop your second mapping."
+                               Style="{StaticResource InlineHintStyle}" TextWrapping="Wrap" TextTrimming="None"/>
+                </StackPanel>
+            </Button>
+
             <Border Height="6" Background="Transparent"/>
 
             <!-- Reset both (Fizzil): this mapping and the other way of
                  pressing the same button or key (see Gestures), shown only
-                 where there is one. Reset All is hidden until Reset is tapped
+                 while Double press is on. Reset All is hidden until Reset is tapped
                  three times fast (see ResetButton_Click) — a shortcut, not the
                  only route: Settings has a visible one too. -->
             <StackPanel Orientation="Horizontal" Margin="8,0,0,0">

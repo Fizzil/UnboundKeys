@@ -17,8 +17,8 @@ public static class MouseCatalog
     {
         new("right", "Right Button", "RM"),
         new("middle", "Middle Button", "MM"),
-        new("x1", "Mouse Button 4", "M4"),
-        new("x2", "Mouse Button 5", "M5"),
+        new("x1", "Mouse 4", "M4"),
+        new("x2", "Mouse 5", "M5"),
         new("wheelup", "Wheel Up", "W↑"),
         new("wheeldown", "Wheel Down", "W↓"),
     };

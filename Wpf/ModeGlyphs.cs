@@ -8,7 +8,8 @@ namespace UnboundKeys.Wpf;
 // The small accent glyphs that say what a mapping has set beyond a plain
 // tap (Fizzil's ask), shared by the Mouse rows, the Voice tiles and the
 // keyboard map: the Mode (R, a circling arrow for Rotation, H), then ∞ for
-// Infinite or P for Infinite pause (either/or in the editor),
+// Infinite or P for Infinite pause (either/or in the editor), and on a
+// Mouse row D for a button with a double press (Fizzil, 2026-10-13),
 // with a grey plus between two. A plain tap gets nothing, so a list stays
 // quiet unless a mapping is special; accent is right here, these are "on"
 // states (see the Discord rule). Hovering a glyph names it.
@@ -27,8 +28,9 @@ internal static class ModeGlyphs
     // Fills target with behavior's glyphs and returns whether there were
     // any. scale shrinks every size together for the Voice tiles, which
     // have less room than a Mouse row. (The keyboard map's keys have room
-    // for none; their tooltip uses Describe instead.)
-    public static bool Fill(TextBlock target, KeyBehavior behavior, double scale = 1.0)
+    // for none; their tooltip uses Describe instead.) doublePress is what
+    // the button's double press sends, when it has one: the D's tooltip.
+    public static bool Fill(TextBlock target, KeyBehavior behavior, double scale = 1.0, string? doublePress = null)
     {
         target.Inlines.Clear();
         target.FontSize = BaseSize * scale;
@@ -42,6 +44,8 @@ internal static class ModeGlyphs
             Add(target, "∞", "Infinite", 18 * scale, light: true);
         if (behavior.Priority)
             Add(target, "P", "Infinite pause", BaseSize * scale);
+        if (doublePress != null)
+            Add(target, "D", $"Double press: {doublePress}", BaseSize * scale);
         return target.Inlines.Count > 0;
     }
 

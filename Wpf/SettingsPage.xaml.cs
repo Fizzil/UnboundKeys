@@ -122,7 +122,7 @@ public partial class SettingsPage : IDashboardPage
         RefreshStartupSummary();
         UpdatesFold.Summary = "Only if you want it";
         ResetFold.Summary = "Two clicks to confirm";
-        QuitFold.Summary = "Two clicks to confirm";
+        QuitFold.Summary = "Completely shut down UnboundKeys";
         StartWithWindowsToggle.Click += (_, _) => ToggleStartWithWindows();
         AutoStartPausedToggle.Click += (_, _) =>
         {

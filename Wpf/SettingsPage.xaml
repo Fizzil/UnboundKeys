@@ -94,7 +94,7 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="Stops UnboundKeys completely, releasing anything held. Closing this window only hides it. Click twice to confirm."
+                <TextBlock Text="Completely shuts down UnboundKeys and shuts down all key mappings. Closing this window only hides it. Click twice to confirm."
                            FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" Margin="12,0,12,0"
                            Foreground="{DynamicResource TextSecondaryBrush}"/>
                 <Button x:Name="QuitButton" Grid.Column="1" Content="Quit" Width="120" Height="36" FontSize="13"

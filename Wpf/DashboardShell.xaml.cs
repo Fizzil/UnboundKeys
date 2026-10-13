@@ -171,9 +171,9 @@ public partial class DashboardShell
         Body.ScrollToTop();
     }
 
-    private RemapCard NewCard(IRemapSource source, string id)
+    private RemapCard NewCard(IRemapSource source, string id, bool? doublePress = null)
     {
-        var card = new RemapCard(source, id);
+        var card = new RemapCard(source, id, doublePress);
         card.ResetAllRequested += ResetAllMappings;
         return card;
     }
@@ -181,43 +181,57 @@ public partial class DashboardShell
     // A mouse button's or a Keyboard-page key's editor (Fizzil, 2026-10-08,
     // after Helldivers 2): a row of two segments for the ways of pressing
     // it, Single press and Double press (see Gestures), each a whole
-    // mapping of its own, with its card below. Opens on the way the
-    // clicked row, hotspot or key was for.
+    // mapping of its own, with its card below. Since 2026-10-13 (Fizzil:
+    // few people need it) the segments show only while the card's Double
+    // press switch is on, which it is whenever a double press is mapped.
+    // Opens on the way the clicked row, hotspot or key was for.
     private FrameworkElement BuildGestureEditor(IRemapSource source, string id, string title)
     {
         var (baseId, gesture) = Gestures.Split(id);
+        bool doubleOn = gesture == Gesture.Double || source.IsMapped(Gestures.IdFor(baseId, Gesture.Double));
         var page = new StackPanel();
 
         var group = new Border
         {
             Margin = new Thickness(8, 0, 0, 6),
             HorizontalAlignment = System.Windows.HorizontalAlignment.Left,
+            Visibility = doubleOn ? Visibility.Visible : Visibility.Collapsed,
         };
         group.SetResourceReference(StyleProperty, "SegmentGroupStyle");
         var segments = new System.Windows.Controls.Primitives.UniformGrid { Rows = 1, Width = 256 };
         group.Child = segments;
         page.Children.Add(group);
 
-        var hint = new TextBlock
-        {
-            // Fizzil's wording.
-            Text = "A single press can start and stop your first mapping. Double tapping can start and stop your second mapping.",
-        };
-        hint.SetResourceReference(StyleProperty, "RowHintStyle");
-        page.Children.Add(hint);
-
         var host = new ContentControl { HorizontalContentAlignment = System.Windows.HorizontalAlignment.Stretch };
         page.Children.Add(host);
 
         var buttons = new Dictionary<Gesture, Button>();
+        var showing = gesture;
         void Select(Gesture chosen)
         {
+            showing = chosen;
             foreach (var (other, button) in buttons)
                 button.Tag = other == chosen;
             string gestureId = Gestures.IdFor(baseId, chosen);
             if (Log.Enabled && gestureId != id)
                 Log.Info($"editor opened: {title} ({gestureId})");
-            host.Content = NewCard(source, gestureId);
+            var card = NewCard(source, gestureId, doubleOn);
+            card.DoublePressChanged += OnDoublePress;
+            host.Content = card;
+        }
+
+        // On: straight to the double press, Not Mapped, to be set up, with
+        // the segments above it. Off (the card has cleared the double
+        // press): back to the single press if that is not already showing.
+        void OnDoublePress(bool on)
+        {
+            doubleOn = on;
+            group.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
+            if (on || showing == Gesture.Double)
+            {
+                Select(on ? Gesture.Double : Gesture.Single);
+                Body.ScrollToTop();
+            }
         }
 
         foreach (var way in Gestures.All)

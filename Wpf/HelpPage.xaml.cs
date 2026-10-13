@@ -30,7 +30,7 @@ public partial class HelpPage : IDashboardPage
         AddLine("Heard, on the Voice page", "shows what the microphone just heard, and marks the command it sent.");
 
         AddHeader("DOUBLE PRESS", topMargin: 6);
-        AddLine("Two things per button or key", "at the top of a mouse button's or a keyboard key's editor: Single press and Double press, each a mapping of its own. Each way of pressing starts its mapping and stops it again, and starting one stops the other.");
+        AddLine("Two things per button or key", "switch on Double press at the bottom of a mouse button's or a keyboard key's editor, and Single press and Double press appear at its top, each a mapping of its own. Each way of pressing starts its mapping and stops it again, and starting one stops the other. Switching it off clears the double press.");
         AddLine("Timing", "with a double press set, a single press lands a moment later, once no second press is coming. A button or key with no double press set is as quick as ever.");
 
         AddHeader("REMAPPING MODES", topMargin: 6);
@@ -42,7 +42,7 @@ public partial class HelpPage : IDashboardPage
         AddLine("Say or press it again", "to stop a Repeat or Hold early, Infinite or not.");
         AddLine("Infinite pause", "in the editor, under Infinite: pauses every infinite repeat for the time you set (1.0 s to start) while this key fires, then they resume. Then set the key's Mode to Repeat or Hold for the same time, so it actually presses the key during the pause: Repeat for an instant ability, Hold for a cast or a channel.");
 
-        AddLine("The small signs beside a mapping", "say how it is pressed: R for Repeat, a circling arrow for Rotation, H for Hold, ∞ for Infinite, P for Infinite pause. A plain Tap shows none. Hover one for its name; on the Keyboard page, hover a lit key.");
+        AddLine("The small signs beside a mapping", "say how it is pressed: R for Repeat, a circling arrow for Rotation, H for Hold, ∞ for Infinite, P for Infinite pause, and on the Mouse page D for a button with a double press. A plain Tap shows none. Hover one for its name; on the Keyboard page, hover a lit key.");
 
         AddHeader("SAFETY NETS", topMargin: 6);
         AddLine("Stop, on the rail", "lets go of everything, whatever is mapped, with one click.");

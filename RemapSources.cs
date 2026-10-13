@@ -22,6 +22,10 @@ internal interface IRemapSource
     // for a button that hasn't been assigned one yet.
     string KeyLabelFor(string id);
 
+    // Whether the id sends anything at all: a word always does; a button,
+    // or a key's double press, can be Not Mapped.
+    bool IsMapped(string id);
+
     // Add Key's starting value for a new extra key slot — a word just
     // copies its own already-real main key; an unmapped button has
     // nothing sensible to copy, so it falls back to "A".
@@ -45,6 +49,7 @@ internal sealed class KeyMapSource : IRemapSource
     public void ResetToDefault(string id) => KeyMap.ResetToDefault(id);
 
     public string KeyLabelFor(string id) => $"Key 1: {KeyCatalog.DisplayNameFor(KeyMap.Words[id])}";
+    public bool IsMapped(string id) => true;
     public ushort AddKeySeed(string id) => KeyMap.Words[id];
 }
 
@@ -66,6 +71,7 @@ internal sealed class MouseMapSource : IRemapSource
 
     public string KeyLabelFor(string id) =>
         MouseMap.Enabled[id] ? $"Key 1: {KeyCatalog.DisplayNameFor(MouseMap.Words[id])}" : "Key 1: Not Mapped";
+    public bool IsMapped(string id) => MouseMap.Enabled[id];
     public ushort AddKeySeed(string id) => MouseMap.Enabled[id] ? MouseMap.Words[id] : (ushort)0x41;
 }
 
@@ -89,5 +95,6 @@ internal sealed class VirtualKeyMapSource : IRemapSource
     // "Not Mapped" (0), as a mouse button does (see VirtualKeyMap.IsMapped).
     public string KeyLabelFor(string id) =>
         VirtualKeyMap.IsMapped(id) ? $"Key 1: {KeyCatalog.DisplayNameFor(VirtualKeyMap.Words[id])}" : "Key 1: Not Mapped";
+    public bool IsMapped(string id) => VirtualKeyMap.IsMapped(id);
     public ushort AddKeySeed(string id) => VirtualKeyMap.IsMapped(id) ? VirtualKeyMap.Words[id] : (ushort)0x41;
 }

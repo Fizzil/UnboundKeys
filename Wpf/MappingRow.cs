@@ -129,9 +129,10 @@ internal sealed class MappingRow : Grid
     public void SetChipText(string value) => _chip.Content = ChipText(value);
 
     // The glyphs for what the row has set beyond a plain tap, in a pill
-    // before the chip (see ModeGlyphs); hidden for a plain tap.
-    public void SetModeGlyphs(KeyBehavior behavior) =>
-        _glyphPill.Visibility = ModeGlyphs.Fill(_modeGlyphs, behavior) ? Visibility.Visible : Visibility.Collapsed;
+    // before the chip (see ModeGlyphs); hidden for a plain tap with no
+    // double press.
+    public void SetModeGlyphs(KeyBehavior behavior, string? doublePress = null) =>
+        _glyphPill.Visibility = ModeGlyphs.Fill(_modeGlyphs, behavior, doublePress: doublePress) ? Visibility.Visible : Visibility.Collapsed;
 
     // A source's behavior for an id, or a plain tap if it has none yet.
     public static KeyBehavior BehaviorOf(IRemapSource source, string id) =>

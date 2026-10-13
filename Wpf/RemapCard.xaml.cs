@@ -25,6 +25,10 @@ public partial class RemapCard
 
     internal event Action? ResetAllRequested;
 
+    // The Double press switch was flipped (true = on); the host shows or
+    // hides the Single press / Double press tabs.
+    internal event Action<bool>? DoublePressChanged;
+
     private bool _repeatOn;
     private bool _holdOn;
     private double _duration;
@@ -34,6 +38,7 @@ public partial class RemapCard
     // for _prioritySeconds while this key fires.
     private bool _priorityOn;
     private double _prioritySeconds;
+    private bool _doublePressOn;
     private int _resetTapCount;
     private readonly DispatcherTimer _resetTapTimer = new() { Interval = TimeSpan.FromMilliseconds(600) };
 
@@ -41,7 +46,9 @@ public partial class RemapCard
     // itself has to stay public for the XAML loader, but nothing outside
     // this assembly should be constructing one directly, and IRemapSource
     // (internal) can't appear in a public member's signature anyway.
-    internal RemapCard(IRemapSource source, string id)
+    // doublePress: whether the Double press switch starts on, for a mouse
+    // button's or a keyboard key's card; null for a word's, which has none.
+    internal RemapCard(IRemapSource source, string id, bool? doublePress = null)
     {
         _source = source;
         _id = id;
@@ -78,8 +85,13 @@ public partial class RemapCard
         RefreshPauseRows(animate: false);
 
         // Only a mouse button or a Keyboard-page key has another way of
-        // pressing to reset along with this one (see Gestures).
-        ResetBothButton.Visibility = source is MouseMapSource or VirtualKeyMapSource ? Visibility.Visible : Visibility.Collapsed;
+        // pressing (see Gestures).
+        if (doublePress is bool on)
+        {
+            _doublePressOn = on;
+            DoublePressButton.Visibility = Visibility.Visible;
+            ShowDoublePress();
+        }
     }
 
     // Every "Key N: X" string IRemapSource builds follows the same
@@ -475,6 +487,28 @@ public partial class RemapCard
         PauseButton.Tag = _priorityOn;
         PauseText.Text = $"{_prioritySeconds.ToString("0.0", CultureInfo.InvariantCulture)} s";
         SetElementVisible(PausePanel, _priorityOn, animate);
+    }
+
+    // ---- Double press ----
+    //
+    // Off clears the double press's mapping, which is what lets the single
+    // press land at once again (PressGestures waits only where a double is
+    // mapped). Nothing else is stored: the switch reads on whenever a
+    // double press is mapped.
+    private void DoublePressButton_Click(object sender, RoutedEventArgs e)
+    {
+        _doublePressOn = !_doublePressOn;
+        if (!_doublePressOn)
+            _source.ResetToDefault(Gestures.IdFor(Gestures.Split(_id).Id, Gesture.Double));
+        ShowDoublePress();
+        DoublePressChanged?.Invoke(_doublePressOn);
+    }
+
+    // Reset both only means something while there is a double press.
+    private void ShowDoublePress()
+    {
+        DoublePressButton.Tag = _doublePressOn;
+        ResetBothButton.Visibility = _doublePressOn ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void SaveBehavior() =>

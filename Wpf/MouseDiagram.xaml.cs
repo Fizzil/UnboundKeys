@@ -6,8 +6,8 @@ namespace UnboundKeys.Wpf;
 
 // Hotspot ids are MouseCatalog's button ids, so the diagram and the row
 // list talk about the same thing without a lookup table between them.
-// x1 is the rear thumb button ("Mouse Button 4", Back) and x2 the front
-// one ("Mouse Button 5", Forward), matching how Windows numbers them.
+// x1 is the rear thumb button ("Mouse 4", Back) and x2 the front
+// one ("Mouse 5", Forward), matching how Windows numbers them.
 public partial class MouseDiagram
 {
     private readonly Dictionary<string, Shape> _hotspots;
