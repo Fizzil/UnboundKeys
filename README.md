@@ -52,6 +52,8 @@ Requires Windows 10/11 (64-bit) and a microphone.
 
 ## Credits
 
+Built by Fizzil, with Claude (Wren) as coding partner.
+
 Speech recognition by [Vosk](https://alphacephei.com/vosk/), microphone capture by [NAudio](https://github.com/naudio/NAudio). The on-screen keyboard's word suggestions use the English list from [FrequencyWords](https://github.com/hermitdave/FrequencyWords) by Hermit Dave (CC BY-SA 4.0), derived from OpenSubtitles.
 
 ## A small personal project
