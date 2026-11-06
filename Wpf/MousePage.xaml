@@ -51,12 +51,12 @@
                     <TextBlock Text="Stretch" Style="{StaticResource RowLabelStyle}"/>
                     <TextBlock x:Name="StretchText" Grid.Column="1" Style="{StaticResource ValueTextStyle}"/>
                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
-                        <Button x:Name="StretchMinusButton" Content="−10 %" Style="{StaticResource StepButtonStyle}"/>
-                        <Button x:Name="StretchPlusButton" Content="+10 %" Style="{StaticResource StepButtonStyle}"/>
+                        <Button x:Name="StretchMinusButton" Content="−5 %" Style="{StaticResource StepButtonStyle}"/>
+                        <Button x:Name="StretchPlusButton" Content="+5 %" Style="{StaticResource StepButtonStyle}"/>
                         <Button x:Name="StretchResetButton" Content="Reset" Style="{StaticResource StepButtonStyle}"/>
                     </StackPanel>
                 </Grid>
-                <TextBlock Text="How far the pointer can be pulled from the centre before it stops, as a share of the way to the screen's edge. That line is full lock (and full pedal). Reset goes back to 50 %."
+                <TextBlock Text="How far the pointer can be pulled from the centre before it stops, as a share of the way to the screen's edge. That line is full lock (and full pedal). Reset goes back to 10 %."
                            Style="{StaticResource RowHintStyle}" Margin="12,0,12,8"/>
 
                 <!-- Push up and Push down: mappings pressed by pushing the

@@ -42,8 +42,10 @@ namespace UnboundKeys;
 // below is the pure part the harness checks.
 public static class Steering
 {
-    public const double DefaultStretch = 0.5;
-    public const double MinStretch = 0.1;
+    // 10 %: what won Fizzil a race (50 % and 80 % felt loose, and the
+    // spring home took longer from further out). Steps of 5 % from there.
+    public const double DefaultStretch = 0.1;
+    public const double MinStretch = 0.05;
     public const double MaxStretch = 1.0;
 
     private const int TickMs = 15;

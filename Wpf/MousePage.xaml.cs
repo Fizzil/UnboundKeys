@@ -83,8 +83,8 @@ public partial class MousePage : IDashboardPage
         // stretch is saved. Changed can fire from the hook's thread or a
         // panic path's, so the picture is redrawn through the dispatcher.
         SteeringToggle.Click += (_, _) => Steering.SetOn(!Steering.IsOn);
-        StretchMinusButton.Click += (_, _) => Steering.SetStretch(Math.Round(Steering.Stretch - 0.1, 2));
-        StretchPlusButton.Click += (_, _) => Steering.SetStretch(Math.Round(Steering.Stretch + 0.1, 2));
+        StretchMinusButton.Click += (_, _) => Steering.SetStretch(Math.Round(Steering.Stretch - 0.05, 2));
+        StretchPlusButton.Click += (_, _) => Steering.SetStretch(Math.Round(Steering.Stretch + 0.05, 2));
         StretchResetButton.Click += (_, _) => Steering.SetStretch(Steering.DefaultStretch);
         Steering.Changed += () => Dispatcher.InvokeAsync(ShowSteering);
         ShowSteering();
