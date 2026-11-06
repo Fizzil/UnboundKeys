@@ -15,6 +15,7 @@ internal static class SteeringTests
         _ok = true;
         Section("steering: the line the pointer cannot pass", Line);
         Section("steering: letting go springs the pointer home", Spring);
+        Section("steering: the pointer's offset becomes the pad", Pad);
         Section("steering: a word with Steering on is not a plain tap", Behavior);
         return _ok;
     }
@@ -63,6 +64,26 @@ internal static class SteeringTests
         var fresh = Band();
         Check(fresh.Tick(1200, 500, 0.0) == null, "the first instant after switching on is still too soon");
         Check(fresh.Tick(1200, 500, 0.2) != null, "then an unmoved pointer is pulled home");
+    }
+
+    private static void Pad()
+    {
+        // The band's lines: 300 px sideways, 150 px up or down.
+        var c = PadValues.FromOffset(0, 0, 300, 150, false);
+        Check(c == (0.0, 0.0, 0.0), "the centre gives all zeros");
+        Check(PadValues.FromOffset(-150, 0, 300, 150, false).Steer == -0.5, "half left steers -0.5");
+        Check(PadValues.FromOffset(-900, 0, 300, 150, false).Steer == -1.0, "past the left line is clamped to -1");
+        Check(PadValues.FromOffset(900, 0, 300, 150, false).Steer == 1.0, "past the right line is clamped to +1");
+        var up = PadValues.FromOffset(0, -75, 300, 150, false);
+        Check(up.Throttle == 0.5 && up.Brake == 0.0, "half up gives throttle 0.5 and no brake");
+        var down = PadValues.FromOffset(0, 150, 300, 150, false);
+        Check(down.Brake == 1.0 && down.Throttle == 0.0, "down gives the brake and no throttle");
+        Check(PadValues.FromOffset(0, -400, 300, 150, false).Throttle == 1.0, "past the top line the throttle is clamped to 1");
+        Check(PadValues.FromOffset(0, 0, 300, 150, true).Throttle == 1.0, "middle held gives full throttle at the centre");
+        Check(PadValues.FromOffset(0, -75, 300, 150, true).Throttle == 1.0, "middle held gives full throttle whatever the height");
+        var both = PadValues.FromOffset(0, 75, 300, 150, true);
+        Check(both.Throttle == 1.0 && both.Brake == 0.5, "middle held with the pointer down: full throttle and the brake too");
+        Check(PadValues.FromOffset(50, 50, 0, 0, false) == (0.0, 0.0, 0.0), "a line at 0 gives zeros, not a division error");
     }
 
     private static void Behavior()
