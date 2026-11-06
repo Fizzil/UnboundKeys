@@ -71,11 +71,11 @@ public partial class SteeringPage : IDashboardPage
 
     private void ShowSteering()
     {
-        StateText.Text = Steering.IsOn ? "Steering is on." : "Steering is off.";
         var switches = SteeringSwitches();
-        SwitchesText.Text = switches.Count == 0
-            ? "Nothing switches it yet: give a word, mouse button or keyboard key the Steering switch in its editor."
-            : (switches.Count == 1 ? switches[0] + " switches it on and off." : string.Join(", ", switches) + " switch it on and off.");
+        string state = Steering.IsOn ? "Steering is on." : "Steering is off.";
+        StateText.Text = switches.Count == 0
+            ? state + " Nothing switches it yet."
+            : state + " " + string.Join(", ", switches) + (switches.Count == 1 ? " switches it." : " switch it.");
         StretchText.Text = $"{Math.Round(Steering.Stretch * 100)} %";
     }
 
@@ -111,9 +111,11 @@ public partial class SteeringPage : IDashboardPage
     // failed, why in plain words.
     private void ShowPadDriver()
     {
-        PadDriverStatus.Text = VirtualPadDriver.IsInstalled()
-            ? "Virtual controller driver: installed"
-            : "Virtual controller driver: not installed";
+        bool installed = VirtualPadDriver.IsInstalled();
+        PadDriverStatus.Text = installed
+            ? "Virtual Xbox controller: ready."
+            : "Virtual Xbox controller: its driver is not installed.";
+        GetPadDriverButton.Visibility = installed ? Visibility.Collapsed : Visibility.Visible;
         string? problem = Steering.PadProblem;
         PadProblemText.Text = problem ?? "";
         PadProblemText.Visibility = problem == null ? Visibility.Collapsed : Visibility.Visible;
