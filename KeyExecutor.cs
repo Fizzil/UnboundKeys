@@ -420,6 +420,16 @@ internal static class KeyExecutor
     // for a mouse button's other ways of pressing (Fizzil: one button does
     // one thing at a time — a single press while the double press's
     // mapping is running switches to the single press's, and so on round).
+    // Whether a word is doing anything right now: an infinite hold or
+    // repeat engaged, or a timed run under way. A push's release (see
+    // Program.cs) waits on this before stopping, so a release that lands a
+    // moment after its press never stops nothing and leaves the hold on.
+    public static bool IsRunning(string word)
+    {
+        lock (_lock)
+            return (_engaged.TryGetValue(word, out var on) && on) || _activeTimedRuns.ContainsKey(word);
+    }
+
     public static void Stop(string word)
     {
         ForceRelease(word);

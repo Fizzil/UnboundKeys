@@ -74,7 +74,9 @@ internal static class SteeringTests
         // The band's lines: 300 px sideways, 150 px up or down.
         var c = PadValues.FromOffset(0, 0, 300, 150, false);
         Check(c == (0.0, 0.0, 0.0), "the centre gives all zeros");
-        Check(PadValues.FromOffset(-150, 0, 300, 150, false).Steer == -0.5, "half left steers -0.5");
+        // The curve (see PadValues): gentle near the centre, full at the line.
+        Check(PadValues.FromOffset(-150, 0, 300, 150, false).Steer == -0.25, "half left steers a quarter (the curve)");
+        Check(PadValues.FromOffset(300, 0, 300, 150, false).Steer == 1.0, "the line is full lock");
         Check(PadValues.FromOffset(-900, 0, 300, 150, false).Steer == -1.0, "past the left line is clamped to -1");
         Check(PadValues.FromOffset(900, 0, 300, 150, false).Steer == 1.0, "past the right line is clamped to +1");
         // Height means nothing to the car (Fizzil: up and down as pedals
@@ -154,7 +156,7 @@ internal static class SteeringTests
         var both = PadValues.FromOffset(0, 0, 300, 150, true, padThrottle: false, padBrake: true);
         Check(both.Throttle == 1.0 && both.Brake == 1.0, "the middle-click throttle and the brake key work together");
         var on = PadValues.FromOffset(-150, 0, 300, 150, false, padThrottle: true, padBrake: false);
-        Check(on.Steer == -0.5 && on.Throttle == 1.0, "steering is untouched by the pedals");
+        Check(on.Steer == -0.25 && on.Throttle == 1.0, "steering is untouched by the pedals");
         Check(PadValues.FromOffset(0, 0, 300, 150, false) == (0.0, 0.0, 0.0), "the pedals default to off");
     }
 

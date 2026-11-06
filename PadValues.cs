@@ -22,7 +22,12 @@ public static class PadValues
         int dx, int dy, int maxPx, int maxPy, bool throttleOn,
         bool padThrottle = false, bool padBrake = false)
     {
-        double steer = maxPx > 0 ? Math.Clamp((double)dx / maxPx, -1.0, 1.0) : 0.0;
+        // Squared, keeping the sign: a quarter turn at half a push and full
+        // lock at the line. A straight line made small corrections coarse
+        // and sent full lock through too easily; a longer stretch was tried
+        // instead and made the spring home feel laggy (Fizzil).
+        double raw = maxPx > 0 ? Math.Clamp((double)dx / maxPx, -1.0, 1.0) : 0.0;
+        double steer = raw * Math.Abs(raw);
         return (steer, throttleOn || padThrottle ? 1.0 : 0.0, padBrake ? 1.0 : 0.0);
     }
 }
