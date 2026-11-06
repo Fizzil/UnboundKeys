@@ -17,15 +17,15 @@
         <!-- The one-button way, ready made (Fizzil): Middle Button gets
              Throttle, Hold, Infinite and Starts and stops steering in the
              active profile, and the Mouse page opens on it. -->
-        <Button x:Name="DefaultButton" Content="Default" Height="44" Margin="4,0,4,4" FontSize="13" Style="{StaticResource OutlineButtonStyle}"/>
+        <Button x:Name="DefaultButton" Content="Default" Width="150" HorizontalAlignment="Right" Margin="0,0,8,6" Style="{StaticResource OutlineButtonStyle}"/>
         <TextBlock Text="Or choose your own: open a mouse button, keyboard key or spoken word and switch on Starts and stops steering."
                    Style="{StaticResource RowHintStyle}"/>
-        <UniformGrid Rows="1" Margin="4,0,4,6">
-            <Button x:Name="GoMouseButton" Content="Mouse" Height="44" Margin="0,0,4,0" FontSize="13" Style="{StaticResource OutlineButtonStyle}"/>
-            <Button x:Name="GoKeyboardButton" Content="Keyboard" Height="44" Margin="2,0,2,0" FontSize="13" Style="{StaticResource OutlineButtonStyle}"/>
-            <Button x:Name="GoVoiceButton" Content="Voice" Height="44" Margin="4,0,0,0" FontSize="13" Style="{StaticResource OutlineButtonStyle}"/>
-        </UniformGrid>
-        <TextBlock x:Name="StateText" FontSize="13" TextWrapping="Wrap" Margin="16,2,12,2"/>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,8,6">
+            <Button x:Name="GoMouseButton" Content="Mouse" Width="150" Margin="0,0,8,0" Style="{StaticResource OutlineButtonStyle}"/>
+            <Button x:Name="GoKeyboardButton" Content="Keyboard" Width="150" Margin="0,0,8,0" Style="{StaticResource OutlineButtonStyle}"/>
+            <Button x:Name="GoVoiceButton" Content="Voice" Width="150" Style="{StaticResource OutlineButtonStyle}"/>
+        </StackPanel>
+        <TextBlock x:Name="StateText" FontSize="13" TextWrapping="Wrap" Margin="16,2,12,2" Foreground="{DynamicResource TextPrimaryBrush}"/>
         <TextBlock Text="Holds the pointer in the centre of the screen. The further you push left or right, the harder you turn. Stop pushing and the pointer springs back to the centre."
                    Style="{StaticResource RowHintStyle}"/>
 
@@ -56,7 +56,7 @@
 
         <!-- The virtual controller, one line; the driver's download button
              only while it is missing (installed once). -->
-        <TextBlock x:Name="PadDriverStatus" FontSize="13" TextWrapping="Wrap" Margin="16,12,12,2"/>
+        <TextBlock x:Name="PadDriverStatus" FontSize="13" TextWrapping="Wrap" Margin="16,12,12,2" Foreground="{DynamicResource TextPrimaryBrush}"/>
         <TextBlock x:Name="PadProblemText" Visibility="Collapsed" Style="{StaticResource RowHintStyle}" Margin="16,0,12,4"/>
         <Button x:Name="GetPadDriverButton" Content="Get the ViGEmBus driver (installed once)" Height="44" Margin="4,4,4,8" Padding="12,0,12,0" FontSize="13" Style="{StaticResource SecondaryButtonStyle}"/>
     </StackPanel>
