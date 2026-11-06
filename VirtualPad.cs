@@ -19,6 +19,19 @@ public interface IVirtualPad : IDisposable
     void Set(double steer, double throttle, double brake);
 }
 
+// Two pseudo key codes, outside every real virtual-key code, that stand for
+// the virtual pad's pedals so a mapping can hold them like any key: Mode
+// Hold with Infinite on Throttle is a pedal held until the mapping is
+// stopped. NativeInput.KeyDown/KeyUp hand them to Steering.SetPadPedal
+// instead of sending a key.
+public static class PadKeys
+{
+    public const ushort Throttle = 0xFF01;
+    public const ushort Brake = 0xFF02;
+
+    public static bool IsPadKey(ushort vk) => vk is Throttle or Brake;
+}
+
 public static class VirtualPadDriver
 {
     public const string DownloadUrl = "https://github.com/nefarius/ViGEmBus/releases/latest";

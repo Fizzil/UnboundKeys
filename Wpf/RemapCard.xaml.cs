@@ -352,6 +352,7 @@ public partial class RemapCard
         "Navigation" => "→",
         "Modifiers" => "Alt",
         "Mouse" => "",
+        "Controller" => "Pad",
         _ => "Esc",
     };
 

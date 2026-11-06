@@ -9,6 +9,7 @@ public partial class MousePage : IDashboardPage
 {
     private readonly Dictionary<string, MappingRow> _rows = new();
     private readonly Dictionary<string, string> _labels = new();
+    private readonly HashSet<string> _pushIds = new();
 
     internal event Action<IRemapSource, string, string>? EditRequested;
 
@@ -61,6 +62,23 @@ public partial class MousePage : IDashboardPage
         };
         Diagram.HotspotClicked += id => EditRequested?.Invoke(MouseMapSource.Instance, id, _labels[id]);
 
+        // PUSHES: Push up and Push down, rows like the buttons' but with no
+        // place on the drawn mouse, so nothing to highlight. Their editor
+        // is the plain one (DashboardShell.OpenEditor).
+        var pushLabel = new TextBlock { Text = "PUSHES", Margin = new Thickness(0, 8, 0, 4) };
+        pushLabel.SetResourceReference(StyleProperty, "SectionHeaderStyle");
+        PushRows.Children.Add(pushLabel);
+        foreach (var push in MouseCatalog.Pushes)
+        {
+            string id = push.Id;
+            var row = new MappingRow(push.Label, MappingRow.ValueOf(MouseMapSource.Instance, id));
+            row.SetModeGlyphs(MappingRow.BehaviorOf(MouseMapSource.Instance, id), null);
+            row.Clicked += () => EditRequested?.Invoke(MouseMapSource.Instance, id, push.Label);
+            _rows[id] = row;
+            _pushIds.Add(id);
+            PushRows.Children.Add(row);
+        }
+
         // Steering (see Steering.cs): the switch is for the session, the
         // stretch is saved. Changed can fire from the hook's thread or a
         // panic path's, so the picture is redrawn through the dispatcher.
@@ -83,7 +101,8 @@ public partial class MousePage : IDashboardPage
         foreach (var (id, row) in _rows)
         {
             row.SetChipText(MappingRow.ValueOf(MouseMapSource.Instance, id));
-            row.SetModeGlyphs(MappingRow.BehaviorOf(MouseMapSource.Instance, id), DoublePressOf(id));
+            row.SetModeGlyphs(MappingRow.BehaviorOf(MouseMapSource.Instance, id),
+                _pushIds.Contains(id) ? null : DoublePressOf(id));
         }
         ShowSteering();
     }

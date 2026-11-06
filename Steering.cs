@@ -15,7 +15,11 @@ namespace UnboundKeys;
 // lock, and the middle mouse button held = full throttle, so the game
 // gets a real analog turn. Up and down hold the pointer too but mean
 // nothing to the car: pedals on them were tried and got in the way of
-// holding the middle button (Fizzil). The
+// holding the middle button (Fizzil). Height instead presses two
+// mappings of their own, Push up and Push down (PushState): pressed when
+// the pointer is pushed past a third of the stretch, released when it
+// comes back, so "push down to accelerate" is Push down sending the
+// Throttle key (PadKeys) in Hold with Infinite. The
 // first version held arrow keys from the pointer's zone instead; the
 // game only ever saw full left or full right, so it went (Fizzil: "hard
 // left, then hard right"). A separate program read the pointer into its
@@ -49,6 +53,9 @@ public static class Steering
     private static RubberBand? _band;
     private static System.Threading.Timer? _timer;
     private static IVirtualPad? _pad;
+    private static readonly PushState _push = new();
+    private static bool _padThrottle;
+    private static bool _padBrake;
 
     // The window in front when steering came on (the game), or zero while
     // that was the dashboard and the game has not been clicked yet. The
@@ -72,6 +79,29 @@ public static class Steering
     // land either side of steering switching on and leave Windows thinking
     // the button was stuck down.
     public static bool ThrottleOn { get; private set; }
+
+    // Push up or Push down was pressed or released ("pushup" / "pushdown"):
+    // raised outside the lock, because the handlers run mappings.
+    public static event Action<string>? PushPressed;
+    public static event Action<string>? PushReleased;
+
+    // The Throttle or Brake key (PadKeys) is being held, for the pad.
+    // Pressed while steering is off they do nothing.
+    public static bool PadThrottleHeld { get { lock (_lock) return _padThrottle; } }
+    public static bool PadBrakeHeld { get { lock (_lock) return _padBrake; } }
+
+    public static void SetPadPedal(ushort padKey, bool down)
+    {
+        lock (_lock)
+        {
+            if (_band == null)
+                return;
+            if (padKey == PadKeys.Throttle)
+                _padThrottle = down;
+            else if (padKey == PadKeys.Brake)
+                _padBrake = down;
+        }
+    }
 
     public static void ToggleThrottle()
     {
@@ -101,6 +131,7 @@ public static class Steering
         if (on && !IsOn)
             newPad = VirtualPadDriver.TryCreate(out problem);
         IVirtualPad? oldPad = null;
+        PushEvent letGo = PushEvent.None;
         lock (_lock)
         {
             if (IsOn == on)
@@ -133,9 +164,13 @@ public static class Steering
                 oldPad = _pad;
                 _pad = null;
                 ThrottleOn = false;
+                _padThrottle = false;
+                _padBrake = false;
+                letGo = _push.Release();
             }
         }
         oldPad?.Dispose();
+        RaisePushes(letGo);
         Changed?.Invoke();
     }
 
@@ -195,49 +230,143 @@ public static class Steering
 
     private static void Tick()
     {
+        bool switchOff = false;
+        PushEvent pushes;
         lock (_lock)
+            pushes = TickLocked(out switchOff);
+        // Outside the lock: these run mappings, and switching off takes it.
+        RaisePushes(pushes);
+        if (switchOff)
+            SetOn(false);
+    }
+
+    // Push up and Push down go out as events, one call each, from outside
+    // the lock.
+    private static void RaisePushes(PushEvent e)
+    {
+        if (e.HasFlag(PushEvent.UpReleased)) PushReleased?.Invoke("pushup");
+        if (e.HasFlag(PushEvent.DownReleased)) PushReleased?.Invoke("pushdown");
+        if (e.HasFlag(PushEvent.UpPressed)) PushPressed?.Invoke("pushup");
+        if (e.HasFlag(PushEvent.DownPressed)) PushPressed?.Invoke("pushdown");
+    }
+
+    private static PushEvent TickLocked(out bool switchOff)
+    {
+        switchOff = false;
+        if (_band == null)
+            return PushEvent.None;
+        // The dashboard in front: the band lets go, and so does the
+        // pad, so the car is not driven from the dashboard. A push
+        // held at that moment is let go of too.
+        if (Suspended?.Invoke() == true)
         {
-            if (_band == null)
-                return;
-            // The dashboard in front: the band lets go, and so does the
-            // pad, so the car is not driven from the dashboard.
-            if (Suspended?.Invoke() == true)
-            {
-                _pad?.Set(0, 0, 0);
-                return;
-            }
-            // The game no longer in front: steering is over (see
-            // _gameWindow). Its first time in front, after a start from the
-            // dashboard, is remembered instead.
-            var front = NativeInput.GetFocusedWindow();
-            if (_gameWindow == IntPtr.Zero)
-                _gameWindow = front;
-            else if (front != _gameWindow)
-            {
-                SetOn(false);
-                return;
-            }
-            if (NativeInput.IsLeftButtonDown())
-            {
-                _pad?.Set(0, 0, 0);
-                return;
-            }
-            var (x, y) = NativeInput.GetPointer();
-            var next = _band.Tick(x, y, Now);
-            if (next != null)
-            {
-                NativeInput.MovePointerTo(next.Value.X, next.Value.Y);
-                (x, y) = next.Value;
-            }
-            // The pointer's offset from the centre, after the spring's move,
-            // is what the pad is told.
-            var (steer, throttle, brake) = PadValues.FromOffset(
-                x - _band.CentreX, y - _band.CentreY, _band.MaxPx, _band.MaxPy, ThrottleOn);
-            _pad?.Set(steer, throttle, brake);
+            _pad?.Set(0, 0, 0);
+            return _push.Release();
         }
+        // The game no longer in front: steering is over (see
+        // _gameWindow). Its first time in front, after a start from the
+        // dashboard, is remembered instead.
+        var front = NativeInput.GetFocusedWindow();
+        if (_gameWindow == IntPtr.Zero)
+            _gameWindow = front;
+        else if (front != _gameWindow)
+        {
+            switchOff = true;
+            return PushEvent.None;
+        }
+        if (NativeInput.IsLeftButtonDown())
+        {
+            _pad?.Set(0, 0, 0);
+            return _push.Release();
+        }
+        var (x, y) = NativeInput.GetPointer();
+        var next = _band.Tick(x, y, Now);
+        if (next != null)
+        {
+            NativeInput.MovePointerTo(next.Value.X, next.Value.Y);
+            (x, y) = next.Value;
+        }
+        // The pointer's offset from the centre, after the spring's move,
+        // is what the pad is told.
+        var (steer, throttle, brake) = PadValues.FromOffset(
+            x - _band.CentreX, y - _band.CentreY, _band.MaxPx, _band.MaxPy, ThrottleOn,
+            _padThrottle, _padBrake);
+        _pad?.Set(steer, throttle, brake);
+        return _push.Update(y - _band.CentreY, _band.MaxPy);
     }
 
     private static double Now => _clock.Elapsed.TotalSeconds;
+}
+
+// What a change of the pointer's height does to Push up and Push down.
+[Flags]
+public enum PushEvent
+{
+    None = 0,
+    UpPressed = 1,
+    UpReleased = 2,
+    DownPressed = 4,
+    DownReleased = 8,
+}
+
+// Push up and Push down as a state machine, with no pointer of its own:
+// told the pointer's vertical offset from the band's centre (positive =
+// below) and the band's line, it answers what was pressed or released.
+// A push is pressed when the offset passes a third of the line and
+// released when it comes back inside a quarter, so a wobble at the line
+// does not chatter. Up and down are never pressed together: crossing from
+// one side to the other releases one and (past a third) presses the other.
+public sealed class PushState
+{
+    public bool UpPressed { get; private set; }
+    public bool DownPressed { get; private set; }
+
+    public PushEvent Update(int dy, int maxPy)
+    {
+        var e = PushEvent.None;
+        if (maxPy <= 0)
+            return Release();
+
+        // Held pushes stay only on their own side and outside a quarter.
+        if (UpPressed && !(dy < 0 && -dy * 4 > maxPy))
+        {
+            UpPressed = false;
+            e |= PushEvent.UpReleased;
+        }
+        if (DownPressed && !(dy > 0 && dy * 4 > maxPy))
+        {
+            DownPressed = false;
+            e |= PushEvent.DownReleased;
+        }
+        // Nothing new is pressed while the other side is still held.
+        if (!UpPressed && !DownPressed)
+        {
+            if (dy < 0 && -dy * 3 > maxPy)
+            {
+                UpPressed = true;
+                e |= PushEvent.UpPressed;
+            }
+            else if (dy > 0 && dy * 3 > maxPy)
+            {
+                DownPressed = true;
+                e |= PushEvent.DownPressed;
+            }
+        }
+        return e;
+    }
+
+    // Lets go of whatever is pressed (steering off, the dashboard in front).
+    public PushEvent Release()
+    {
+        var e = PushEvent.None;
+        if (UpPressed)
+            e |= PushEvent.UpReleased;
+        if (DownPressed)
+            e |= PushEvent.DownReleased;
+        UpPressed = false;
+        DownPressed = false;
+        return e;
+    }
 }
 
 // The rubber band itself, with no pointer of its own: told about real

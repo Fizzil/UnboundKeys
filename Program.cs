@@ -130,6 +130,45 @@ static class Program
             RunMapping(id, MouseMap.GetAllKeys(id), MouseMap.Behaviors[id]);
         };
 
+        // Push up and Push down (see Steering.cs): the pointer pushed past a
+        // third of the stretch presses the push's mapping like a button
+        // press would, and coming back lets go. Releasing calls Stop, so
+        // Hold or Repeat with Infinite lasts exactly as long as the push,
+        // and a Tap just taps once per push.
+        //
+        // A press and a release a moment apart must not swap places (a
+        // release's Stop landing before the press's Execute would leave the
+        // key held for good), so both go down one chain, in the order they
+        // came. The one exception is a timed Hold or Repeat (a duration, no
+        // Infinite), whose Execute lasts the whole duration: it starts on
+        // its own so the chain is not stuck behind it, and Stop cuts it off.
+        var pushChain = Task.CompletedTask;
+        var pushLock = new object();
+        void OnPushChain(Action step)
+        {
+            lock (pushLock)
+                pushChain = pushChain.ContinueWith(_ => step(), TaskScheduler.Default);
+        }
+        Steering.PushPressed += id =>
+        {
+            if (!(MouseMap.Enabled.TryGetValue(id, out bool on) && on))
+                return;
+            var keys = MouseMap.GetAllKeys(id);
+            var behavior = MouseMap.Behaviors[id];
+            bool timed = !behavior.Infinite && (behavior.Hold || behavior.Repeat) && behavior.DurationSeconds > 0;
+            OnPushChain(() =>
+            {
+                if (timed)
+                    RunMapping(id, keys, behavior);
+                else
+                {
+                    KeyExecutor.Stop(Gestures.Sibling(id));
+                    KeyExecutor.Execute(id, keys, behavior);
+                }
+            });
+        };
+        Steering.PushReleased += id => OnPushChain(() => KeyExecutor.Stop(id));
+
         // Two rapid Caps Lock taps on a real keyboard: a panic button that
         // works no matter what is mapped (the same effect as saying "press
         // stop"), and it lifts Fade too, for whenever the screen is too

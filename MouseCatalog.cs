@@ -23,16 +23,32 @@ public static class MouseCatalog
         new("wheeldown", "Wheel Down", "W↓"),
     };
 
+    // Push up and Push down (Fizzil, 2026-11-06): mappings pressed by the
+    // pointer being pushed up or down the rubber band (see Steering.cs),
+    // not by a button. Kept apart from Buttons, which draws the mouse and
+    // fills the BUTTONS and SCROLL WHEEL rows, but stored and saved like
+    // any button through AllIds.
+    public static readonly ButtonInfo[] Pushes =
+    {
+        new("pushup", "Push up", "P↑"),
+        new("pushdown", "Push down", "P↓"),
+    };
+
+    public static bool IsPush(string id) => Gestures.Split(id).Id is "pushup" or "pushdown";
+
     public static string LabelFor(string buttonId)
     {
         foreach (var button in Buttons)
             if (button.Id == buttonId)
                 return button.Label;
+        foreach (var push in Pushes)
+            if (push.Id == buttonId)
+                return push.Label;
         return buttonId;
     }
 
     // Every mapping id there is, button by button: "right", "right.double",
     // "middle", ... (see Gestures) — what MouseMap keys its dictionaries by.
-    // Declared after Buttons: static initializers run in order.
-    public static readonly string[] AllIds = Gestures.AllIds(Buttons.Select(b => b.Id));
+    // Declared after Buttons and Pushes: static initializers run in order.
+    public static readonly string[] AllIds = Gestures.AllIds(Buttons.Concat(Pushes).Select(b => b.Id));
 }

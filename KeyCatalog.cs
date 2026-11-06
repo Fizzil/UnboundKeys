@@ -65,6 +65,14 @@ public static class KeyCatalog
         new("` (backtick)", 0xC0),
     };
 
+    // The virtual pad's pedals (see PadKeys): pressing one holds the pedal
+    // on the pad Steering makes, and does nothing while steering is off.
+    private static readonly Entry[] Controller =
+    {
+        new("Throttle", PadKeys.Throttle),
+        new("Brake", PadKeys.Brake),
+    };
+
     private static readonly Entry[] Other =
     {
         new("Space", 0x20),
@@ -81,6 +89,7 @@ public static class KeyCatalog
         ("Navigation", Navigation),
         ("Modifiers", Modifiers),
         ("Mouse", MouseButtons),
+        ("Controller", Controller),
         ("Other", Other),
     };
 

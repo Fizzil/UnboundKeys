@@ -136,6 +136,12 @@ internal static class NativeInput
 
     public static void KeyDown(ushort virtualKeyCode, bool extended)
     {
+        if (PadKeys.IsPadKey(virtualKeyCode))
+        {
+            Steering.SetPadPedal(virtualKeyCode, down: true);
+            return;
+        }
+
         if (IsMouseButtonVk(virtualKeyCode))
         {
             SendMouseButtonEvent(virtualKeyCode, down: true);
@@ -156,6 +162,12 @@ internal static class NativeInput
 
     public static void KeyUp(ushort virtualKeyCode, bool extended)
     {
+        if (PadKeys.IsPadKey(virtualKeyCode))
+        {
+            Steering.SetPadPedal(virtualKeyCode, down: false);
+            return;
+        }
+
         if (IsMouseButtonVk(virtualKeyCode))
         {
             SendMouseButtonEvent(virtualKeyCode, down: false);

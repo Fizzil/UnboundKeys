@@ -164,7 +164,11 @@ public partial class DashboardShell
         // Logged with the mapping changes (see RemapStore.LogChange), so a
         // change nobody meant can be traced to the editor it came through.
         Log.Info($"editor opened: {title} ({id})");
-        _editor = source is MouseMapSource or VirtualKeyMapSource ? BuildGestureEditor(source, id, title) : NewCard(source, id);
+        // Push up and Push down have one way of being pressed, so they get
+        // the plain editor, as a word does: no Single press / Double press.
+        bool isPush = source is MouseMapSource && MouseCatalog.IsPush(id);
+        bool twoWays = (source is MouseMapSource or VirtualKeyMapSource) && !isPush;
+        _editor = twoWays ? BuildGestureEditor(source, id, title) : NewCard(source, id);
         BackButton.Visibility = Visibility.Visible;
         PageTitle.Text = title;
         PageHost.Content = _editor;
