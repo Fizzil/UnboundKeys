@@ -83,10 +83,22 @@ public static class Steering
 
     public static void SetOn(bool on)
     {
+        // The pad takes a few hundred milliseconds to plug in, and the mouse
+        // hook waits on the lock for every pointer move meanwhile, which
+        // Windows punishes by dropping the hook. So the pad is made and
+        // unplugged outside the lock, and only handed over inside it.
+        IVirtualPad? newPad = null;
+        string? problem = null;
+        if (on && !IsOn)
+            newPad = VirtualPadDriver.TryCreate(out problem);
+        IVirtualPad? oldPad = null;
         lock (_lock)
         {
             if (IsOn == on)
+            {
+                newPad?.Dispose();
                 return;
+            }
             IsOn = on;
             if (on)
             {
@@ -100,7 +112,7 @@ public static class Steering
                 NativeInput.MovePointerTo(cx, cy);
                 _timer = new System.Threading.Timer(_ => Tick(), null, TickMs, TickMs);
                 NativeInput.KeyDown(VK_F16, extended: false);
-                _pad = VirtualPadDriver.TryCreate(out var problem);
+                _pad = newPad;
                 PadProblem = _pad == null ? problem : null;
             }
             else
@@ -108,12 +120,13 @@ public static class Steering
                 _timer?.Dispose();
                 _timer = null;
                 _band = null;
-                _pad?.Dispose();
+                oldPad = _pad;
                 _pad = null;
                 ThrottleHeld = false;
                 NativeInput.KeyUp(VK_F16, extended: false);
             }
         }
+        oldPad?.Dispose();
         Changed?.Invoke();
     }
 
