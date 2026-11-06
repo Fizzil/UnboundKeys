@@ -113,7 +113,7 @@ public static class Steering
 
     // How far the pointer can be pulled from the centre, as a share of the
     // way to the screen's edge: 0.5 is halfway.
-    public static double Stretch { get; private set; } = Settings.LoadSteeringStretch(KeyMap.ActiveProfile);
+    public static double Stretch { get; private set; } = Settings.LoadSteeringStretch();
 
     // On/off or the stretch changed, from whichever thread did it (the
     // hook's, a panic path's, the voice engine's): the Mouse page dispatches.
@@ -185,7 +185,7 @@ public static class Steering
     public static void SetStretch(double share)
     {
         Stretch = Math.Clamp(share, MinStretch, MaxStretch);
-        Settings.SaveSteeringStretch(KeyMap.ActiveProfile, Stretch);
+        Settings.SaveSteeringStretch(Stretch);
         lock (_lock)
         {
             // A band already up takes the new lines at once.
@@ -198,17 +198,6 @@ public static class Steering
         }
         Changed?.Invoke();
     }
-
-    // Called by the dashboard alongside MouseMap.SwitchProfile. Steering
-    // itself stays as it is: a game switch mid-race is not a panic.
-    public static void SwitchProfile(string profile)
-    {
-        Stretch = Settings.LoadSteeringStretch(profile);
-        Changed?.Invoke();
-    }
-
-    // Reset profile (the dashboard): the stretch back to the default.
-    public static void ResetToDefault() => SetStretch(DefaultStretch);
 
     // Every real pointer move while steering is on, in screen pixels (the
     // hook's own coordinates). True means the move was past the line and

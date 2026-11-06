@@ -75,6 +75,30 @@ internal sealed class MouseMapSource : IRemapSource
     public ushort AddKeySeed(string id) => MouseMap.Enabled[id] ? MouseMap.Words[id] : (ushort)0x41;
 }
 
+// The Steering page's pushes: unmapped until a key is picked, as a mouse
+// button is, but app-wide (see SteeringMap).
+internal sealed class SteeringMapSource : IRemapSource
+{
+    public static readonly SteeringMapSource Instance = new();
+    private SteeringMapSource() { }
+
+    public Dictionary<string, ushort> Words => SteeringMap.Words;
+    public Dictionary<string, List<ushort>> ExtraWords => SteeringMap.ExtraWords;
+    public Dictionary<string, KeyBehavior> Behaviors => SteeringMap.Behaviors;
+
+    public void Rebind(string id, ushort vkCode) => SteeringMap.Rebind(id, vkCode);
+    public void AddExtraKey(string id, ushort vkCode) => SteeringMap.AddExtraKey(id, vkCode);
+    public void SetExtraKey(string id, int index, ushort vkCode) => SteeringMap.SetExtraKey(id, index, vkCode);
+    public void RemoveExtraKey(string id, int index) => SteeringMap.RemoveExtraKey(id, index);
+    public void SetBehavior(string id, KeyBehavior behavior) => SteeringMap.SetBehavior(id, behavior);
+    public void ResetToDefault(string id) => SteeringMap.ResetToDefault(id);
+
+    public string KeyLabelFor(string id) =>
+        SteeringMap.Enabled[id] ? $"Key 1: {KeyCatalog.DisplayNameFor(SteeringMap.Words[id])}" : "Key 1: Not Mapped";
+    public bool IsMapped(string id) => SteeringMap.Enabled[id];
+    public ushort AddKeySeed(string id) => SteeringMap.Enabled[id] ? SteeringMap.Words[id] : (ushort)0x41;
+}
+
 internal sealed class VirtualKeyMapSource : IRemapSource
 {
     public static readonly VirtualKeyMapSource Instance = new();

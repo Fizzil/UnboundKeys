@@ -63,6 +63,9 @@ internal static class KeyExecutor
             "A word and a mouse button id collide — KeyExecutor's shared _engaged dictionary can't tell them apart.");
         Debug.Assert(!KeyMap.RemappableWords.Intersect(VirtualKeyMap.KeyIds, StringComparer.OrdinalIgnoreCase).Any(),
             "A word and a virtual key id collide — KeyExecutor's shared _engaged dictionary can't tell them apart.");
+        Debug.Assert(!SteeringMap.Ids.Intersect(KeyMap.RemappableWords, StringComparer.OrdinalIgnoreCase).Any()
+                     && !SteeringMap.Ids.Intersect(VirtualKeyMap.KeyIds, StringComparer.OrdinalIgnoreCase).Any(),
+            "A push id collides with a word or a virtual key id — KeyExecutor's shared _engaged dictionary can't tell them apart.");
         Debug.Assert(!MouseMap.ButtonIds.Intersect(VirtualKeyMap.KeyIds, StringComparer.OrdinalIgnoreCase).Any(),
             "A mouse button id and a virtual key id collide — KeyExecutor's shared _engaged dictionary can't tell them apart.");
     }
@@ -91,7 +94,10 @@ internal static class KeyExecutor
     private static readonly InfiniteState _mouseState = new();
     private static readonly InfiniteState _virtualState = new();
 
-    private static bool IsMouseSource(string word) => Array.IndexOf(MouseMap.ButtonIds, word) >= 0;
+    // The pushes (SteeringMap) are pressed by the mouse, so they share the
+    // mouse buttons' slots, as they did when MouseMap held them.
+    private static bool IsMouseSource(string word) =>
+        Array.IndexOf(MouseMap.ButtonIds, word) >= 0 || Array.IndexOf(SteeringMap.Ids, word) >= 0;
     private static bool IsVirtualSource(string word) => Array.IndexOf(VirtualKeyMap.KeyIds, word) >= 0;
 
     private static InfiniteState StateFor(string word) =>

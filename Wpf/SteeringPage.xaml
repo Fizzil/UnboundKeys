@@ -4,11 +4,11 @@
     <!-- Steering (Fizzil, 2026-11-06, for racing games): the mouse as a
          steering wheel, one feature on one page. A short hint under each
          control; the long explanations live in Help. The switch is for the
-         session and starts off; the stretch is saved with the profile
-         (see Steering.cs). -->
+         session and starts off; the stretch and the pushes are the
+         app's, the same in every profile (see SteeringMap.cs). -->
     <StackPanel Margin="0,8,0,0">
         <Button x:Name="SteeringToggle" Content="Steer with the mouse" Style="{StaticResource RailToggleStyle}" Margin="4,0,4,0"/>
-        <TextBlock Text="Holds the pointer on a rubber band and drives a virtual controller. Off at every start; Stop switches it off."
+        <TextBlock Text="Holds the pointer on a rubber band and drives a virtual controller. Off at every start; Stop switches it off. Same settings in every profile."
                    Style="{StaticResource RowHintStyle}"/>
 
         <Grid Height="44" Margin="4,0,4,0">

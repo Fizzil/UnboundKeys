@@ -22,9 +22,9 @@ public partial class SteeringPage : IDashboardPage
         foreach (var push in MouseCatalog.Pushes)
         {
             string id = push.Id;
-            var row = new MappingRow(push.Label, MappingRow.ValueOf(MouseMapSource.Instance, id));
-            row.SetModeGlyphs(MappingRow.BehaviorOf(MouseMapSource.Instance, id), null);
-            row.Clicked += () => EditRequested?.Invoke(MouseMapSource.Instance, id, push.Label);
+            var row = new MappingRow(push.Label, MappingRow.ValueOf(SteeringMapSource.Instance, id));
+            row.SetModeGlyphs(MappingRow.BehaviorOf(SteeringMapSource.Instance, id), null);
+            row.Clicked += () => EditRequested?.Invoke(SteeringMapSource.Instance, id, push.Label);
             _rows[id] = row;
             PushRows.Children.Add(row);
         }
@@ -75,8 +75,8 @@ public partial class SteeringPage : IDashboardPage
     {
         foreach (var (id, row) in _rows)
         {
-            row.SetChipText(MappingRow.ValueOf(MouseMapSource.Instance, id));
-            row.SetModeGlyphs(MappingRow.BehaviorOf(MouseMapSource.Instance, id), null);
+            row.SetChipText(MappingRow.ValueOf(SteeringMapSource.Instance, id));
+            row.SetModeGlyphs(MappingRow.BehaviorOf(SteeringMapSource.Instance, id), null);
         }
         ShowSteering();
         ShowPadDriver();

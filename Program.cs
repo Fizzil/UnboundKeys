@@ -145,8 +145,8 @@ static class Program
         // Tap is over before the wait ends, and its Stop is a no-op.
         Steering.PushPressed += id =>
         {
-            if (MouseMap.Enabled.TryGetValue(id, out bool on) && on)
-                RunMapping(id, MouseMap.GetAllKeys(id), MouseMap.Behaviors[id]);
+            if (SteeringMap.Enabled.TryGetValue(id, out bool on) && on)
+                RunMapping(id, SteeringMap.GetAllKeys(id), SteeringMap.Behaviors[id]);
         };
         Steering.PushReleased += id => Task.Run(async () =>
         {

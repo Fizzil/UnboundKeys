@@ -162,7 +162,7 @@ internal static class SteeringTests
 
     private static void PushIds()
     {
-        Check(MouseMap.ButtonIds.Contains("pushup") && MouseMap.ButtonIds.Contains("pushdown"), "pushup and pushdown are mapping ids");
+        Check(SteeringMap.Ids.Contains("pushup") && SteeringMap.Ids.Contains("pushdown"), "pushup and pushdown are the steering map's ids");
         Check(!MouseCatalog.Buttons.Any(b => b.Id.StartsWith("push")), "the pushes are not in the drawn mouse's buttons");
         Check(MouseCatalog.LabelFor("pushup") == "Push up" && MouseCatalog.LabelFor("pushdown") == "Push down", "their labels");
         Check(KeyCatalog.DisplayNameFor(PadKeys.Throttle) == "Throttle" && KeyCatalog.DisplayNameFor(PadKeys.Brake) == "Brake", "the pad keys have names");

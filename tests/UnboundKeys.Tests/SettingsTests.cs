@@ -27,7 +27,8 @@ internal static class SettingsTests
         Section("the log: off unless switched on", LogSwitch);
         Section("the keyboard's learned words: off unless switched on", LearnedWords);
         Section("mouse: a button reset to Not Mapped stays that way after a restart", MouseReset);
-        Section("mouse: the steering stretch survives a save", SteeringStretch);
+        Section("steering: the stretch is the app's, not the profile's", SteeringStretch);
+        Section("steering: the pushes are the app's, not the profile's", SteeringPushes);
         Section("settings: games (profiles)", Games);
         Section("settings: sub-profiles", SubProfiles);
         Section("settings: files from older versions", OlderFiles);
@@ -231,29 +232,65 @@ internal static class SettingsTests
         Check(Settings.LoadKeyboardShown(), "and the new value loads again");
     }
 
-    // The steering stretch (see Steering.cs) lives beside the mouse
-    // mappings in the sub-profile: one number, with the app's default
-    // until it is saved, and a save of it leaves the mouse mappings alone.
+    // The steering stretch (see Steering.cs) is app-wide: one number, with
+    // the app's default until it is saved, the same whichever profile is
+    // active, and untouched by a save of a profile's mouse mappings.
     private static void SteeringStretch()
     {
-        Check(Settings.LoadSteeringStretch("Default") == Steering.DefaultStretch, "never saved reads the default");
+        Check(Settings.LoadSteeringStretch() == Steering.DefaultStretch, "never saved reads the default");
 
         Settings.SaveMouseProfile("Default",
             new() { ["middle"] = true },
             new() { ["middle"] = 0x26 },
             new() { ["middle"] = new() },
             new() { ["middle"] = new KeyBehavior { Hold = true, Infinite = true } });
-        Settings.SaveSteeringStretch("Default", 0.25);
-        Check(Settings.LoadSteeringStretch("Default") == 0.25, "a saved stretch loads again");
+        Settings.SaveSteeringStretch(0.25);
+        Check(Settings.LoadSteeringStretch() == 0.25, "a saved stretch loads again");
         Check(Settings.LoadMouseKeyMap("Default", new() { ["middle"] = 0 })["middle"] == 0x26, "saving it keeps the mouse mappings");
-        Check(Settings.LoadSteeringStretch("Other") == Steering.DefaultStretch, "another game keeps its own default");
 
         Settings.SaveMouseProfile("Default",
             new() { ["middle"] = true },
             new() { ["middle"] = 0x28 },
             new() { ["middle"] = new() },
             new() { ["middle"] = new KeyBehavior() });
-        Check(Settings.LoadSteeringStretch("Default") == 0.25, "and saving the mouse mappings keeps the stretch");
+        Check(Settings.LoadSteeringStretch() == 0.25, "and saving the mouse mappings keeps the stretch");
+
+        Settings.CreateProfileIfMissing("Racing", new(), new(), new(), new(), new(), new(), new());
+        Settings.SetActiveProfile("Racing");
+        Check(Settings.LoadSteeringStretch() == 0.25, "it is the same whatever profile is active");
+    }
+
+    // Push up and Push down (the Steering page) are app-wide as well: a
+    // mapping made in one profile is there in every other, and neither a
+    // profile's mouse save nor Reset profile's MouseMap.ResetAll touches it.
+    private static void SteeringPushes()
+    {
+        var enabled = Settings.LoadSteeringEnabled(SteeringMap.FreshEnabled());
+        Check(!enabled["pushup"] && !enabled["pushdown"], "never saved: both pushes are unmapped");
+
+        SteeringMap.Rebind("pushup", 0x57);
+        SteeringMap.SetBehavior("pushup", new KeyBehavior { Hold = true, Infinite = true });
+        SteeringMap.AddExtraKey("pushup", 0x45);
+        Settings.CreateProfileIfMissing("Browsing", new(), new(), new(), new(), new(), new(), new());
+        Settings.SetActiveProfile("Browsing");
+        enabled = Settings.LoadSteeringEnabled(SteeringMap.FreshEnabled());
+        Check(enabled["pushup"] && Settings.LoadSteeringKeyMap(SteeringMap.FreshWords())["pushup"] == 0x57,
+            "a Push up mapping still loads after another profile is made active");
+        Check(Settings.LoadSteeringExtraKeys(SteeringMap.FreshExtraKeys())["pushup"].SequenceEqual(new ushort[] { 0x45 }), "with its extra key");
+        Check(Settings.LoadSteeringBehaviors(SteeringMap.FreshBehaviors())["pushup"].Hold, "and its behavior");
+
+        Settings.SaveMouseProfile("Browsing",
+            new() { ["middle"] = true }, new() { ["middle"] = 0x26 }, new() { ["middle"] = new() }, new() { ["middle"] = new KeyBehavior() });
+        Check(Settings.LoadSteeringEnabled(SteeringMap.FreshEnabled())["pushup"], "a mouse profile save leaves it alone");
+
+        MouseMap.SwitchProfile("Browsing");
+        MouseMap.ResetAll();
+        Check(Settings.LoadSteeringEnabled(SteeringMap.FreshEnabled())["pushup"]
+              && Settings.LoadSteeringKeyMap(SteeringMap.FreshWords())["pushup"] == 0x57, "Reset profile's MouseMap.ResetAll leaves it alone");
+        Check(!MouseMap.ButtonIds.Contains("pushup") && !MouseMap.ButtonIds.Contains("pushdown"), "the mouse map no longer carries the pushes");
+
+        SteeringMap.ResetToDefault("pushup");
+        Check(!SteeringMap.Enabled["pushup"] && !Settings.LoadSteeringEnabled(SteeringMap.FreshEnabled())["pushup"], "a push reset to Not Mapped stays so in the file");
     }
 
     private static void Games()

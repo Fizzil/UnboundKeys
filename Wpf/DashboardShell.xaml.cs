@@ -167,10 +167,10 @@ public partial class DashboardShell
         // Logged with the mapping changes (see RemapStore.LogChange), so a
         // change nobody meant can be traced to the editor it came through.
         Log.Info($"editor opened: {title} ({id})");
-        // Push up and Push down have one way of being pressed, so they get
-        // the plain editor, as a word does: no Single press / Double press.
-        bool isPush = source is MouseMapSource && MouseCatalog.IsPush(id);
-        bool twoWays = (source is MouseMapSource or VirtualKeyMapSource) && !isPush;
+        // Push up and Push down (SteeringMapSource) have one way of being
+        // pressed, so they get the plain editor, as a word does: no Single
+        // press / Double press.
+        bool twoWays = source is MouseMapSource or VirtualKeyMapSource;
         _editor = twoWays ? BuildGestureEditor(source, id, title) : NewCard(source, id);
         BackButton.Visibility = Visibility.Visible;
         PageTitle.Text = title;
@@ -279,7 +279,6 @@ public partial class DashboardShell
             Log.Info($"profile: {name} / {Settings.LoadActiveSubProfile(name)}");
         KeyMap.SwitchProfile(name);
         MouseMap.SwitchProfile(name);
-        Steering.SwitchProfile(name);
         VirtualKeyMap.SwitchProfile(name);
         ThemeMode.SwitchProfile(name);
         ShowProfileOnRail();
@@ -312,7 +311,6 @@ public partial class DashboardShell
         Log.Info($"profile: {game} / {sub}");
         KeyMap.SwitchProfile(game);
         MouseMap.SwitchProfile(game);
-        Steering.SwitchProfile(game);
         VirtualKeyMap.SwitchProfile(game);
         ShowProfileOnRail();
         ShowSection(_section);
@@ -324,7 +322,6 @@ public partial class DashboardShell
     {
         KeyMap.ResetAll();
         MouseMap.ResetAll();
-        Steering.ResetToDefault();
         VirtualKeyMap.ResetAll();
         ShowSection(_section);
     }
