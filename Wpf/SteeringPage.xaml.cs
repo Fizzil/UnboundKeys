@@ -29,10 +29,9 @@ public partial class SteeringPage : IDashboardPage
             PushRows.Children.Add(row);
         }
 
-        // The switch is for the session, the stretch is saved. Changed can
+        // Steering is for the session, the stretch is saved. Changed can
         // fire from the hook's thread or a panic path's, so the page is
         // redrawn through the dispatcher.
-        SteeringToggle.Click += (_, _) => Steering.SetOn(!Steering.IsOn);
         StretchMinusButton.Click += (_, _) => Steering.SetStretch(Math.Round(Steering.Stretch - 0.05, 2));
         StretchPlusButton.Click += (_, _) => Steering.SetStretch(Math.Round(Steering.Stretch + 0.05, 2));
         StretchResetButton.Click += (_, _) => Steering.SetStretch(Steering.DefaultStretch);
@@ -55,8 +54,40 @@ public partial class SteeringPage : IDashboardPage
 
     private void ShowSteering()
     {
-        SteeringToggle.Tag = Steering.IsOn;
+        StateText.Text = Steering.IsOn ? "Steering is on." : "Steering is off.";
+        var switches = SteeringSwitches();
+        SwitchesText.Text = switches.Count == 0
+            ? "Nothing switches it yet: give a word, mouse button or keyboard key the Steering switch in its editor."
+            : (switches.Count == 1 ? switches[0] + " switches it on and off." : string.Join(", ", switches) + " switch it on and off.");
         StretchText.Text = $"{Math.Round(Steering.Stretch * 100)} %";
+    }
+
+    // Every mapping in the active profile with Steering on, named the way
+    // the user knows it: "press nine", "Middle Button", "Middle Button
+    // double press", "A" (a Keyboard-page key).
+    private static List<string> SteeringSwitches()
+    {
+        var names = new List<string>();
+        foreach (var word in KeyMap.RemappableWords)
+            if (KeyMap.Behaviors.TryGetValue(word, out var b) && b.Steering)
+                names.Add($"\"press {word}\"");
+        foreach (var id in MouseMap.ButtonIds)
+            if (MouseMap.Behaviors.TryGetValue(id, out var b) && b.Steering)
+            {
+                var (baseId, gesture) = Gestures.Split(id);
+                names.Add(MouseCatalog.LabelFor(baseId) + (gesture == Gesture.Double ? " double press" : ""));
+            }
+        foreach (var id in VirtualKeyMap.KeyIds)
+            if (VirtualKeyMap.Behaviors.TryGetValue(id, out var b) && b.Steering)
+            {
+                var (baseId, gesture) = Gestures.Split(id);
+                string label = baseId;
+                foreach (var key in VirtualKeyCatalog.Keys)
+                    if (key.Id == baseId)
+                        label = key.Label;
+                names.Add(label + " key" + (gesture == Gesture.Double ? " double press" : ""));
+            }
+        return names;
     }
 
     // Whether the virtual controller can be made, and if the last try

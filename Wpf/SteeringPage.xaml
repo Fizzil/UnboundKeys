@@ -7,7 +7,12 @@
          session and starts off; the stretch and the pushes are the
          app's, the same in every profile (see SteeringMap.cs). -->
     <StackPanel Margin="0,8,0,0">
-        <Button x:Name="SteeringToggle" Content="Steer with the mouse" Style="{StaticResource RailToggleStyle}" Margin="4,0,4,0"/>
+        <!-- No switch here (Fizzil): the one way in is the one way out, a
+             word, button or key with Steering on in its editor. A switch on
+             this page would hold the pointer in the band with no way back
+             to it. The page says what is on and what switches it. -->
+        <TextBlock x:Name="StateText" FontSize="13" TextWrapping="Wrap" Margin="16,2,12,2"/>
+        <TextBlock x:Name="SwitchesText" Style="{StaticResource RowHintStyle}"/>
         <TextBlock Text="Holds the pointer in the centre of the screen. The further you push left or right, the harder you turn. Stop pushing and the pointer springs back to the centre."
                    Style="{StaticResource RowHintStyle}"/>
 

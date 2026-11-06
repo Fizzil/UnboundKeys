@@ -28,7 +28,8 @@ namespace UnboundKeys;
 //
 // Switched on and off by any word, button or key whose editor has the
 // Steering switch on (KeyBehavior.Steering: "press nine" toggles it, no
-// new spoken word, Fizzil), by the switch on the Mouse page, and off by
+// new spoken word, Fizzil; the Steering page has no switch of its own,
+// so the way in is always the way out), and off by
 // every panic path (Stop, two Caps Lock taps, quit: KeyExecutor.
 // ReleaseAll). Only the stretch is saved (per sub-profile, beside the
 // mouse mappings); on/off is for the session and starts off. While the
