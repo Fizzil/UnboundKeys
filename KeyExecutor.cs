@@ -726,8 +726,13 @@ internal static class KeyExecutor
                     bool windowChanged = s.HoldWindow.Value != current;
                     bool titleChanged = !windowChanged && s.HoldWindowTitle != currentTitle;
                     bool ownSideEffect = titleChanged && LooksLikeOwnSideEffect(s.HoldWindowTitle, currentTitle);
+                    // A hold made only of the virtual pad's pedals (see
+                    // PadKeys) is not a key stuck in a game: a browser game
+                    // changing its tab title mid-race must not lift the
+                    // throttle. A real switch of window still does.
+                    bool pedalsOnly = s.HoldKeys!.All(k => PadKeys.IsPadKey(k.Vk));
 
-                    if (windowChanged || (titleChanged && !ownSideEffect))
+                    if (windowChanged || (titleChanged && !ownSideEffect && !pedalsOnly))
                     {
                         _engaged[s.HoldWord] = false;
                         holdReleases.Add(s.HoldKeys!);

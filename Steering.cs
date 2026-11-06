@@ -93,12 +93,14 @@ public static class Steering
     public static bool PadThrottleHeld { get { lock (_lock) return _padThrottle; } }
     public static bool PadBrakeHeld { get { lock (_lock) return _padBrake; } }
 
+    // Whenever the key is held, steering on or not: a mapping may start
+    // holding the pedal before the word that starts steering is said, and
+    // the pedal then applies the moment steering is on (Fizzil pressed
+    // Mouse 5, then started steering, and had no throttle).
     public static void SetPadPedal(ushort padKey, bool down)
     {
         lock (_lock)
         {
-            if (_band == null)
-                return;
             if (padKey == PadKeys.Throttle)
                 _padThrottle = down;
             else if (padKey == PadKeys.Brake)
