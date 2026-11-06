@@ -17,7 +17,7 @@
         <!-- The one-button way, ready made (Fizzil): Middle Button gets
              Throttle, Hold, Infinite and Starts and stops steering in the
              active profile, and the Mouse page opens on it. -->
-        <Button x:Name="DefaultButton" Content="Default: Middle Button starts and stops racing, moving down brakes" Height="44" Margin="4,0,4,4" FontSize="13" Style="{StaticResource OutlineButtonStyle}"/>
+        <Button x:Name="DefaultButton" Content="Default" Height="44" Margin="4,0,4,4" FontSize="13" Style="{StaticResource OutlineButtonStyle}"/>
         <TextBlock Text="Or choose your own: open a mouse button, keyboard key or spoken word and switch on Starts and stops steering."
                    Style="{StaticResource RowHintStyle}"/>
         <UniformGrid Rows="1" Margin="4,0,4,6">
