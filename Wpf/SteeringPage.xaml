@@ -17,13 +17,13 @@
         <!-- The one-button way, ready made (Fizzil): Middle Button gets
              Throttle, Hold, Infinite and Starts and stops steering in the
              active profile, and the Mouse page opens on it. -->
-        <Button x:Name="DefaultButton" Content="Default: Middle Button starts and stops racing, moving down brakes" Height="44" Margin="4,0,4,4" FontSize="13" Style="{StaticResource SecondaryButtonStyle}"/>
+        <Button x:Name="DefaultButton" Content="Default: Middle Button starts and stops racing, moving down brakes" Height="44" Margin="4,0,4,4" FontSize="13" Style="{StaticResource OutlineButtonStyle}"/>
         <TextBlock Text="Or choose your own: open a mouse button, keyboard key or spoken word and switch on Starts and stops steering."
                    Style="{StaticResource RowHintStyle}"/>
         <UniformGrid Rows="1" Margin="4,0,4,6">
-            <Button x:Name="GoMouseButton" Content="Mouse" Height="44" Margin="0,0,4,0" FontSize="13" Style="{StaticResource SecondaryButtonStyle}"/>
-            <Button x:Name="GoKeyboardButton" Content="Keyboard" Height="44" Margin="2,0,2,0" FontSize="13" Style="{StaticResource SecondaryButtonStyle}"/>
-            <Button x:Name="GoVoiceButton" Content="Voice" Height="44" Margin="4,0,0,0" FontSize="13" Style="{StaticResource SecondaryButtonStyle}"/>
+            <Button x:Name="GoMouseButton" Content="Mouse" Height="44" Margin="0,0,4,0" FontSize="13" Style="{StaticResource OutlineButtonStyle}"/>
+            <Button x:Name="GoKeyboardButton" Content="Keyboard" Height="44" Margin="2,0,2,0" FontSize="13" Style="{StaticResource OutlineButtonStyle}"/>
+            <Button x:Name="GoVoiceButton" Content="Voice" Height="44" Margin="4,0,0,0" FontSize="13" Style="{StaticResource OutlineButtonStyle}"/>
         </UniformGrid>
         <TextBlock x:Name="StateText" FontSize="13" TextWrapping="Wrap" Margin="16,2,12,2"/>
         <TextBlock Text="Holds the pointer in the centre of the screen. The further you push left or right, the harder you turn. Stop pushing and the pointer springs back to the centre."
