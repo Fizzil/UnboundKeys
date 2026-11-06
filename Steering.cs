@@ -109,6 +109,11 @@ public static class Steering
                 _timer = new System.Threading.Timer(_ => Tick(), null, TickMs, TickMs);
                 _pad = newPad;
                 PadProblem = _pad == null ? problem : null;
+                // A middle button held since before steering came on is the
+                // throttle too: its press was never seen by the hook's
+                // steering check, so ask Windows instead of waiting for the
+                // next press (Fizzil: hold first, then "press nine").
+                ThrottleHeld = NativeInput.IsMiddleButtonDown();
             }
             else
             {

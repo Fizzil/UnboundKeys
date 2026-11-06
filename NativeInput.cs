@@ -247,6 +247,15 @@ internal static class NativeInput
     [DllImport("user32.dll")]
     private static extern bool GetCursorPos(out POINT lpPoint);
 
+    [DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int vKey);
+
+    // Whether the middle mouse button is down right now, from Windows's own
+    // record rather than from events: Steering asks when it switches on, so
+    // a button held since before then counts (the TetraMouse's click-and-
+    // hold is usually done first, then the word is spoken).
+    public static bool IsMiddleButtonDown() => (GetAsyncKeyState((int)VK_MBUTTON) & 0x8000) != 0;
+
     // Where the pointer is, in screen pixels.
     public static (int X, int Y) GetPointer()
     {
