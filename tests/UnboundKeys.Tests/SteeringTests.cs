@@ -72,24 +72,24 @@ internal static class SteeringTests
     private static void Pad()
     {
         // The band's lines: 300 px sideways, 150 px up or down.
-        var c = PadValues.FromOffset(0, 0, 300, 150, false);
+        var c = PadValues.FromOffset(0, 0, 300, 150);
         Check(c == (0.0, 0.0, 0.0), "the centre gives all zeros");
         // The curve (see PadValues): gentle near the centre, full at the line.
-        Check(PadValues.FromOffset(-150, 0, 300, 150, false).Steer == -0.25, "half left steers a quarter (the curve)");
-        Check(PadValues.FromOffset(300, 0, 300, 150, false).Steer == 1.0, "the line is full lock");
-        Check(PadValues.FromOffset(-900, 0, 300, 150, false).Steer == -1.0, "past the left line is clamped to -1");
-        Check(PadValues.FromOffset(900, 0, 300, 150, false).Steer == 1.0, "past the right line is clamped to +1");
+        Check(PadValues.FromOffset(-150, 0, 300, 150).Steer == -0.25, "half left steers a quarter (the curve)");
+        Check(PadValues.FromOffset(300, 0, 300, 150).Steer == 1.0, "the line is full lock");
+        Check(PadValues.FromOffset(-900, 0, 300, 150).Steer == -1.0, "past the left line is clamped to -1");
+        Check(PadValues.FromOffset(900, 0, 300, 150).Steer == 1.0, "past the right line is clamped to +1");
         // Height means nothing to the car (Fizzil: up and down as pedals
         // got in the way of holding the middle button).
-        var up = PadValues.FromOffset(0, -75, 300, 150, false);
+        var up = PadValues.FromOffset(0, -75, 300, 150);
         Check(up.Throttle == 0.0 && up.Brake == 0.0, "up gives no throttle and no brake");
-        var down = PadValues.FromOffset(0, 150, 300, 150, false);
+        var down = PadValues.FromOffset(0, 150, 300, 150);
         Check(down.Brake == 0.0 && down.Throttle == 0.0, "down gives nothing either");
-        Check(PadValues.FromOffset(0, 0, 300, 150, true).Throttle == 1.0, "middle held gives full throttle at the centre");
-        Check(PadValues.FromOffset(0, -75, 300, 150, true).Throttle == 1.0, "middle held gives full throttle whatever the height");
-        var both = PadValues.FromOffset(0, 75, 300, 150, true);
-        Check(both.Throttle == 1.0 && both.Brake == 0.0, "middle held with the pointer down: full throttle, no brake");
-        Check(PadValues.FromOffset(50, 50, 0, 0, false) == (0.0, 0.0, 0.0), "a line at 0 gives zeros, not a division error");
+        Check(PadValues.FromOffset(0, 0, 300, 150, padThrottle: true).Throttle == 1.0, "the Throttle key held gives full throttle at the centre");
+        Check(PadValues.FromOffset(0, -75, 300, 150, padThrottle: true).Throttle == 1.0, "the Throttle key held gives full throttle whatever the height");
+        var both = PadValues.FromOffset(0, 75, 300, 150, padThrottle: true);
+        Check(both.Throttle == 1.0 && both.Brake == 0.0, "the Throttle key with the pointer down: full throttle, no brake");
+        Check(PadValues.FromOffset(50, 50, 0, 0) == (0.0, 0.0, 0.0), "a line at 0 gives zeros, not a division error");
     }
 
     // The band's line is 150 px: a third is 50 px, a quarter 37.5 px.
@@ -149,15 +149,15 @@ internal static class SteeringTests
 
     private static void PadPedals()
     {
-        var thr = PadValues.FromOffset(0, 0, 300, 150, false, padThrottle: true, padBrake: false);
+        var thr = PadValues.FromOffset(0, 0, 300, 150, padThrottle: true, padBrake: false);
         Check(thr.Throttle == 1.0 && thr.Brake == 0.0, "the pad throttle key gives full throttle");
-        var brk = PadValues.FromOffset(0, 0, 300, 150, false, padThrottle: false, padBrake: true);
+        var brk = PadValues.FromOffset(0, 0, 300, 150, padThrottle: false, padBrake: true);
         Check(brk.Throttle == 0.0 && brk.Brake == 1.0, "the pad brake key gives full brake");
-        var both = PadValues.FromOffset(0, 0, 300, 150, true, padThrottle: false, padBrake: true);
-        Check(both.Throttle == 1.0 && both.Brake == 1.0, "the middle-click throttle and the brake key work together");
-        var on = PadValues.FromOffset(-150, 0, 300, 150, false, padThrottle: true, padBrake: false);
+        var both = PadValues.FromOffset(0, 0, 300, 150, padThrottle: true, padBrake: true);
+        Check(both.Throttle == 1.0 && both.Brake == 1.0, "the Throttle and Brake keys work together");
+        var on = PadValues.FromOffset(-150, 0, 300, 150, padThrottle: true, padBrake: false);
         Check(on.Steer == -0.25 && on.Throttle == 1.0, "steering is untouched by the pedals");
-        Check(PadValues.FromOffset(0, 0, 300, 150, false) == (0.0, 0.0, 0.0), "the pedals default to off");
+        Check(PadValues.FromOffset(0, 0, 300, 150) == (0.0, 0.0, 0.0), "the pedals default to off");
     }
 
     private static void PushIds()

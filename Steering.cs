@@ -12,7 +12,7 @@ namespace UnboundKeys;
 // offset from the centre also drives a virtual Xbox 360 controller that
 // UnboundKeys makes itself through the ViGEmBus driver (VirtualPad.cs,
 // PadValues.cs): sideways = steering, with the stretch line as full
-// lock, and the middle mouse button held = full throttle, so the game
+// lock, so the game
 // gets a real analog turn. Up and down hold the pointer too but mean
 // nothing to the car: pedals on them were tried and got in the way of
 // holding the middle button (Fizzil). Height instead presses two
@@ -75,14 +75,6 @@ public static class Steering
     // nothing drives the car, and Settings says why.
     public static string? PadProblem { get; private set; }
 
-    // Full throttle is on: while steering, one middle click starts it and
-    // the next stops it, the way a Hold + Infinite mapping works. A held
-    // button was tried first and failed Fizzil's middle button, which only
-    // ever pulses, and its latch gesture, whose press and release could
-    // land either side of steering switching on and leave Windows thinking
-    // the button was stuck down.
-    public static bool ThrottleOn { get; private set; }
-
     // Push up or Push down was pressed or released ("pushup" / "pushdown"):
     // raised outside the lock, because the handlers run mappings.
     public static event Action<string>? PushPressed;
@@ -106,12 +98,6 @@ public static class Steering
             else if (padKey == PadKeys.Brake)
                 _padBrake = down;
         }
-    }
-
-    public static void ToggleThrottle()
-    {
-        lock (_lock)
-            ThrottleOn = !ThrottleOn;
     }
 
     // How far the pointer can be pulled from the centre, as a share of the
@@ -158,7 +144,6 @@ public static class Steering
                 _timer = new System.Threading.Timer(_ => Tick(), null, TickMs, TickMs);
                 _pad = newPad;
                 PadProblem = _pad == null ? problem : null;
-                ThrottleOn = false;
                 _gameWindow = Suspended?.Invoke() == true ? IntPtr.Zero : NativeInput.GetFocusedWindow();
             }
             else
@@ -168,7 +153,6 @@ public static class Steering
                 _band = null;
                 oldPad = _pad;
                 _pad = null;
-                ThrottleOn = false;
                 _padThrottle = false;
                 _padBrake = false;
                 letGo = _push.Release();
@@ -283,7 +267,7 @@ public static class Steering
         // The pointer's offset from the centre, after the spring's move,
         // is what the pad is told.
         var (steer, throttle, brake) = PadValues.FromOffset(
-            x - _band.CentreX, y - _band.CentreY, _band.MaxPx, _band.MaxPy, ThrottleOn,
+            x - _band.CentreX, y - _band.CentreY, _band.MaxPx, _band.MaxPy,
             _padThrottle, _padBrake);
         _pad?.Set(steer, throttle, brake);
         return _push.Update(y - _band.CentreY, _band.MaxPy);

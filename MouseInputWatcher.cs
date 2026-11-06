@@ -65,9 +65,6 @@ public sealed class MouseInputWatcher : IDisposable
 
     private readonly LowLevelHook _hook = new();
 
-    // See the steering check in HookCallback.
-    private bool _middlePressSwallowed;
-
     public void Start() => _hook.Start(WH_MOUSE_LL, HookCallback);
     public void Pause() => _hook.Pause();
     public void Resume() => _hook.Resume();
@@ -105,25 +102,6 @@ public sealed class MouseInputWatcher : IDisposable
             if (Steering.IsOn && Steering.PointerMoved(data.pt.x, data.pt.y))
                 return (IntPtr)1;
             return _hook.CallNext(nCode, wParam, lParam);
-        }
-
-        // While steering, the middle button is the accelerator (Fizzil): a
-        // click switches full throttle on, the next switches it off, and the
-        // click is swallowed whatever the button's own mapping says, so that
-        // mapping does not run while steering is on. Only a release whose
-        // press was swallowed is swallowed too: a press that reached Windows
-        // before steering came on must get its release, or Windows (and the
-        // browser) keep the button down for good.
-        if (msg == WM_MBUTTONDOWN && Steering.IsOn)
-        {
-            Steering.ToggleThrottle();
-            _middlePressSwallowed = true;
-            return (IntPtr)1;
-        }
-        if (msg == WM_MBUTTONUP && _middlePressSwallowed)
-        {
-            _middlePressSwallowed = false;
-            return (IntPtr)1;
         }
 
         short highWord = (short)(data.mouseData >> 16);
