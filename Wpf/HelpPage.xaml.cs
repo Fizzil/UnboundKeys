@@ -34,7 +34,7 @@ public partial class HelpPage : IDashboardPage
         AddLine("Timing", "with a double press set, a single press lands a moment later, once no second press is coming. A button or key with no double press set is as quick as ever.");
 
         AddHeader("STEERING", topMargin: 6);
-        AddLine("A rubber band on the pointer", "while steering is on: push and the pointer moves out, up to the stretch line; stop pushing and it springs back to the middle of the screen. UnboundKeys also makes a virtual Xbox controller from where the pointer sits: sideways steers, gradually, and the middle button held is full throttle. It needs the free ViGEmBus driver, installed once from Settings (Get the ViGEmBus driver, or github.com/nefarius/ViGEmBus).");
+        AddLine("A rubber band on the pointer", "while steering is on: push and the pointer moves out, up to the stretch line; stop pushing and it springs back to the middle of the screen. UnboundKeys also makes a virtual Xbox controller from where the pointer sits: sideways steers, gradually, and the middle button is full throttle: one click to go, another to stop. It needs the free ViGEmBus driver, installed once from Settings (Get the ViGEmBus driver, or github.com/nefarius/ViGEmBus).");
         AddLine("Switching it on and off", "any word, button or key with Steering on in its editor (say \"press nine\" to start, \"press nine\" to stop), or the switch at the bottom of the Mouse page. Off at every start; Stop switches it off; the band lets go while this dashboard is in front.");
         AddLine("Stretch", "on the Mouse page: how far the pointer can be pulled from the centre, as a share of the way to the screen's edge. That line is full lock and full pedal.");
 

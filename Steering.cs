@@ -57,13 +57,18 @@ public static class Steering
     // nothing drives the car, and Settings says why.
     public static string? PadProblem { get; private set; }
 
-    // The middle button is held (it is the accelerator while steering).
-    public static bool ThrottleHeld { get; private set; }
+    // Full throttle is on: while steering, one middle click starts it and
+    // the next stops it, the way a Hold + Infinite mapping works. A held
+    // button was tried first and failed Fizzil's middle button, which only
+    // ever pulses, and its latch gesture, whose press and release could
+    // land either side of steering switching on and leave Windows thinking
+    // the button was stuck down.
+    public static bool ThrottleOn { get; private set; }
 
-    public static void SetThrottle(bool held)
+    public static void ToggleThrottle()
     {
         lock (_lock)
-            ThrottleHeld = held;
+            ThrottleOn = !ThrottleOn;
     }
 
     // How far the pointer can be pulled from the centre, as a share of the
@@ -109,11 +114,7 @@ public static class Steering
                 _timer = new System.Threading.Timer(_ => Tick(), null, TickMs, TickMs);
                 _pad = newPad;
                 PadProblem = _pad == null ? problem : null;
-                // A middle button held since before steering came on is the
-                // throttle too: its press was never seen by the hook's
-                // steering check, so ask Windows instead of waiting for the
-                // next press (Fizzil: hold first, then "press nine").
-                ThrottleHeld = NativeInput.IsMiddleButtonDown();
+                ThrottleOn = false;
             }
             else
             {
@@ -122,7 +123,7 @@ public static class Steering
                 _band = null;
                 oldPad = _pad;
                 _pad = null;
-                ThrottleHeld = false;
+                ThrottleOn = false;
             }
         }
         oldPad?.Dispose();
@@ -204,7 +205,7 @@ public static class Steering
             // The pointer's offset from the centre, after the spring's move,
             // is what the pad is told.
             var (steer, throttle, brake) = PadValues.FromOffset(
-                x - _band.CentreX, y - _band.CentreY, _band.MaxPx, _band.MaxPy, ThrottleHeld);
+                x - _band.CentreX, y - _band.CentreY, _band.MaxPx, _band.MaxPy, ThrottleOn);
             _pad?.Set(steer, throttle, brake);
         }
     }
