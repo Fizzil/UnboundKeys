@@ -115,8 +115,8 @@
             <Button x:Name="SteeringButton" Click="SteeringButton_Click" Style="{StaticResource RailToggleStyle}"
                     Height="Auto" MinHeight="48" Padding="12,6,12,6" Margin="4,0,4,0">
                 <StackPanel>
-                    <TextBlock Text="Steering"/>
-                    <TextBlock Text="Saying this word, or pressing this button or key, switches mouse steering on or off instead of sending its keys. Stop switches it off too. The stretch is set on the Mouse page."
+                    <TextBlock Text="Starts and stops steering"/>
+                    <TextBlock Text="This word, button or key switches mouse steering on and off, and sends nothing else. Leave it off for a button that should send its keys, Throttle or Brake included. Stop also stops steering; the Steering page has the rest."
                                Style="{StaticResource InlineHintStyle}" TextWrapping="Wrap" TextTrimming="None"/>
                 </StackPanel>
             </Button>

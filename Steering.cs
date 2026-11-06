@@ -85,19 +85,54 @@ public static class Steering
     public static bool PadThrottleHeld { get { lock (_lock) return _padThrottle; } }
     public static bool PadBrakeHeld { get { lock (_lock) return _padBrake; } }
 
-    // Whenever the key is held, steering on or not: a mapping may start
-    // holding the pedal before the word that starts steering is said, and
-    // the pedal then applies the moment steering is on (Fizzil pressed
-    // Mouse 5, then started steering, and had no throttle).
+    // Whenever the key is held, steering on or not. With steering on, the
+    // timer tells the pad every tick. With steering off, the pedals work
+    // on their own: the pad is plugged in for as long as a pedal is held
+    // and told straight away, so Throttle on a button accelerates even
+    // before the steering word is said (Fizzil, testing as a new user:
+    // Throttle did nothing, Up Arrow did). The pad is made outside the
+    // lock, as in SetOn.
     public static void SetPadPedal(ushort padKey, bool down)
     {
+        IVirtualPad? toDispose = null;
+        bool needPad = false;
         lock (_lock)
         {
             if (padKey == PadKeys.Throttle)
                 _padThrottle = down;
             else if (padKey == PadKeys.Brake)
                 _padBrake = down;
+            if (_band == null)
+            {
+                if (_padThrottle || _padBrake)
+                {
+                    if (_pad == null)
+                        needPad = true;
+                    else
+                        _pad.Set(0, _padThrottle ? 1 : 0, _padBrake ? 1 : 0);
+                }
+                else
+                {
+                    toDispose = _pad;
+                    _pad = null;
+                }
+            }
         }
+        toDispose?.Dispose();
+        if (!needPad)
+            return;
+        var pad = VirtualPadDriver.TryCreate(out var problem);
+        lock (_lock)
+        {
+            if (_pad == null && (_padThrottle || _padBrake))
+            {
+                _pad = pad;
+                PadProblem = pad == null ? problem : null;
+                pad?.Set(0, _padThrottle ? 1 : 0, _padBrake ? 1 : 0);
+                pad = null;
+            }
+        }
+        pad?.Dispose();
     }
 
     // How far the pointer can be pulled from the centre, as a share of the
@@ -119,7 +154,10 @@ public static class Steering
         // unplugged outside the lock, and only handed over inside it.
         IVirtualPad? newPad = null;
         string? problem = null;
-        if (on && !IsOn)
+        bool havePad;
+        lock (_lock)
+            havePad = _pad != null;
+        if (on && !IsOn && !havePad)
             newPad = VirtualPadDriver.TryCreate(out problem);
         IVirtualPad? oldPad = null;
         PushEvent letGo = PushEvent.None;
@@ -142,8 +180,13 @@ public static class Steering
                 _band = new RubberBand(cx, cy, (int)(m.Width / 2 * Stretch), (int)(m.Height / 2 * Stretch), Now);
                 NativeInput.MovePointerTo(cx, cy);
                 _timer = new System.Threading.Timer(_ => Tick(), null, TickMs, TickMs);
-                _pad = newPad;
-                PadProblem = _pad == null ? problem : null;
+                if (_pad == null)
+                {
+                    _pad = newPad;
+                    PadProblem = _pad == null ? problem : null;
+                }
+                else
+                    newPad?.Dispose();
                 _gameWindow = Suspended?.Invoke() == true ? IntPtr.Zero : NativeInput.GetFocusedWindow();
             }
             else
@@ -151,11 +194,17 @@ public static class Steering
                 _timer?.Dispose();
                 _timer = null;
                 _band = null;
-                oldPad = _pad;
-                _pad = null;
                 // The pedal flags stay: the mapping holding a pedal owns them
                 // and clears them with its own key-up (a panic path releases
-                // every hold, which does that too).
+                // every hold, which does that too). A pedal still held keeps
+                // the pad, with the steering let go.
+                if (_padThrottle || _padBrake)
+                    _pad?.Set(0, _padThrottle ? 1 : 0, _padBrake ? 1 : 0);
+                else
+                {
+                    oldPad = _pad;
+                    _pad = null;
+                }
                 letGo = _push.Release();
             }
         }
