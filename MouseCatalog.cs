@@ -29,8 +29,8 @@ public static class MouseCatalog
     // from AllIds: they belong to SteeringMap, app-wide, not to a profile.
     public static readonly ButtonInfo[] Pushes =
     {
-        new("pushup", "Push up", "P↑"),
-        new("pushdown", "Push down", "P↓"),
+        new("pushup", "Move up", "M↑"),
+        new("pushdown", "Move down", "M↓"),
     };
 
     public static string LabelFor(string buttonId)

@@ -8,7 +8,7 @@
          app's, the same in every profile (see SteeringMap.cs). -->
     <StackPanel Margin="0,8,0,0">
         <Button x:Name="SteeringToggle" Content="Steer with the mouse" Style="{StaticResource RailToggleStyle}" Margin="4,0,4,0"/>
-        <TextBlock Text="Holds the pointer on a rubber band and drives a virtual controller. Off at every start; Stop switches it off. Same settings in every profile."
+        <TextBlock Text="Holds the pointer in the centre of the screen. The further you push left or right, the harder you turn. Stop pushing and the pointer springs back to the centre."
                    Style="{StaticResource RowHintStyle}"/>
 
         <Grid Height="44" Margin="4,0,4,0">
@@ -25,25 +25,25 @@
                 <Button x:Name="StretchResetButton" Content="Reset" Style="{StaticResource StepButtonStyle}"/>
             </StackPanel>
         </Grid>
-        <TextBlock Text="How far the pointer can be pulled from the centre. That line is full lock."
+        <TextBlock Text="How far the pointer can be pulled from the centre."
                    Style="{StaticResource RowHintStyle}"/>
 
         <!-- Push up and Push down: mappings pressed by pushing the pointer
              up or down the band, not by a button (see MouseCatalog.Pushes).
              Their rows are added in code. -->
-        <TextBlock Text="PUSHES" Style="{StaticResource SectionHeaderStyle}" Margin="0,8,0,4"/>
+        <TextBlock Text="MOVE MOUSE" Style="{StaticResource SectionHeaderStyle}" Margin="0,8,0,4"/>
         <StackPanel x:Name="PushRows"/>
-        <TextBlock Text="Pushed past a third of the stretch, a push presses its mapping like a button; coming back lets go."
+        <TextBlock Text="Moving the mouse up or down can press a key or a pedal, such as the throttle or the brake."
                    Style="{StaticResource RowHintStyle}"/>
 
         <!-- The virtual controller's driver, installed once. -->
-        <TextBlock Text="CONTROLLER" Style="{StaticResource SectionHeaderStyle}" Margin="0,8,0,4"/>
+        <TextBlock Text="VIRTUAL XBOX CONTROLLER" Style="{StaticResource SectionHeaderStyle}" Margin="0,8,0,4"/>
         <TextBlock x:Name="PadDriverStatus" FontSize="13" TextWrapping="Wrap" Margin="16,0,12,2"/>
         <TextBlock x:Name="PadProblemText" Visibility="Collapsed" Style="{StaticResource RowHintStyle}" Margin="16,0,12,4"/>
         <Button x:Name="GetPadDriverButton" Content="Get the ViGEmBus driver" Height="44" Margin="4,4,4,4" Padding="12,0,12,0" FontSize="13" Style="{StaticResource SecondaryButtonStyle}"/>
-        <TextBlock Text="Installed once; the game sees an Xbox controller."
+        <TextBlock Text="Install it once. The game sees an Xbox controller."
                    Style="{StaticResource RowHintStyle}"/>
 
-        <TextBlock Text="Help has the full story." Style="{StaticResource RowHintStyle}" Margin="12,8,12,8"/>
+        <TextBlock Text="Same settings in every profile. Help has the full story." Style="{StaticResource RowHintStyle}" Margin="12,8,12,8"/>
     </StackPanel>
 </UserControl>

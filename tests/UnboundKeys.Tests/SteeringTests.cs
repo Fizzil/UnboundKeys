@@ -164,7 +164,7 @@ internal static class SteeringTests
     {
         Check(SteeringMap.Ids.Contains("pushup") && SteeringMap.Ids.Contains("pushdown"), "pushup and pushdown are the steering map's ids");
         Check(!MouseCatalog.Buttons.Any(b => b.Id.StartsWith("push")), "the pushes are not in the drawn mouse's buttons");
-        Check(MouseCatalog.LabelFor("pushup") == "Push up" && MouseCatalog.LabelFor("pushdown") == "Push down", "their labels");
+        Check(MouseCatalog.LabelFor("pushup") == "Move up" && MouseCatalog.LabelFor("pushdown") == "Move down", "their labels");
         Check(KeyCatalog.DisplayNameFor(PadKeys.Throttle) == "Throttle" && KeyCatalog.DisplayNameFor(PadKeys.Brake) == "Brake", "the pad keys have names");
         Check(KeyCatalog.Groups.Any(g => g.Category == "Controller" && g.Keys.Length == 2), "the Controller group lists both");
         Check(!KeyMap.IsExtendedKey(PadKeys.Throttle) && !KeyMap.IsExtendedKey(PadKeys.Brake), "pad keys are not extended keys");
