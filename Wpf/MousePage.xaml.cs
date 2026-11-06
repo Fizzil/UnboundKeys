@@ -9,7 +9,6 @@ public partial class MousePage : IDashboardPage
 {
     private readonly Dictionary<string, MappingRow> _rows = new();
     private readonly Dictionary<string, string> _labels = new();
-    private readonly HashSet<string> _pushIds = new();
 
     internal event Action<IRemapSource, string, string>? EditRequested;
 
@@ -61,39 +60,6 @@ public partial class MousePage : IDashboardPage
             Diagram.Highlight(id);
         };
         Diagram.HotspotClicked += id => EditRequested?.Invoke(MouseMapSource.Instance, id, _labels[id]);
-
-        // PUSHES: Push up and Push down, rows like the buttons' but with no
-        // place on the drawn mouse, so nothing to highlight. Their editor
-        // is the plain one (DashboardShell.OpenEditor).
-        var pushLabel = new TextBlock { Text = "PUSHES", Margin = new Thickness(0, 8, 0, 4) };
-        pushLabel.SetResourceReference(StyleProperty, "SectionHeaderStyle");
-        PushRows.Children.Add(pushLabel);
-        foreach (var push in MouseCatalog.Pushes)
-        {
-            string id = push.Id;
-            var row = new MappingRow(push.Label, MappingRow.ValueOf(MouseMapSource.Instance, id));
-            row.SetModeGlyphs(MappingRow.BehaviorOf(MouseMapSource.Instance, id), null);
-            row.Clicked += () => EditRequested?.Invoke(MouseMapSource.Instance, id, push.Label);
-            _rows[id] = row;
-            _pushIds.Add(id);
-            PushRows.Children.Add(row);
-        }
-
-        // Steering (see Steering.cs): the switch is for the session, the
-        // stretch is saved. Changed can fire from the hook's thread or a
-        // panic path's, so the picture is redrawn through the dispatcher.
-        SteeringToggle.Click += (_, _) => Steering.SetOn(!Steering.IsOn);
-        StretchMinusButton.Click += (_, _) => Steering.SetStretch(Math.Round(Steering.Stretch - 0.05, 2));
-        StretchPlusButton.Click += (_, _) => Steering.SetStretch(Math.Round(Steering.Stretch + 0.05, 2));
-        StretchResetButton.Click += (_, _) => Steering.SetStretch(Steering.DefaultStretch);
-        Steering.Changed += () => Dispatcher.InvokeAsync(ShowSteering);
-        ShowSteering();
-    }
-
-    private void ShowSteering()
-    {
-        SteeringToggle.Tag = Steering.IsOn;
-        StretchText.Text = $"{Math.Round(Steering.Stretch * 100)} %";
     }
 
     public void Refresh()
@@ -101,10 +67,8 @@ public partial class MousePage : IDashboardPage
         foreach (var (id, row) in _rows)
         {
             row.SetChipText(MappingRow.ValueOf(MouseMapSource.Instance, id));
-            row.SetModeGlyphs(MappingRow.BehaviorOf(MouseMapSource.Instance, id),
-                _pushIds.Contains(id) ? null : DoublePressOf(id));
+            row.SetModeGlyphs(MappingRow.BehaviorOf(MouseMapSource.Instance, id), DoublePressOf(id));
         }
-        ShowSteering();
     }
 
     // What a button's double press sends, or null when it has none: the

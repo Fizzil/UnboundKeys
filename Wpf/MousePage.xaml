@@ -28,41 +28,6 @@
             <StackPanel Grid.Column="1">
                 <StackPanel x:Name="Rows"/>
 
-                <!-- Steering (Fizzil, 2026-11-06, for Need for Speed
-                     Underground 2 in the browser): the mouse as a steering
-                     wheel, one switch and one number (see Steering.cs).
-                     The switch is for the session and starts off; the dead
-                     zone is saved with the profile. -->
-                <TextBlock Text="STEERING" Style="{StaticResource SectionHeaderStyle}" Margin="0,8,0,4"/>
-                <Button x:Name="SteeringToggle" Style="{StaticResource RailToggleStyle}"
-                        Height="Auto" MinHeight="48" Padding="12,6,12,6" Margin="4,0,4,0">
-                    <StackPanel>
-                        <TextBlock Text="Steer with the mouse"/>
-                        <TextBlock Text="Holds the pointer near the middle of the screen like a rubber band: push to pull it out, let go and it springs back. Sideways steers, and the middle button is the accelerator while steering is on: one click to go, another to stop. The virtual controller driver is installed once, from Settings. Off at every start; Stop switches it off; a word or button with Steering on in its editor switches it on and off. Push up and Push down are mappings of their own, pressed when the pointer is pushed past a third of the stretch and released when it comes back, so &quot;push down to accelerate&quot; is Push down, Throttle, Mode Hold with Infinite. The key picker's Controller group has Throttle and Brake for the virtual controller."
-                                   Style="{StaticResource InlineHintStyle}" TextWrapping="Wrap" TextTrimming="None"/>
-                    </StackPanel>
-                </Button>
-                <Grid Height="44" Margin="4,0,4,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="Stretch" Style="{StaticResource RowLabelStyle}"/>
-                    <TextBlock x:Name="StretchText" Grid.Column="1" Style="{StaticResource ValueTextStyle}"/>
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
-                        <Button x:Name="StretchMinusButton" Content="−5 %" Style="{StaticResource StepButtonStyle}"/>
-                        <Button x:Name="StretchPlusButton" Content="+5 %" Style="{StaticResource StepButtonStyle}"/>
-                        <Button x:Name="StretchResetButton" Content="Reset" Style="{StaticResource StepButtonStyle}"/>
-                    </StackPanel>
-                </Grid>
-                <TextBlock Text="How far the pointer can be pulled from the centre before it stops, as a share of the way to the screen's edge. That line is full lock (and full pedal). Reset goes back to 10 %."
-                           Style="{StaticResource RowHintStyle}" Margin="12,0,12,8"/>
-
-                <!-- Push up and Push down: mappings pressed by pushing the
-                     pointer up or down the band, not by a button (see
-                     MouseCatalog.Pushes). Their rows are added in code. -->
-                <StackPanel x:Name="PushRows"/>
             </StackPanel>
         </Grid>
     </StackPanel>

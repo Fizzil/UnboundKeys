@@ -49,6 +49,7 @@ public partial class NavRail
         {
             [MouseButton] = DashboardSection.Mouse,
             [VoiceButton] = DashboardSection.Voice,
+            [SteeringButton] = DashboardSection.Steering,
             [KeyboardButton] = DashboardSection.Keyboard,
             [SettingsButton] = DashboardSection.Settings,
             [HelpButton] = DashboardSection.Help,
