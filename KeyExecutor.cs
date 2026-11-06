@@ -234,11 +234,17 @@ internal static class KeyExecutor
     public static void Execute(string word, IReadOnlyList<(ushort Vk, bool Extended)> keys, KeyBehavior behavior)
     {
         // Steering (see Steering.cs): this word, button or key is the
-        // steering switch. It sends nothing of its own.
+        // steering switch. Its pedals go along with it (Fizzil: one button
+        // for steering plus throttle, Throttle in Hold with Infinite, so a
+        // press is race on and the next is race off), any other key is not
+        // sent ("press nine" must not type a 9).
         if (behavior.Steering)
         {
             Steering.Toggle();
-            return;
+            var pedals = keys.Where(k => PadKeys.IsPadKey(k.Vk)).ToList();
+            if (pedals.Count == 0)
+                return;
+            keys = pedals;
         }
 
         int cooldownLeftMs = behavior.Priority ? PauseRepeatsForPriority(behavior) : 0;

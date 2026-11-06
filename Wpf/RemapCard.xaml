@@ -116,7 +116,7 @@
                     Height="Auto" MinHeight="48" Padding="12,6,12,6" Margin="4,0,4,0">
                 <StackPanel>
                     <TextBlock Text="Starts and stops steering"/>
-                    <TextBlock Text="This word, button or key switches mouse steering on and off, and sends nothing else. Leave it off for a button that should send its keys, Throttle or Brake included. Stop also stops steering; the Steering page has the rest."
+                    <TextBlock Text="This word, button or key switches mouse steering on and off. Throttle or Brake on it go along, so one button can be steering plus throttle; any other key is not sent. Stop also stops steering; the Steering page has the rest."
                                Style="{StaticResource InlineHintStyle}" TextWrapping="Wrap" TextTrimming="None"/>
                 </StackPanel>
             </Button>
