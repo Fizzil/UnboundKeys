@@ -39,6 +39,16 @@ public partial class SteeringPage : IDashboardPage
         GoMouseButton.Click += (_, _) => NavigateRequested?.Invoke(DashboardSection.Mouse);
         GoKeyboardButton.Click += (_, _) => NavigateRequested?.Invoke(DashboardSection.Keyboard);
         GoVoiceButton.Click += (_, _) => NavigateRequested?.Invoke(DashboardSection.Voice);
+        // The default one-button setup, in the active profile: Middle Button
+        // sends Throttle in Hold with Infinite and starts and stops steering,
+        // so one press is race on and the next is race off. Then the Mouse
+        // page, where the Middle Button row shows it.
+        DefaultButton.Click += (_, _) =>
+        {
+            MouseMap.Rebind("middle", PadKeys.Throttle);
+            MouseMap.SetBehavior("middle", new KeyBehavior { Hold = true, Infinite = true, Steering = true });
+            NavigateRequested?.Invoke(DashboardSection.Mouse);
+        };
         StretchMinusButton.Click += (_, _) => Steering.SetStretch(Math.Round(Steering.Stretch - 0.05, 2));
         StretchPlusButton.Click += (_, _) => Steering.SetStretch(Math.Round(Steering.Stretch + 0.05, 2));
         StretchResetButton.Click += (_, _) => Steering.SetStretch(Steering.DefaultStretch);
