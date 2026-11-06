@@ -93,6 +93,7 @@ internal sealed class SteeringMapSource : IRemapSource
     public void SetBehavior(string id, KeyBehavior behavior) => SteeringMap.SetBehavior(id, behavior);
     public void ResetToDefault(string id) => SteeringMap.ResetToDefault(id);
 
+    // The race mapping is always mapped (see SteeringMap.FreshEnabled).
     public string KeyLabelFor(string id) =>
         SteeringMap.Enabled[id] ? $"Key 1: {KeyCatalog.DisplayNameFor(SteeringMap.Words[id])}" : "Key 1: Not Mapped";
     public bool IsMapped(string id) => SteeringMap.Enabled[id];

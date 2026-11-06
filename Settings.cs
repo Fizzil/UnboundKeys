@@ -199,6 +199,11 @@ internal static class Settings
         public Dictionary<string, List<ushort>> SteeringExtraKeys { get; set; } = new();
         public Dictionary<string, KeyBehavior> SteeringBehaviors { get; set; } = new();
 
+        // The race button (see SteeringMap.RaceTrigger): the id of the mouse
+        // button or Keyboard-page key that starts and stops steering with
+        // the throttle on, from whichever profile is active. Empty: none.
+        public string RaceTrigger { get; set; } = "";
+
         // Whether the app keeps a log (see Log). Off unless switched on in
         // Settings > Action logger.
         public bool WriteLog { get; set; }
@@ -686,6 +691,15 @@ internal static class Settings
     {
         var saved = Read();
         saved.SteeringStretch = share;
+        Write(saved);
+    }
+
+    public static string LoadRaceTrigger() => Read().RaceTrigger ?? "";
+
+    public static void SaveRaceTrigger(string id)
+    {
+        var saved = Read();
+        saved.RaceTrigger = id;
         Write(saved);
     }
 

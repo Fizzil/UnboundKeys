@@ -127,6 +127,14 @@ static class Program
             // a mapping id (e.g. "middle", or "middle.double" for a double
             // press) is just as valid a key into that as a spoken word,
             // and the two never collide.
+            // The race button wins over the profile's mapping, so it works
+            // from any profile: its single press runs the app-wide race
+            // mapping; its double press keeps whatever the profile says.
+            if (SteeringMap.IsRaceTrigger(id))
+            {
+                RunMapping(SteeringMap.RaceId, SteeringMap.GetAllKeys(SteeringMap.RaceId), SteeringMap.Behaviors[SteeringMap.RaceId]);
+                return;
+            }
             RunMapping(id, MouseMap.GetAllKeys(id), MouseMap.Behaviors[id]);
         };
 
@@ -174,7 +182,15 @@ static class Program
         // which tells a single press from a double one and names the
         // mapping to run.
         physical.VirtualKeyPressed += KeyPresses.Press;
-        KeyPresses.Pressed += id => RunMapping(id, VirtualKeyMap.GetAllKeys(id), VirtualKeyMap.Behaviors[id]);
+        KeyPresses.Pressed += id =>
+        {
+            // The race button wins over the profile's mapping, so it works
+            // from any profile (as for a mouse button above).
+            if (SteeringMap.IsRaceTrigger(id))
+                RunMapping(SteeringMap.RaceId, SteeringMap.GetAllKeys(SteeringMap.RaceId), SteeringMap.Behaviors[SteeringMap.RaceId]);
+            else
+                RunMapping(id, VirtualKeyMap.GetAllKeys(id), VirtualKeyMap.Behaviors[id]);
+        };
 
         // The dashboard rail Listening switch pauses the voice keys only.
         // Fizzil wants the mouse buttons and both keyboards to keep working

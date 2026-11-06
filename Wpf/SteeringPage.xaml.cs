@@ -7,6 +7,9 @@ namespace UnboundKeys.Wpf;
 public partial class SteeringPage : IDashboardPage
 {
     private readonly Dictionary<string, MappingRow> _rows = new();
+    private readonly MappingRow _raceButtonRow;
+    private readonly System.Windows.Controls.Grid _racePicker;
+    private bool _racePickerOpen;
 
     internal event Action<IRemapSource, string, string>? EditRequested;
 
@@ -15,6 +18,28 @@ public partial class SteeringPage : IDashboardPage
     public SteeringPage()
     {
         InitializeComponent();
+
+        // The race button: a row whose chip names the mouse button or key,
+        // with the key picker the editor uses opening under it, and a row
+        // for the race mapping itself (Throttle, Hold, Infinite, Steering
+        // to start with), edited in the plain editor like a push.
+        _raceButtonRow = new MappingRow("Race button", SteeringMap.TriggerLabel());
+        _raceButtonRow.Clicked += ToggleRacePicker;
+        RaceRows.Children.Add(_raceButtonRow);
+
+        // Fixed height, collapsed until the row is clicked (as in the
+        // editor's key rows); filled afresh on each opening so it marks the
+        // current choice.
+        _racePicker = new System.Windows.Controls.Grid { Visibility = Visibility.Collapsed, ClipToBounds = true, Height = 0 };
+        _racePicker.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        _racePicker.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        RaceRows.Children.Add(_racePicker);
+
+        var raceRow = new MappingRow("Race", MappingRow.ValueOf(SteeringMapSource.Instance, SteeringMap.RaceId));
+        raceRow.SetModeGlyphs(MappingRow.BehaviorOf(SteeringMapSource.Instance, SteeringMap.RaceId), null);
+        raceRow.Clicked += () => EditRequested?.Invoke(SteeringMapSource.Instance, SteeringMap.RaceId, "Race");
+        _rows[SteeringMap.RaceId] = raceRow;
+        RaceRows.Children.Add(raceRow);
 
         // Push up and Push down: rows like the Mouse page's buttons but with
         // no place on the drawn mouse. Their editor is the plain one
@@ -49,6 +74,39 @@ public partial class SteeringPage : IDashboardPage
                 Log.Error("opening the ViGEmBus download page", ex);
             }
         };
+        Refresh();
+    }
+
+    private const double RacePickerHeight = 320;
+
+    private void ToggleRacePicker()
+    {
+        _racePickerOpen = !_racePickerOpen;
+        if (_racePickerOpen)
+        {
+            _racePicker.Children.Clear();
+            RemapCard.PopulateCategoryList(_racePicker, ChooseRaceTrigger, KeyCatalog.DisplayNameFor(SteeringMap.TriggerVk()));
+        }
+        RemapCard.AnimateHeight(_racePicker, _racePickerOpen, _racePickerOpen ? RacePickerHeight : 0,
+            onExpanded: () => _racePicker.BringIntoView());
+    }
+
+    // What the picker chose becomes the race button if it is a mouse button
+    // or a letter or digit key; anything else is refused in a line under
+    // the rows and the picker stays open for another try.
+    private void ChooseRaceTrigger(KeyCatalog.Entry entry)
+    {
+        string? id = SteeringMap.TriggerForVk(entry.VkCode);
+        if (id == null)
+        {
+            RaceMessage.Text = "Pick a mouse button or a letter or digit";
+            RaceMessage.Visibility = Visibility.Visible;
+            return;
+        }
+        RaceMessage.Visibility = Visibility.Collapsed;
+        SteeringMap.RaceTrigger = id;
+        _racePickerOpen = false;
+        RemapCard.AnimateHeight(_racePicker, false, 0);
         Refresh();
     }
 
@@ -104,6 +162,7 @@ public partial class SteeringPage : IDashboardPage
 
     public void Refresh()
     {
+        _raceButtonRow.SetChipText(SteeringMap.TriggerLabel());
         foreach (var (id, row) in _rows)
         {
             row.SetChipText(MappingRow.ValueOf(SteeringMapSource.Instance, id));

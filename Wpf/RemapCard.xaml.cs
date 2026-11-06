@@ -250,7 +250,7 @@ public partial class RemapCard
     // its pill and its sample turns accent. Right column: that category's
     // keys, the one this mapping currently sends in accent. Opens on the
     // current key's category, so what is set is the first thing seen.
-    private void PopulateCategoryList(Grid categoryList, Action<KeyCatalog.Entry> onSelect, string currentKeyName)
+    internal static void PopulateCategoryList(Grid categoryList, Action<KeyCatalog.Entry> onSelect, string currentKeyName)
     {
         var nav = new StackPanel { Margin = new Thickness(0, 4, 0, 0) };
         Grid.SetColumn(nav, 0);
@@ -682,7 +682,7 @@ public partial class RemapCard
     // which is a fixed height by design (see AddKeyRow's own comment).
     // Here the hold at the target height is wanted, so only the collapse
     // releases it.
-    private void AnimateHeight(FrameworkElement element, bool expand, double explicitTargetHeight, Action? onExpanded = null)
+    internal static void AnimateHeight(FrameworkElement element, bool expand, double explicitTargetHeight, Action? onExpanded = null)
     {
         if (expand)
         {

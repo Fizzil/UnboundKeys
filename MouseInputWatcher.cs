@@ -30,7 +30,7 @@ public sealed class MouseInputWatcher : IDisposable
     public MouseInputWatcher()
     {
         _gestures = new PressGestures(
-            id => MouseMap.Enabled.TryGetValue(id, out bool on) && on,
+            id => SteeringMap.IsRaceTrigger(id) || (MouseMap.Enabled.TryGetValue(id, out bool on) && on),
             id => ButtonPressed?.Invoke(id));
     }
 
@@ -120,7 +120,10 @@ public sealed class MouseInputWatcher : IDisposable
         // A button with a key on either way of pressing it is taken over
         // whole: its ordinary click can no longer pass through, because
         // whether a double press is coming cannot be known yet.
-        if (downId != null && MouseMap.AnyGestureEnabled(downId))
+        // The race button counts too, even where this profile has no mapping
+        // for it: it wins over the profile's mapping, so it works from any
+        // profile (see SteeringMap.RaceTrigger).
+        if (downId != null && (SteeringMap.IsRaceTrigger(downId) || MouseMap.AnyGestureEnabled(downId)))
         {
             _gestures.Press(downId);
             return (IntPtr)1;
@@ -140,7 +143,7 @@ public sealed class MouseInputWatcher : IDisposable
             WM_XBUTTONUP when highWord == XBUTTON2 => "x2",
             _ => null,
         };
-        if (upId != null && MouseMap.AnyGestureEnabled(upId))
+        if (upId != null && (SteeringMap.IsRaceTrigger(upId) || MouseMap.AnyGestureEnabled(upId)))
             return (IntPtr)1;
 
         return _hook.CallNext(nCode, wParam, lParam);
