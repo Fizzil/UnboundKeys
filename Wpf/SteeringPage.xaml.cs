@@ -43,10 +43,14 @@ public partial class SteeringPage : IDashboardPage
         // sends Throttle in Hold with Infinite and starts and stops steering,
         // so one press is race on and the next is race off. Then the Mouse
         // page, where the Middle Button row shows it.
+        // Moving down brakes, the same way (Fizzil).
         DefaultButton.Click += (_, _) =>
         {
             MouseMap.Rebind("middle", PadKeys.Throttle);
             MouseMap.SetBehavior("middle", new KeyBehavior { Hold = true, Infinite = true, Steering = true });
+            SteeringMap.Rebind("pushdown", PadKeys.Brake);
+            SteeringMap.SetBehavior("pushdown", new KeyBehavior { Hold = true, Infinite = true });
+            Refresh();
             NavigateRequested?.Invoke(DashboardSection.Mouse);
         };
         StretchMinusButton.Click += (_, _) => Steering.SetStretch(Math.Round(Steering.Stretch - 0.05, 2));
