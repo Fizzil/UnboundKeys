@@ -36,6 +36,9 @@
          audio and feeds it to Vosk (Vosk itself has no capture of its own). -->
     <PackageReference Include="Vosk" Version="0.3.38" />
     <PackageReference Include="NAudio" Version="2.4.0" />
+    <!-- Nefarius.ViGEm.Client: talks to the ViGEmBus driver so Steering can
+         plug in a virtual Xbox 360 pad (see ViGEmPad.cs). -->
+    <PackageReference Include="Nefarius.ViGEm.Client" Version="1.21.256" />
   </ItemGroup>
 
   <ItemGroup>

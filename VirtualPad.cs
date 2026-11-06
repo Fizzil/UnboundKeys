@@ -1,3 +1,6 @@
+using Nefarius.ViGEm.Client;
+using Nefarius.ViGEm.Client.Exceptions;
+
 namespace UnboundKeys;
 
 // The virtual Xbox controller Steering drives (see Steering.cs): what the
@@ -20,14 +23,41 @@ public static class VirtualPadDriver
 {
     public const string DownloadUrl = "https://github.com/nefarius/ViGEmBus/releases/latest";
 
-    // True when the ViGEmBus driver is installed and answering.
-    public static bool IsInstalled() => false;
+    // True when the ViGEmBus driver is installed and answering. Opening a
+    // client is the library's own test: it throws when the driver is not
+    // there. Any other failure also counts as "not answering".
+    public static bool IsInstalled()
+    {
+        try
+        {
+            using var client = new ViGEmClient();
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
 
     // An Xbox 360 pad plugged into the driver, or null with a plain-words
     // reason for the Settings page ("The ViGEmBus driver is not installed").
     public static IVirtualPad? TryCreate(out string? problem)
     {
-        problem = "The virtual controller is not built yet.";
-        return null;
+        try
+        {
+            var pad = new ViGEmPad();
+            problem = null;
+            return pad;
+        }
+        catch (VigemBusNotFoundException)
+        {
+            problem = "The ViGEmBus driver is not installed. Install it from " + DownloadUrl + ", then switch steering on again.";
+            return null;
+        }
+        catch (Exception ex)
+        {
+            problem = "The virtual controller could not be started: " + ex.Message;
+            return null;
+        }
     }
 }
