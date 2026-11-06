@@ -11,9 +11,11 @@ namespace UnboundKeys;
 // the push stops the pointer springs back to the centre. The pointer's
 // offset from the centre also drives a virtual Xbox 360 controller that
 // UnboundKeys makes itself through the ViGEmBus driver (VirtualPad.cs,
-// PadValues.cs): sideways = steering, up = throttle, down = brake, the
-// middle mouse button held = full throttle, with the stretch lines as
-// full lock and full pedal, so the game gets real analog input. The
+// PadValues.cs): sideways = steering, with the stretch line as full
+// lock, and the middle mouse button held = full throttle, so the game
+// gets a real analog turn. Up and down hold the pointer too but mean
+// nothing to the car: pedals on them were tried and got in the way of
+// holding the middle button (Fizzil). The
 // first version held arrow keys from the pointer's zone instead; the
 // game only ever saw full left or full right, so it went (Fizzil: "hard
 // left, then hard right"). A separate program read the pointer into its

@@ -74,15 +74,16 @@ internal static class SteeringTests
         Check(PadValues.FromOffset(-150, 0, 300, 150, false).Steer == -0.5, "half left steers -0.5");
         Check(PadValues.FromOffset(-900, 0, 300, 150, false).Steer == -1.0, "past the left line is clamped to -1");
         Check(PadValues.FromOffset(900, 0, 300, 150, false).Steer == 1.0, "past the right line is clamped to +1");
+        // Height means nothing to the car (Fizzil: up and down as pedals
+        // got in the way of holding the middle button).
         var up = PadValues.FromOffset(0, -75, 300, 150, false);
-        Check(up.Throttle == 0.5 && up.Brake == 0.0, "half up gives throttle 0.5 and no brake");
+        Check(up.Throttle == 0.0 && up.Brake == 0.0, "up gives no throttle and no brake");
         var down = PadValues.FromOffset(0, 150, 300, 150, false);
-        Check(down.Brake == 1.0 && down.Throttle == 0.0, "down gives the brake and no throttle");
-        Check(PadValues.FromOffset(0, -400, 300, 150, false).Throttle == 1.0, "past the top line the throttle is clamped to 1");
+        Check(down.Brake == 0.0 && down.Throttle == 0.0, "down gives nothing either");
         Check(PadValues.FromOffset(0, 0, 300, 150, true).Throttle == 1.0, "middle held gives full throttle at the centre");
         Check(PadValues.FromOffset(0, -75, 300, 150, true).Throttle == 1.0, "middle held gives full throttle whatever the height");
         var both = PadValues.FromOffset(0, 75, 300, 150, true);
-        Check(both.Throttle == 1.0 && both.Brake == 0.5, "middle held with the pointer down: full throttle and the brake too");
+        Check(both.Throttle == 1.0 && both.Brake == 0.0, "middle held with the pointer down: full throttle, no brake");
         Check(PadValues.FromOffset(50, 50, 0, 0, false) == (0.0, 0.0, 0.0), "a line at 0 gives zeros, not a division error");
     }
 
