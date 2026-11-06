@@ -153,8 +153,9 @@ public static class Steering
                 _band = null;
                 oldPad = _pad;
                 _pad = null;
-                _padThrottle = false;
-                _padBrake = false;
+                // The pedal flags stay: the mapping holding a pedal owns them
+                // and clears them with its own key-up (a panic path releases
+                // every hold, which does that too).
                 letGo = _push.Release();
             }
         }
