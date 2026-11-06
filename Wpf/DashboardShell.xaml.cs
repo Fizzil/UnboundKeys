@@ -49,6 +49,7 @@ public partial class DashboardShell
         _pages[DashboardSection.Mouse] = mousePage;
         var steeringPage = new SteeringPage();
         steeringPage.EditRequested += OpenEditor;
+        steeringPage.NavigateRequested += ShowSection;
         _pages[DashboardSection.Steering] = steeringPage;
         var voicePage = new VoicePage();
         voicePage.EditRequested += OpenEditor;

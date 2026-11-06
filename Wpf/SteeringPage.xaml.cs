@@ -10,6 +10,10 @@ public partial class SteeringPage : IDashboardPage
 
     internal event Action<IRemapSource, string, string>? EditRequested;
 
+    // The three buttons at the top take the user to the page where the
+    // Starts and stops steering switch lives (the shell shows the section).
+    internal event Action<DashboardSection>? NavigateRequested;
+
     public string Title => "Steering";
 
     public SteeringPage()
@@ -32,6 +36,9 @@ public partial class SteeringPage : IDashboardPage
         // Steering is for the session, the stretch is saved. Changed can
         // fire from the hook's thread or a panic path's, so the page is
         // redrawn through the dispatcher.
+        GoMouseButton.Click += (_, _) => NavigateRequested?.Invoke(DashboardSection.Mouse);
+        GoKeyboardButton.Click += (_, _) => NavigateRequested?.Invoke(DashboardSection.Keyboard);
+        GoVoiceButton.Click += (_, _) => NavigateRequested?.Invoke(DashboardSection.Voice);
         StretchMinusButton.Click += (_, _) => Steering.SetStretch(Math.Round(Steering.Stretch - 0.05, 2));
         StretchPlusButton.Click += (_, _) => Steering.SetStretch(Math.Round(Steering.Stretch + 0.05, 2));
         StretchResetButton.Click += (_, _) => Steering.SetStretch(Steering.DefaultStretch);
