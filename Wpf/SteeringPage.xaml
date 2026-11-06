@@ -7,15 +7,6 @@
          session and starts off; the stretch and the pushes are the
          app's, the same in every profile (see SteeringMap.cs). -->
     <StackPanel Margin="0,8,0,0">
-        <!-- The race button (Fizzil: one button that drives a car): pick a
-             mouse button or key, and it starts steering with the throttle
-             held. The rows and the key picker are added in code. -->
-        <TextBlock Text="RACE BUTTON" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,4"/>
-        <StackPanel x:Name="RaceRows"/>
-        <TextBlock x:Name="RaceMessage" Visibility="Collapsed" Style="{StaticResource RowHintStyle}"/>
-        <TextBlock Text="One button for everything: press it for steering and throttle, press it again for both off."
-                   Style="{StaticResource RowHintStyle}"/>
-
         <!-- No switch here (Fizzil): the one way in is the one way out, a
              word, button or key with Steering on in its editor. A switch on
              this page would hold the pointer in the band with no way back

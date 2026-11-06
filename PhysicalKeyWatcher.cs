@@ -159,10 +159,7 @@ public sealed class PhysicalKeyWatcher : IDisposable
         }
 
         if ((msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN) && VkToId.TryGetValue(vk, out var downId)
-            // The race button is taken over even where this profile has no
-            // mapping for the key: it wins over the profile (see
-            // SteeringMap.RaceTrigger).
-            && (SteeringMap.IsRaceTrigger(downId) || VirtualKeyMap.IsIntercepted(downId)))
+            && VirtualKeyMap.IsIntercepted(downId))
         {
             if (_heldMirroredKeys.Add(vk))
                 VirtualKeyPressed?.Invoke(downId);

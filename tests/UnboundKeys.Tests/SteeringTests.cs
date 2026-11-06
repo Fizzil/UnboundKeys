@@ -20,7 +20,6 @@ internal static class SteeringTests
         Section("steering: pushing up or down presses a push", Pushes);
         Section("steering: the pad's pedals can be held by keys", PadPedals);
         Section("steering: pushes are mappings of their own", PushIds);
-        Section("steering: a picked key becomes the race button", RaceTriggerIds);
         return _ok;
     }
 
@@ -176,20 +175,6 @@ internal static class SteeringTests
         Check(Steering.PadThrottleHeld, "a pad key held while steering is off is remembered");
         Steering.SetPadPedal(PadKeys.Throttle, false);
         Check(!Steering.PadThrottleHeld, "and letting go clears it");
-    }
-
-    private static void RaceTriggerIds()
-    {
-        Check(SteeringMap.Ids.Contains("race"), "race is the steering map's third id");
-        Check(SteeringMap.TriggerForVk(0x02) == "right", "the right button's code is right");
-        Check(SteeringMap.TriggerForVk(0x04) == "middle", "the middle button's code is middle");
-        Check(SteeringMap.TriggerForVk(0x05) == "x1", "Mouse 4's code is x1");
-        Check(SteeringMap.TriggerForVk(0x06) == "x2", "Mouse 5's code is x2");
-        Check(SteeringMap.TriggerForVk('A') == "va", "the A key is the Keyboard page's va");
-        Check(SteeringMap.TriggerForVk(0x35) == "v5", "a digit key is its v-id");
-        Check(SteeringMap.TriggerForVk(0x01) == null, "the left button is refused");
-        Check(SteeringMap.TriggerForVk(0x70) == null, "a key the Keyboard page has no id for is refused");
-        Check(SteeringMap.TriggerForVk(PadKeys.Throttle) == null, "so is a pad key");
     }
 
     private static void Behavior()

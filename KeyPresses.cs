@@ -13,7 +13,7 @@ internal static class KeyPresses
     // press with no key picked for it.
     public static event Action<string>? Pressed;
 
-    private static readonly PressGestures _gestures = new(id => SteeringMap.IsRaceTrigger(id) || VirtualKeyMap.IsMapped(id), id => Pressed?.Invoke(id));
+    private static readonly PressGestures _gestures = new(VirtualKeyMap.IsMapped, id => Pressed?.Invoke(id));
 
     public static void Press(string keyId) => _gestures.Press(keyId);
 }

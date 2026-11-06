@@ -29,7 +29,6 @@ internal static class SettingsTests
         Section("mouse: a button reset to Not Mapped stays that way after a restart", MouseReset);
         Section("steering: the stretch is the app's, not the profile's", SteeringStretch);
         Section("steering: the pushes are the app's, not the profile's", SteeringPushes);
-        Section("steering: the race button is the app's", SteeringRace);
         Section("settings: games (profiles)", Games);
         Section("settings: sub-profiles", SubProfiles);
         Section("settings: files from older versions", OlderFiles);
@@ -292,47 +291,6 @@ internal static class SettingsTests
 
         SteeringMap.ResetToDefault("pushup");
         Check(!SteeringMap.Enabled["pushup"] && !Settings.LoadSteeringEnabled(SteeringMap.FreshEnabled())["pushup"], "a push reset to Not Mapped stays so in the file");
-    }
-
-    // The race button (Steering page) is app-wide too: the button or key
-    // chosen for it, and its mapping (Throttle, Hold, Infinite, Steering to
-    // start with), are the same in every profile.
-    private static void SteeringRace()
-    {
-        Check(Settings.LoadRaceTrigger() == "", "never saved: no race button");
-        Check(SteeringMap.RaceTrigger == "", "and the map has none");
-
-        Check(SteeringMap.Words["race"] == PadKeys.Throttle, "the race mapping's Key 1 is the Throttle");
-        var b = SteeringMap.Behaviors["race"];
-        Check(b.Hold && b.Infinite && b.Steering && !b.Repeat, "with Hold, Infinite and Steering");
-        Check(SteeringMap.Enabled["race"], "and it is always mapped");
-
-        SteeringMap.RaceTrigger = "middle";
-        Check(Settings.LoadRaceTrigger() == "middle", "a chosen race button is saved");
-        Check(SteeringMap.IsRaceTrigger("middle") && !SteeringMap.IsRaceTrigger("right") && !SteeringMap.IsRaceTrigger("middle.double"),
-            "only that button's single press is the race button");
-
-        SteeringMap.Rebind("race", 0x57);
-        SteeringMap.SetBehavior("race", new KeyBehavior());
-        Settings.CreateProfileIfMissing("Everyday", new(), new(), new(), new(), new(), new(), new());
-        Settings.SetActiveProfile("Everyday");
-        Check(Settings.LoadRaceTrigger() == "middle", "the race button survives another profile becoming active");
-        Check(Settings.LoadSteeringKeyMap(SteeringMap.FreshWords())["race"] == 0x57, "and so does the race mapping");
-
-        Settings.SaveMouseProfile("Everyday",
-            new() { ["middle"] = true }, new() { ["middle"] = 0x26 }, new() { ["middle"] = new() }, new() { ["middle"] = new KeyBehavior() });
-        Check(Settings.LoadRaceTrigger() == "middle", "a mouse profile save leaves it alone");
-
-        SteeringMap.ResetToDefault("race");
-        var again = Settings.LoadSteeringBehaviors(SteeringMap.FreshBehaviors())["race"];
-        Check(Settings.LoadSteeringKeyMap(SteeringMap.FreshWords())["race"] == PadKeys.Throttle
-              && again.Hold && again.Infinite && again.Steering
-              && Settings.LoadSteeringEnabled(SteeringMap.FreshEnabled())["race"],
-            "Reset puts the race mapping back to Throttle, Hold, Infinite, Steering, in the file too");
-        Check(Settings.LoadRaceTrigger() == "middle", "and leaves the race button chosen");
-
-        SteeringMap.RaceTrigger = "";
-        Check(Settings.LoadRaceTrigger() == "", "clearing it saves");
     }
 
     private static void Games()
