@@ -112,6 +112,19 @@ public partial class SettingsPage : IDashboardPage
                 Log.Error("opening the log folder", ex);
             }
         };
+        // The page that downloads the driver, in the default browser.
+        GetPadDriverButton.Click += (_, _) =>
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(VirtualPadDriver.DownloadUrl) { UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                Log.Error("opening the ViGEmBus download page", ex);
+            }
+        };
+        RefreshPadDriver();
         // The new version is running; this one leaves the same way Quit does.
         Updates.Launched += () => QuitRequested?.Invoke();
 
@@ -147,6 +160,21 @@ public partial class SettingsPage : IDashboardPage
         EndRename();
         RebuildProfileList();
         RefreshSwatches();
+        RefreshPadDriver();
+    }
+
+    // Whether steering's virtual controller can be made, and if the last try
+    // failed, why in plain words.
+    private void RefreshPadDriver()
+    {
+        bool installed = VirtualPadDriver.IsInstalled();
+        PadDriverStatus.Text = installed
+            ? "Virtual controller driver: installed"
+            : "Virtual controller driver: not installed";
+        SteeringFold.Summary = installed ? "Driver installed" : "Driver not installed";
+        string? problem = Steering.PadProblem;
+        PadProblemText.Text = problem ?? "";
+        PadProblemText.Visibility = problem == null ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private void RefreshSwatches()

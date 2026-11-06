@@ -8,16 +8,17 @@ namespace UnboundKeys;
 // screen: pushing the TetraMouse's joystick moves it as usual, but never
 // past a line on either side (the stretch, a share of the way from the
 // centre to the edge, sideways and up and down alike), and the moment
-// the push stops the pointer springs back to the centre. The turning and
-// the pedals are not done here: PadForge (Fizzil's Tools\PadForge) reads
-// where the pointer sits and pushes a virtual Xbox stick and its triggers
-// to match (sideways = steering, up = throttle, down = brake), with the
-// lines as full lock and full pedal, so the game gets real analog input. The first version held arrow keys from the
-// pointer's zone instead; the game only ever saw full left or full
-// right, so it went (Fizzil: "hard left, then hard right").
-//
-// While it is on, F16 is held down (see VK_F16) so PadForge's rows can
-// sit in a shift layer that needs it, and be off with it.
+// the push stops the pointer springs back to the centre. The pointer's
+// offset from the centre also drives a virtual Xbox 360 controller that
+// UnboundKeys makes itself through the ViGEmBus driver (VirtualPad.cs,
+// PadValues.cs): sideways = steering, up = throttle, down = brake, the
+// middle mouse button held = full throttle, with the stretch lines as
+// full lock and full pedal, so the game gets real analog input. The
+// first version held arrow keys from the pointer's zone instead; the
+// game only ever saw full left or full right, so it went (Fizzil: "hard
+// left, then hard right"). A separate program read the pointer into its
+// own pad for a while; it needed a held key to keep its rows in a layer,
+// and one program is easier to set up than two.
 //
 // Switched on and off by any word, button or key whose editor has the
 // Steering switch on (KeyBehavior.Steering: "press nine" toggles it, no
@@ -41,13 +42,6 @@ public static class Steering
 
     private const int TickMs = 15;
 
-    // Held down for as long as steering is on, so PadForge can keep its
-    // steering, throttle and brake rows in a shift layer that needs this
-    // key: with steering off the pad goes quiet and the game's menus can be
-    // used with the pointer again (Fizzil). F16: nothing on the desktop
-    // reacts to it, and the harness's own test keys are F13 to F15.
-    private const ushort VK_F16 = 0x7F;
-
     private static readonly object _lock = new();
     private static readonly Stopwatch _clock = Stopwatch.StartNew();
     private static RubberBand? _band;
@@ -57,8 +51,8 @@ public static class Steering
     public static bool IsOn { get; private set; }
 
     // Why there is no virtual pad, for the Settings page; null when the pad
-    // exists. Without a pad the band still works: PadForge, a separate
-    // program, reads the pointer's position instead.
+    // exists. Without the driver the band still holds the pointer but
+    // nothing drives the car, and Settings says why.
     public static string? PadProblem { get; private set; }
 
     // The middle button is held (it is the accelerator while steering).
@@ -111,7 +105,6 @@ public static class Steering
                 _band = new RubberBand(cx, cy, (int)(m.Width / 2 * Stretch), (int)(m.Height / 2 * Stretch), Now);
                 NativeInput.MovePointerTo(cx, cy);
                 _timer = new System.Threading.Timer(_ => Tick(), null, TickMs, TickMs);
-                NativeInput.KeyDown(VK_F16, extended: false);
                 _pad = newPad;
                 PadProblem = _pad == null ? problem : null;
             }
@@ -123,7 +116,6 @@ public static class Steering
                 oldPad = _pad;
                 _pad = null;
                 ThrottleHeld = false;
-                NativeInput.KeyUp(VK_F16, extended: false);
             }
         }
         oldPad?.Dispose();
