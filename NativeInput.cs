@@ -247,6 +247,15 @@ internal static class NativeInput
     [DllImport("user32.dll")]
     private static extern bool GetCursorPos(out POINT lpPoint);
 
+    [DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int vKey);
+
+    // Whether the left mouse button is down right now, from Windows's own
+    // record: Steering's band lets the pointer go while it is (the
+    // TetraMouse's left click-and-hold), so there is always a way to drag
+    // the pointer out of the band and click something.
+    public static bool IsLeftButtonDown() => (GetAsyncKeyState((int)VK_LBUTTON) & 0x8000) != 0;
+
 
     // Where the pointer is, in screen pixels.
     public static (int X, int Y) GetPointer()

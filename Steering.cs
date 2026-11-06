@@ -50,6 +50,14 @@ public static class Steering
     private static System.Threading.Timer? _timer;
     private static IVirtualPad? _pad;
 
+    // The window in front when steering came on (the game), or zero while
+    // that was the dashboard and the game has not been clicked yet. The
+    // band holds only while that window is in front: the window changing
+    // switches steering off, the same rule the safety nets apply to held
+    // keys, so losing the game never leaves the pointer trapped (Fizzil
+    // could not click anything until the browser was closed).
+    private static IntPtr _gameWindow;
+
     public static bool IsOn { get; private set; }
 
     // Why there is no virtual pad, for the Settings page; null when the pad
@@ -115,6 +123,7 @@ public static class Steering
                 _pad = newPad;
                 PadProblem = _pad == null ? problem : null;
                 ThrottleOn = false;
+                _gameWindow = Suspended?.Invoke() == true ? IntPtr.Zero : NativeInput.GetFocusedWindow();
             }
             else
             {
@@ -172,7 +181,9 @@ public static class Steering
     {
         lock (_lock)
         {
-            if (_band == null || Suspended?.Invoke() == true)
+            // The left button held frees the pointer (see NativeInput.
+            // IsLeftButtonDown): a drag goes wherever it likes.
+            if (_band == null || Suspended?.Invoke() == true || NativeInput.IsLeftButtonDown())
                 return false;
             var fix = _band.Moved(x, y, Now);
             if (fix == null)
@@ -191,6 +202,22 @@ public static class Steering
             // The dashboard in front: the band lets go, and so does the
             // pad, so the car is not driven from the dashboard.
             if (Suspended?.Invoke() == true)
+            {
+                _pad?.Set(0, 0, 0);
+                return;
+            }
+            // The game no longer in front: steering is over (see
+            // _gameWindow). Its first time in front, after a start from the
+            // dashboard, is remembered instead.
+            var front = NativeInput.GetFocusedWindow();
+            if (_gameWindow == IntPtr.Zero)
+                _gameWindow = front;
+            else if (front != _gameWindow)
+            {
+                SetOn(false);
+                return;
+            }
+            if (NativeInput.IsLeftButtonDown())
             {
                 _pad?.Set(0, 0, 0);
                 return;
