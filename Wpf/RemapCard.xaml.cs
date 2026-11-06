@@ -39,6 +39,9 @@ public partial class RemapCard
     private bool _priorityOn;
     private double _prioritySeconds;
     private bool _doublePressOn;
+
+    // Steering (see the XAML comment): this mapping is the steering switch.
+    private bool _steeringOn;
     private int _resetTapCount;
     private readonly DispatcherTimer _resetTapTimer = new() { Interval = TimeSpan.FromMilliseconds(600) };
 
@@ -62,6 +65,7 @@ public partial class RemapCard
         _rotation = behavior.Rotation;
         _priorityOn = behavior.Priority;
         _prioritySeconds = behavior.PrioritySeconds;
+        _steeringOn = behavior.Steering;
 
         // A priority key saved before Infinite pause existed, with "one gap"
         // (0) as its pause, reads as the 1.0 s start.
@@ -80,6 +84,7 @@ public partial class RemapCard
         RebuildKeyGroup();
         UpdateModeVisuals();
         InfiniteButton.Tag = _infiniteOn;
+        SteeringButton.Tag = _steeringOn;
         UpdateDurationText();
         SetElementVisible(TimingPanel, _repeatOn || _holdOn, animate: false);
         RefreshPauseRows(animate: false);
@@ -495,6 +500,13 @@ public partial class RemapCard
     // press land at once again (PressGestures waits only where a double is
     // mapped). Nothing else is stored: the switch reads on whenever a
     // double press is mapped.
+    private void SteeringButton_Click(object sender, RoutedEventArgs e)
+    {
+        _steeringOn = !_steeringOn;
+        SteeringButton.Tag = _steeringOn;
+        SaveBehavior();
+    }
+
     private void DoublePressButton_Click(object sender, RoutedEventArgs e)
     {
         _doublePressOn = !_doublePressOn;
@@ -521,6 +533,7 @@ public partial class RemapCard
             Rotation = _rotation,
             Priority = _priorityOn,
             PrioritySeconds = _prioritySeconds,
+            Steering = _steeringOn,
         });
 
     // Resets everything about this mapping: the key(s), Mode, Infinite,
@@ -538,9 +551,11 @@ public partial class RemapCard
         _rotation = behavior.Rotation;
         _priorityOn = false;
         _prioritySeconds = 0.0;
+        _steeringOn = false;
 
         UpdateModeVisuals();
         InfiniteButton.Tag = _infiniteOn;
+        SteeringButton.Tag = _steeringOn;
         UpdateDurationText();
         SetElementVisible(TimingPanel, _repeatOn || _holdOn, animate: true);
         RefreshPauseRows(animate: true);

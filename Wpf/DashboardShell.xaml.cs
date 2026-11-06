@@ -272,6 +272,7 @@ public partial class DashboardShell
             Log.Info($"profile: {name} / {Settings.LoadActiveSubProfile(name)}");
         KeyMap.SwitchProfile(name);
         MouseMap.SwitchProfile(name);
+        Steering.SwitchProfile(name);
         VirtualKeyMap.SwitchProfile(name);
         ThemeMode.SwitchProfile(name);
         ShowProfileOnRail();
@@ -304,6 +305,7 @@ public partial class DashboardShell
         Log.Info($"profile: {game} / {sub}");
         KeyMap.SwitchProfile(game);
         MouseMap.SwitchProfile(game);
+        Steering.SwitchProfile(game);
         VirtualKeyMap.SwitchProfile(game);
         ShowProfileOnRail();
         ShowSection(_section);
@@ -315,6 +317,7 @@ public partial class DashboardShell
     {
         KeyMap.ResetAll();
         MouseMap.ResetAll();
+        Steering.ResetToDefault();
         VirtualKeyMap.ResetAll();
         ShowSection(_section);
     }

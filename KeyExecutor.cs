@@ -227,6 +227,14 @@ internal static class KeyExecutor
 
     public static void Execute(string word, IReadOnlyList<(ushort Vk, bool Extended)> keys, KeyBehavior behavior)
     {
+        // Steering (see Steering.cs): this word, button or key is the
+        // steering switch. It sends nothing of its own.
+        if (behavior.Steering)
+        {
+            Steering.Toggle();
+            return;
+        }
+
         int cooldownLeftMs = behavior.Priority ? PauseRepeatsForPriority(behavior) : 0;
 
         if (behavior.Infinite)
@@ -463,6 +471,11 @@ internal static class KeyExecutor
         // the one shared place every panic path (press stop, triple Caps
         // Lock, app exit) already funnels through, so it lets go here too.
         StickyModifiers.ReleaseAll();
+
+        // Steering (see Steering.cs) holds its arrows outside _engaged too:
+        // let go, and switch it off, so the next pointer move presses
+        // nothing. Stop means the mouse is a mouse again.
+        Steering.LetGo();
     }
 
     private static void ClearState(InfiniteState s)

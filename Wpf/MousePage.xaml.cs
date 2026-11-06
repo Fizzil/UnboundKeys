@@ -60,6 +60,22 @@ public partial class MousePage : IDashboardPage
             Diagram.Highlight(id);
         };
         Diagram.HotspotClicked += id => EditRequested?.Invoke(MouseMapSource.Instance, id, _labels[id]);
+
+        // Steering (see Steering.cs): the switch is for the session, the
+        // stretch is saved. Changed can fire from the hook's thread or a
+        // panic path's, so the picture is redrawn through the dispatcher.
+        SteeringToggle.Click += (_, _) => Steering.SetOn(!Steering.IsOn);
+        StretchMinusButton.Click += (_, _) => Steering.SetStretch(Math.Round(Steering.Stretch - 0.1, 2));
+        StretchPlusButton.Click += (_, _) => Steering.SetStretch(Math.Round(Steering.Stretch + 0.1, 2));
+        StretchResetButton.Click += (_, _) => Steering.SetStretch(Steering.DefaultStretch);
+        Steering.Changed += () => Dispatcher.InvokeAsync(ShowSteering);
+        ShowSteering();
+    }
+
+    private void ShowSteering()
+    {
+        SteeringToggle.Tag = Steering.IsOn;
+        StretchText.Text = $"{Math.Round(Steering.Stretch * 100)} %";
     }
 
     public void Refresh()
@@ -69,6 +85,7 @@ public partial class MousePage : IDashboardPage
             row.SetChipText(MappingRow.ValueOf(MouseMapSource.Instance, id));
             row.SetModeGlyphs(MappingRow.BehaviorOf(MouseMapSource.Instance, id), DoublePressOf(id));
         }
+        ShowSteering();
     }
 
     // What a button's double press sends, or null when it has none: the

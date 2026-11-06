@@ -205,4 +205,105 @@ internal static class NativeInput
 
         SendInput(1, new[] { input }, Marshal.SizeOf<INPUT>());
     }
+
+    // ---- Monitors (for Steering) ----
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct POINT
+    {
+        public int x;
+        public int y;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RECT
+    {
+        public int left;
+        public int top;
+        public int right;
+        public int bottom;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MONITORINFO
+    {
+        public uint cbSize;
+        public RECT rcMonitor;
+        public RECT rcWork;
+        public uint dwFlags;
+    }
+
+    private const uint MONITOR_DEFAULTTONEAREST = 2;
+    private const int SM_CXSCREEN = 0;
+    private const int SM_CYSCREEN = 1;
+    private const int SM_XVIRTUALSCREEN = 76;
+    private const int SM_YVIRTUALSCREEN = 77;
+    private const int SM_CXVIRTUALSCREEN = 78;
+    private const int SM_CYVIRTUALSCREEN = 79;
+    private const uint MOUSEEVENTF_MOVE = 0x0001;
+    private const uint MOUSEEVENTF_ABSOLUTE = 0x8000;
+    private const uint MOUSEEVENTF_VIRTUALDESK = 0x4000;
+
+    [DllImport("user32.dll")]
+    private static extern bool GetCursorPos(out POINT lpPoint);
+
+    // Where the pointer is, in screen pixels.
+    public static (int X, int Y) GetPointer()
+    {
+        GetCursorPos(out var p);
+        return (p.x, p.y);
+    }
+
+    // Puts the pointer at a screen pixel, as an absolute move over the
+    // whole desktop through SendInput, marked as UnboundKeys's own so the
+    // mouse hook (see MouseInputWatcher) never mistakes it for the user's
+    // hand. Steering's spring is the one caller.
+    public static void MovePointerTo(int x, int y)
+    {
+        int left = GetSystemMetrics(SM_XVIRTUALSCREEN);
+        int top = GetSystemMetrics(SM_YVIRTUALSCREEN);
+        int width = Math.Max(1, GetSystemMetrics(SM_CXVIRTUALSCREEN));
+        int height = Math.Max(1, GetSystemMetrics(SM_CYVIRTUALSCREEN));
+        // Absolute coordinates run 0..65535 across the desktop; the
+        // rounding puts the pointer within a pixel of where it was asked.
+        int nx = (int)Math.Round((x - left) * 65535.0 / (width - 1));
+        int ny = (int)Math.Round((y - top) * 65535.0 / (height - 1));
+        var move = new INPUT
+        {
+            type = INPUT_MOUSE,
+            U = new InputUnion
+            {
+                mi = new MOUSEINPUT
+                {
+                    dx = nx,
+                    dy = ny,
+                    dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK,
+                    dwExtraInfo = InjectedByUnboundKeys,
+                },
+            },
+        };
+        SendInput(1, new[] { move }, Marshal.SizeOf<INPUT>());
+    }
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr MonitorFromPoint(POINT pt, uint dwFlags);
+
+    [DllImport("user32.dll", EntryPoint = "GetMonitorInfoW")]
+    private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
+
+    [DllImport("user32.dll")]
+    private static extern int GetSystemMetrics(int nIndex);
+
+    // The rectangle, in screen pixels, of the monitor a point is on (the
+    // nearest one, for a point off every screen); the primary monitor's
+    // if Windows will not say. Screen pixels here are the same coordinates
+    // the low-level mouse hook reports, which is what Steering works in.
+    public static (int Left, int Top, int Width, int Height) MonitorBoundsAt(int x, int y)
+    {
+        var monitor = MonitorFromPoint(new POINT { x = x, y = y }, MONITOR_DEFAULTTONEAREST);
+        var info = new MONITORINFO { cbSize = (uint)Marshal.SizeOf<MONITORINFO>() };
+        if (monitor != IntPtr.Zero && GetMonitorInfo(monitor, ref info))
+            return (info.rcMonitor.left, info.rcMonitor.top, info.rcMonitor.right - info.rcMonitor.left, info.rcMonitor.bottom - info.rcMonitor.top);
+        return (0, 0, GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN));
+    }
 }

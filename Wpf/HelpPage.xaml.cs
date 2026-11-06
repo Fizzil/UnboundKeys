@@ -33,6 +33,11 @@ public partial class HelpPage : IDashboardPage
         AddLine("Two things per button or key", "switch on Double press at the bottom of a mouse button's or a keyboard key's editor, and Single press and Double press appear at its top, each a mapping of its own. Each way of pressing starts its mapping and stops it again, and starting one stops the other. Switching it off clears the double press.");
         AddLine("Timing", "with a double press set, a single press lands a moment later, once no second press is coming. A button or key with no double press set is as quick as ever.");
 
+        AddHeader("STEERING", topMargin: 6);
+        AddLine("A rubber band on the pointer", "while steering is on: push and the pointer moves out, up to the stretch line; stop pushing and it springs back to the middle of the screen. The free program PadForge turns where the pointer sits into a virtual controller: sideways steers, up is the throttle, down the brake, all gradual.");
+        AddLine("Switching it on and off", "any word, button or key with Steering on in its editor (say \"press nine\" to start, \"press nine\" to stop), or the switch at the bottom of the Mouse page. Off at every start; Stop switches it off; the band lets go while this dashboard is in front.");
+        AddLine("Stretch", "on the Mouse page: how far the pointer can be pulled from the centre, as a share of the way to the screen's edge. Set PadForge so that line is full lock.");
+
         AddHeader("REMAPPING MODES", topMargin: 6);
         AddLine("Tap", "presses all the keys together, once. Right for shortcuts like Ctrl + X.");
         AddLine("Repeat", "presses the keys one at a time, ten times a second: Key 1, Key 2 and so on, then back to Key 1, for the duration. Never together, so use Tap for shortcuts.");

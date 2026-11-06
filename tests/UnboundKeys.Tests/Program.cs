@@ -74,6 +74,7 @@ allPassed &= HoldScenario();
 allPassed &= GesturesScenario();
 allPassed &= OneButtonScenario();
 allPassed &= UnboundKeys.Tests.SettingsTests.Run(scratch);
+allPassed &= UnboundKeys.Tests.SteeringTests.Run();
 allPassed &= UnboundKeys.Tests.UpdaterTests.Run();
 allPassed &= UnboundKeys.Tests.SingleInstanceTests.Run();
 

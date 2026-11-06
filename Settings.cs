@@ -88,6 +88,11 @@ internal static class Settings
         public Dictionary<string, List<ushort>> MouseExtraKeys { get; set; } = new();
         public Dictionary<string, KeyBehavior> MouseBehaviors { get; set; } = new();
 
+        // Steering's stretch (see Steering.cs), a share of the way from
+        // the centre to the edge. A file from before steering has none and
+        // reads the default.
+        public double SteeringStretch { get; set; } = Steering.DefaultStretch;
+
         // The on-screen keyboard's remappable keys (see VirtualKeyCatalog):
         // every one always sends something, so no Enabled map here.
         public Dictionary<string, ushort> VirtualKeyMap { get; set; } = new();
@@ -664,6 +669,12 @@ internal static class Settings
 
     public static void SaveVirtualProfile(string profile, Dictionary<string, ushort> keyMap, Dictionary<string, List<ushort>> extraKeys, Dictionary<string, KeyBehavior> behaviors) =>
         SaveFields(profile, d => { d.VirtualKeyMap = keyMap; d.VirtualExtraKeys = extraKeys; d.VirtualBehaviors = behaviors; });
+
+    public static double LoadSteeringStretch(string profile) =>
+        Resolve(Read(), profile)?.SteeringStretch ?? Steering.DefaultStretch;
+
+    public static void SaveSteeringStretch(string profile, double share) =>
+        SaveFields(profile, d => d.SteeringStretch = share);
 
     // Creates a game with the given defaults as its one "Default"
     // sub-profile if it doesn't already exist — a no-op if it does, so this

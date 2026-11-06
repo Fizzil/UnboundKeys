@@ -27,6 +27,7 @@ internal static class SettingsTests
         Section("the log: off unless switched on", LogSwitch);
         Section("the keyboard's learned words: off unless switched on", LearnedWords);
         Section("mouse: a button reset to Not Mapped stays that way after a restart", MouseReset);
+        Section("mouse: the steering stretch survives a save", SteeringStretch);
         Section("settings: games (profiles)", Games);
         Section("settings: sub-profiles", SubProfiles);
         Section("settings: files from older versions", OlderFiles);
@@ -228,6 +229,31 @@ internal static class SettingsTests
         Check(File.Exists(_backup) && File.ReadAllText(_backup) == before, "a save keeps the file as it was as settings.json.bak");
         Check(!File.Exists(_file + ".tmp"), "and leaves no temporary file behind");
         Check(Settings.LoadKeyboardShown(), "and the new value loads again");
+    }
+
+    // The steering stretch (see Steering.cs) lives beside the mouse
+    // mappings in the sub-profile: one number, with the app's default
+    // until it is saved, and a save of it leaves the mouse mappings alone.
+    private static void SteeringStretch()
+    {
+        Check(Settings.LoadSteeringStretch("Default") == Steering.DefaultStretch, "never saved reads the default");
+
+        Settings.SaveMouseProfile("Default",
+            new() { ["middle"] = true },
+            new() { ["middle"] = 0x26 },
+            new() { ["middle"] = new() },
+            new() { ["middle"] = new KeyBehavior { Hold = true, Infinite = true } });
+        Settings.SaveSteeringStretch("Default", 0.25);
+        Check(Settings.LoadSteeringStretch("Default") == 0.25, "a saved stretch loads again");
+        Check(Settings.LoadMouseKeyMap("Default", new() { ["middle"] = 0 })["middle"] == 0x26, "saving it keeps the mouse mappings");
+        Check(Settings.LoadSteeringStretch("Other") == Steering.DefaultStretch, "another game keeps its own default");
+
+        Settings.SaveMouseProfile("Default",
+            new() { ["middle"] = true },
+            new() { ["middle"] = 0x28 },
+            new() { ["middle"] = new() },
+            new() { ["middle"] = new KeyBehavior() });
+        Check(Settings.LoadSteeringStretch("Default") == 0.25, "and saving the mouse mappings keeps the stretch");
     }
 
     private static void Games()

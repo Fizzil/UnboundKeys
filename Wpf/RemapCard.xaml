@@ -109,6 +109,18 @@
                  Double press tabs (see DashboardShell.BuildGestureEditor);
                  off clears the double press. The hint is Fizzil's wording,
                  long enough to wrap rather than trail off. -->
+            <!-- Steering (Fizzil, 2026-11-06): no new spoken word, so a
+                 word, button or key with this on is the steering switch
+                 (see Steering.cs) and sends nothing of its own. -->
+            <Button x:Name="SteeringButton" Click="SteeringButton_Click" Style="{StaticResource RailToggleStyle}"
+                    Height="Auto" MinHeight="48" Padding="12,6,12,6" Margin="4,0,4,0">
+                <StackPanel>
+                    <TextBlock Text="Steering"/>
+                    <TextBlock Text="Saying this word, or pressing this button or key, switches mouse steering on or off instead of sending its keys. Stop switches it off too. The stretch is set on the Mouse page."
+                               Style="{StaticResource InlineHintStyle}" TextWrapping="Wrap" TextTrimming="None"/>
+                </StackPanel>
+            </Button>
+
             <Button x:Name="DoublePressButton" Click="DoublePressButton_Click" Style="{StaticResource RailToggleStyle}"
                     Height="Auto" MinHeight="48" Padding="12,6,12,6" Margin="4,0,4,0" Visibility="Collapsed">
                 <StackPanel>
