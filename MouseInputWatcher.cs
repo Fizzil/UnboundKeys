@@ -104,6 +104,16 @@ public sealed class MouseInputWatcher : IDisposable
             return _hook.CallNext(nCode, wParam, lParam);
         }
 
+        // While steering, the middle button is the accelerator (Fizzil): its
+        // press holds the pad's throttle, its release lets go, and both are
+        // swallowed whatever the button's own mapping says, so that mapping
+        // does not run for as long as steering is on.
+        if (Steering.IsOn && (msg == WM_MBUTTONDOWN || msg == WM_MBUTTONUP))
+        {
+            Steering.SetThrottle(msg == WM_MBUTTONDOWN);
+            return (IntPtr)1;
+        }
+
         short highWord = (short)(data.mouseData >> 16);
 
         string? downId = msg switch

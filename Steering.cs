@@ -52,8 +52,23 @@ public static class Steering
     private static readonly Stopwatch _clock = Stopwatch.StartNew();
     private static RubberBand? _band;
     private static System.Threading.Timer? _timer;
+    private static IVirtualPad? _pad;
 
     public static bool IsOn { get; private set; }
+
+    // Why there is no virtual pad, for the Settings page; null when the pad
+    // exists. Without a pad the band still works: PadForge, a separate
+    // program, reads the pointer's position instead.
+    public static string? PadProblem { get; private set; }
+
+    // The middle button is held (it is the accelerator while steering).
+    public static bool ThrottleHeld { get; private set; }
+
+    public static void SetThrottle(bool held)
+    {
+        lock (_lock)
+            ThrottleHeld = held;
+    }
 
     // How far the pointer can be pulled from the centre, as a share of the
     // way to the screen's edge: 0.5 is halfway.
@@ -85,12 +100,17 @@ public static class Steering
                 NativeInput.MovePointerTo(cx, cy);
                 _timer = new System.Threading.Timer(_ => Tick(), null, TickMs, TickMs);
                 NativeInput.KeyDown(VK_F16, extended: false);
+                _pad = VirtualPadDriver.TryCreate(out var problem);
+                PadProblem = _pad == null ? problem : null;
             }
             else
             {
                 _timer?.Dispose();
                 _timer = null;
                 _band = null;
+                _pad?.Dispose();
+                _pad = null;
+                ThrottleHeld = false;
                 NativeInput.KeyUp(VK_F16, extended: false);
             }
         }
@@ -153,12 +173,27 @@ public static class Steering
     {
         lock (_lock)
         {
-            if (_band == null || Suspended?.Invoke() == true)
+            if (_band == null)
                 return;
+            // The dashboard in front: the band lets go, and so does the
+            // pad, so the car is not driven from the dashboard.
+            if (Suspended?.Invoke() == true)
+            {
+                _pad?.Set(0, 0, 0);
+                return;
+            }
             var (x, y) = NativeInput.GetPointer();
             var next = _band.Tick(x, y, Now);
             if (next != null)
+            {
                 NativeInput.MovePointerTo(next.Value.X, next.Value.Y);
+                (x, y) = next.Value;
+            }
+            // The pointer's offset from the centre, after the spring's move,
+            // is what the pad is told.
+            var (steer, throttle, brake) = PadValues.FromOffset(
+                x - _band.CentreX, y - _band.CentreY, _band.MaxPx, _band.MaxPy, ThrottleHeld);
+            _pad?.Set(steer, throttle, brake);
         }
     }
 
