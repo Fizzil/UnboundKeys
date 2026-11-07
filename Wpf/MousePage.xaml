@@ -25,7 +25,10 @@
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
             <local:MouseDiagram x:Name="Diagram" Width="160" VerticalAlignment="Top" Margin="4,12,12,0"/>
-            <StackPanel x:Name="Rows" Grid.Column="1"/>
+            <StackPanel Grid.Column="1">
+                <StackPanel x:Name="Rows"/>
+
+            </StackPanel>
         </Grid>
     </StackPanel>
 </UserControl>

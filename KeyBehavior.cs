@@ -34,10 +34,16 @@ public sealed class KeyBehavior
     public bool Priority { get; set; }
     public double PrioritySeconds { get; set; }
 
+    // Steering (Fizzil, 2026-11-06): saying this word, or pressing this
+    // button or key, switches mouse steering on or off (see Steering.cs)
+    // instead of sending its keys. A switch in the editor rather than a
+    // new spoken word: Fizzil wants no more "press ..." commands.
+    public bool Steering { get; set; }
+
     // A mapping nobody has changed the behavior of: a single tap that
     // pauses nothing. The one test the Voice page and the on-screen
     // keyboard both use to decide whether a mapping counts as customized.
     // (A method, not a property, so it is never written to the settings
     // file. Rotation needs Repeat, so it needs no mention here.)
-    public bool IsPlainTap() => !Repeat && !Hold && !Infinite && !Priority;
+    public bool IsPlainTap() => !Repeat && !Hold && !Infinite && !Priority && !Steering;
 }

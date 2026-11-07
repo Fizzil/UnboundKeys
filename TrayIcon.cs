@@ -38,10 +38,30 @@ internal sealed class TrayIcon : IDisposable
         };
     }
 
+    private bool _pausedState;
+    private bool _micLost;
+
     public void SetPaused(bool paused)
     {
-        _icon.Icon = paused ? _paused : _listening;
-        _icon.Text = paused ? "UnboundKeys — voice paused" : "UnboundKeys — listening";
+        _pausedState = paused;
+        Refresh();
+    }
+
+    // The microphone went away (see VoiceEngine.MicrophoneLost): dimmed
+    // like paused, and the tooltip says what is wrong and that the app is
+    // trying to get it back.
+    public void SetMicrophoneLost(bool lost)
+    {
+        _micLost = lost;
+        Refresh();
+    }
+
+    private void Refresh()
+    {
+        _icon.Icon = _pausedState || _micLost ? _paused : _listening;
+        _icon.Text = _micLost ? "UnboundKeys — microphone lost, trying again"
+            : _pausedState ? "UnboundKeys — voice paused"
+            : "UnboundKeys — listening";
     }
 
     private bool _saidStillRunning;

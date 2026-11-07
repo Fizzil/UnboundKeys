@@ -10,7 +10,9 @@ namespace UnboundKeys;
 // of pressing it — swallows the real click and hands the press to
 // PressGestures, which decides whether it was a single or a double press
 // and fires ButtonPressed with that mapping's id, so Program.cs can run
-// it through KeyExecutor exactly like a recognized voice word.
+// it through KeyExecutor exactly like a recognized voice word. Pointer
+// moves go to Steering while that is on (see Steering.cs), which may
+// swallow one that crosses its line.
 //
 // Left Button is never touched anywhere in this file, deliberately: it isn't
 // one of MouseCatalog's six buttons, so it can never be looked up as
@@ -33,6 +35,7 @@ public sealed class MouseInputWatcher : IDisposable
     }
 
     private const int WH_MOUSE_LL = 14;
+    private const int WM_MOUSEMOVE = 0x0200;
     private const int WM_RBUTTONDOWN = 0x0204;
     private const int WM_RBUTTONUP = 0x0205;
     private const int WM_MBUTTONDOWN = 0x0207;
@@ -88,6 +91,19 @@ public sealed class MouseInputWatcher : IDisposable
             return _hook.CallNext(nCode, wParam, lParam);
 
         int msg = wParam.ToInt32();
+
+        // Steering (see Steering.cs): every real pointer move, while it is
+        // on, in the hook's own screen pixels. A move past the band's line
+        // is swallowed and the pointer put on the line instead; any other
+        // move passes through. UnboundKeys's own pointer moves (the
+        // spring) never get here: the check above already skipped them.
+        if (msg == WM_MOUSEMOVE)
+        {
+            if (Steering.IsOn && Steering.PointerMoved(data.pt.x, data.pt.y))
+                return (IntPtr)1;
+            return _hook.CallNext(nCode, wParam, lParam);
+        }
+
         short highWord = (short)(data.mouseData >> 16);
 
         string? downId = msg switch

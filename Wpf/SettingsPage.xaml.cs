@@ -51,6 +51,7 @@ public partial class SettingsPage : IDashboardPage
     // (see Program.cs).
     public event Action? ResetAppRequested;
     public event Action? QuitRequested;
+    public event Action? HelpRequested;
 
     public string Title => "Settings";
 
@@ -79,22 +80,23 @@ public partial class SettingsPage : IDashboardPage
         ConfirmDeleteBehavior.AttachTo(ResetAllButton, () => ResetAllRequested?.Invoke(), "Are you sure?");
         ConfirmDeleteBehavior.AttachTo(ResetAppButton, () => ResetAppRequested?.Invoke(), "Are you sure?");
         ConfirmDeleteBehavior.AttachTo(QuitButton, () => QuitRequested?.Invoke(), "Are you sure?");
-        // The action logger is the user's choice, off unless switched on
+        HelpButton.Click += (_, _) => HelpRequested?.Invoke();
+        // Log what I do is the user's choice, off unless switched on
         // here (Fizzil). The switch takes effect at once; the lines it
         // writes mark where a stretch of logging begins and ends.
         WriteLogToggle.Tag = Settings.LoadWriteLog();
-        LoggerFold.Summary = WriteLogToggle.Tag is true ? "On" : "Off";
+        LoggerFold.Summary = WriteLogToggle.Tag is true ? "Errors and what you do" : "Errors only";
         WriteLogToggle.Click += (_, _) =>
         {
             bool on = !(WriteLogToggle.Tag is true);
             if (!on)
-                Log.Info("action logger switched off");
+                Log.Info("log what I do switched off");
             Settings.SaveWriteLog(on);
             Log.Enabled = on;
             WriteLogToggle.Tag = on;
-            LoggerFold.Summary = on ? "On" : "Off";
+            LoggerFold.Summary = on ? "Errors and what you do" : "Errors only";
             if (on)
-                Log.Info($"action logger switched on, {typeof(SettingsPage).Assembly.GetName().Version}");
+                Log.Info($"log what I do switched on, {typeof(SettingsPage).Assembly.GetName().Version}");
         };
         // The log selected in Explorer, or just its folder while there is
         // no log file yet (the log off since the start).
@@ -123,6 +125,7 @@ public partial class SettingsPage : IDashboardPage
         UpdatesFold.Summary = "Only if you want it";
         ResetFold.Summary = "Two clicks to confirm";
         QuitFold.Summary = "Completely shut down UnboundKeys";
+        HelpFold.Summary = "The manual, one fold per topic";
         StartWithWindowsToggle.Click += (_, _) => ToggleStartWithWindows();
         AutoStartPausedToggle.Click += (_, _) =>
         {
@@ -140,6 +143,15 @@ public partial class SettingsPage : IDashboardPage
         AboutText.Text = title + "\nWord suggestions use the OpenSubtitles-based FrequencyWords list by Hermit Dave (CC BY-SA 4.0).";
 
         RebuildProfileList();
+    }
+
+    // Manage profiles… in the rail's profile flyout lands here: the
+    // PROFILES fold open and in view, not just the Settings page (Fizzil:
+    // it should take you into the profile page).
+    public void ShowProfiles()
+    {
+        ProfilesFold.IsOpen = true;
+        Dispatcher.InvokeAsync(() => ProfilesFold.BringIntoView(), System.Windows.Threading.DispatcherPriority.Loaded);
     }
 
     public void Refresh()

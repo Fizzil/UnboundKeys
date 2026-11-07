@@ -63,6 +63,9 @@ internal static class KeyExecutor
             "A word and a mouse button id collide — KeyExecutor's shared _engaged dictionary can't tell them apart.");
         Debug.Assert(!KeyMap.RemappableWords.Intersect(VirtualKeyMap.KeyIds, StringComparer.OrdinalIgnoreCase).Any(),
             "A word and a virtual key id collide — KeyExecutor's shared _engaged dictionary can't tell them apart.");
+        Debug.Assert(!SteeringMap.Ids.Intersect(KeyMap.RemappableWords, StringComparer.OrdinalIgnoreCase).Any()
+                     && !SteeringMap.Ids.Intersect(VirtualKeyMap.KeyIds, StringComparer.OrdinalIgnoreCase).Any(),
+            "A push id collides with a word or a virtual key id — KeyExecutor's shared _engaged dictionary can't tell them apart.");
         Debug.Assert(!MouseMap.ButtonIds.Intersect(VirtualKeyMap.KeyIds, StringComparer.OrdinalIgnoreCase).Any(),
             "A mouse button id and a virtual key id collide — KeyExecutor's shared _engaged dictionary can't tell them apart.");
     }
@@ -91,7 +94,10 @@ internal static class KeyExecutor
     private static readonly InfiniteState _mouseState = new();
     private static readonly InfiniteState _virtualState = new();
 
-    private static bool IsMouseSource(string word) => Array.IndexOf(MouseMap.ButtonIds, word) >= 0;
+    // The pushes (SteeringMap) are pressed by the mouse, so they share the
+    // mouse buttons' slots, as they did when MouseMap held them.
+    private static bool IsMouseSource(string word) =>
+        Array.IndexOf(MouseMap.ButtonIds, word) >= 0 || Array.IndexOf(SteeringMap.Ids, word) >= 0;
     private static bool IsVirtualSource(string word) => Array.IndexOf(VirtualKeyMap.KeyIds, word) >= 0;
 
     private static InfiniteState StateFor(string word) =>
@@ -227,6 +233,20 @@ internal static class KeyExecutor
 
     public static void Execute(string word, IReadOnlyList<(ushort Vk, bool Extended)> keys, KeyBehavior behavior)
     {
+        // Steering (see Steering.cs): this word, button or key is the
+        // steering switch. Its pedals go along with it (Fizzil: one button
+        // for steering plus throttle, Throttle in Hold with Infinite, so a
+        // press is race on and the next is race off), any other key is not
+        // sent ("press nine" must not type a 9).
+        if (behavior.Steering)
+        {
+            Steering.Toggle();
+            var pedals = keys.Where(k => PadKeys.IsPadKey(k.Vk)).ToList();
+            if (pedals.Count == 0)
+                return;
+            keys = pedals;
+        }
+
         int cooldownLeftMs = behavior.Priority ? PauseRepeatsForPriority(behavior) : 0;
 
         if (behavior.Infinite)
@@ -412,6 +432,16 @@ internal static class KeyExecutor
     // for a mouse button's other ways of pressing (Fizzil: one button does
     // one thing at a time — a single press while the double press's
     // mapping is running switches to the single press's, and so on round).
+    // Whether a word is doing anything right now: an infinite hold or
+    // repeat engaged, or a timed run under way. A push's release (see
+    // Program.cs) waits on this before stopping, so a release that lands a
+    // moment after its press never stops nothing and leaves the hold on.
+    public static bool IsRunning(string word)
+    {
+        lock (_lock)
+            return (_engaged.TryGetValue(word, out var on) && on) || _activeTimedRuns.ContainsKey(word);
+    }
+
     public static void Stop(string word)
     {
         ForceRelease(word);
@@ -463,6 +493,11 @@ internal static class KeyExecutor
         // the one shared place every panic path (press stop, triple Caps
         // Lock, app exit) already funnels through, so it lets go here too.
         StickyModifiers.ReleaseAll();
+
+        // Steering (see Steering.cs) holds its arrows outside _engaged too:
+        // let go, and switch it off, so the next pointer move presses
+        // nothing. Stop means the mouse is a mouse again.
+        Steering.LetGo();
     }
 
     private static void ClearState(InfiniteState s)
@@ -697,8 +732,13 @@ internal static class KeyExecutor
                     bool windowChanged = s.HoldWindow.Value != current;
                     bool titleChanged = !windowChanged && s.HoldWindowTitle != currentTitle;
                     bool ownSideEffect = titleChanged && LooksLikeOwnSideEffect(s.HoldWindowTitle, currentTitle);
+                    // A hold made only of the virtual pad's pedals (see
+                    // PadKeys) is not a key stuck in a game: a browser game
+                    // changing its tab title mid-race must not lift the
+                    // throttle. A real switch of window still does.
+                    bool pedalsOnly = s.HoldKeys!.All(k => PadKeys.IsPadKey(k.Vk));
 
-                    if (windowChanged || (titleChanged && !ownSideEffect))
+                    if (windowChanged || (titleChanged && !ownSideEffect && !pedalsOnly))
                     {
                         _engaged[s.HoldWord] = false;
                         holdReleases.Add(s.HoldKeys!);

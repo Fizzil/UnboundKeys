@@ -6,3 +6,6 @@ UnboundKeys-v*/
 *.zip
 *.user
 TODO.md
+
+# Helper agents' temporary worktrees
+.claude/worktrees/

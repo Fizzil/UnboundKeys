@@ -1,0 +1,78 @@
+<UserControl x:Class="UnboundKeys.Wpf.SteeringPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Steering (Fizzil, 2026-11-06, for racing games): the mouse as a
+         steering wheel, one feature on one page. A short hint under each
+         control; the long explanations live in Help. The switch is for the
+         session and starts off; the stretch and the pushes are the
+         app's, the same in every profile (see SteeringMap.cs). -->
+    <StackPanel Margin="0,8,0,0">
+        <!-- No switch here (Fizzil): the one way in is the one way out, a
+             word, button or key with Starts and stops steering on in its
+             editor. A switch on this page would hold the pointer in the
+             band with no way back to it. So the page starts with the three
+             places that switch lives, and says what is on and what
+             switches it. This is what profiles are for (Fizzil): a racing
+             profile holds the racing setup on the ordinary pages. -->
+        <!-- The one-button way, ready made (Fizzil): Middle Button gets
+             Throttle, Hold, Infinite and Starts and stops steering in the
+             active profile, Move down gets Brake as a ten-second Hold, and
+             the Mouse page opens on it. -->
+        <!-- The what and the why above the button (Fizzil): Default is what
+             most people will click, so it is explained first and the rest
+             of the page is background. Three short lines; Help has more. -->
+        <TextBlock Text="THE DEFAULT SETUP" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,4"/>
+        <TextBlock Text="Click Default and the middle button is your throttle and your steering switch: one click starts the race, the next ends it. Moving the mouse down brakes for as long as you hold it there."
+                   FontSize="11" TextWrapping="Wrap" Margin="12,0,12,4" Foreground="{DynamicResource TextSecondaryBrush}"/>
+        <TextBlock Text="Why: with one joystick, turning and accelerating at the same time is hard, so the accelerator stays down for the whole race and the brake is how you set your speed. You can change any of it at any time."
+                   FontSize="11" TextWrapping="Wrap" Margin="12,0,12,8" Foreground="{DynamicResource TextSecondaryBrush}"/>
+        <!-- Default sits exactly over the Keyboard chip below it (Fizzil):
+             the same right-aligned row, with blank slots where Mouse and
+             Voice are. -->
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,8,6">
+            <Border Width="158"/>
+            <Button x:Name="DefaultButton" Content="Default" Width="150" Style="{StaticResource OutlineButtonStyle}"/>
+            <Border Width="158"/>
+        </StackPanel>
+        <TextBlock Text="Or choose your own: open a mouse button, keyboard key or spoken word and switch on Starts and stops steering."
+                   Style="{StaticResource RowHintStyle}"/>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,8,6">
+            <Button x:Name="GoMouseButton" Content="Mouse" Width="150" Margin="0,0,8,0" Style="{StaticResource OutlineButtonStyle}"/>
+            <Button x:Name="GoKeyboardButton" Content="Keyboard" Width="150" Margin="0,0,8,0" Style="{StaticResource OutlineButtonStyle}"/>
+            <Button x:Name="GoVoiceButton" Content="Voice" Width="150" Style="{StaticResource OutlineButtonStyle}"/>
+        </StackPanel>
+        <TextBlock x:Name="StateText" FontSize="13" TextWrapping="Wrap" Margin="12,2,12,2" Foreground="{DynamicResource TextPrimaryBrush}"/>
+
+        <!-- Heading, description, then the control, the same shape as the
+             sections above and below (Fizzil). -->
+        <TextBlock Text="STRETCH" Style="{StaticResource SectionHeaderStyle}" Margin="0,8,0,4"/>
+        <TextBlock Text="How far the mouse can be pulled from the centre of the screen. The further you push left or right, the harder you turn; stop pushing and the mouse springs back to the centre."
+                   FontSize="11" TextWrapping="Wrap" Margin="12,0,12,4" Foreground="{DynamicResource TextSecondaryBrush}"/>
+        <Grid Height="44" Margin="4,0,4,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock x:Name="StretchText" Style="{StaticResource RowLabelStyle}"/>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
+                <Button x:Name="StretchMinusButton" Content="−5 %" Style="{StaticResource StepButtonStyle}"/>
+                <Button x:Name="StretchPlusButton" Content="+5 %" Style="{StaticResource StepButtonStyle}"/>
+                <Button x:Name="StretchResetButton" Content="Reset" Style="{StaticResource StepButtonStyle}"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Push up and Push down: mappings pressed by pushing the pointer
+             up or down the band, not by a button (see MouseCatalog.Pushes).
+             Their rows are added in code. -->
+        <TextBlock Text="MOVE MOUSE" Style="{StaticResource SectionHeaderStyle}" Margin="0,8,0,4"/>
+        <TextBlock Text="Moving the mouse up or down can press a key or a pedal, such as the throttle or the brake."
+                   Style="{StaticResource RowHintStyle}"/>
+        <StackPanel x:Name="PushRows"/>
+
+        <!-- The virtual controller, one line; the driver's download button
+             only while it is missing (installed once). -->
+        <TextBlock x:Name="PadDriverStatus" FontSize="13" TextWrapping="Wrap" Margin="16,12,12,2" Foreground="{DynamicResource TextPrimaryBrush}"/>
+        <TextBlock x:Name="PadProblemText" Visibility="Collapsed" Style="{StaticResource RowHintStyle}" Margin="16,0,12,4"/>
+        <Button x:Name="GetPadDriverButton" Content="Get the ViGEmBus driver (installed once)" Height="44" Margin="4,4,4,8" Padding="12,0,12,0" FontSize="13" Style="{StaticResource SecondaryButtonStyle}"/>
+    </StackPanel>
+</UserControl>

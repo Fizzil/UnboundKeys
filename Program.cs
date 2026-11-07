@@ -19,7 +19,7 @@ static class Program
         if (!SingleInstance.Claim())
             return;
 
-        // The log is the user's choice (Settings > Action logger), off unless they
+        // The log is the user's choice (Settings > Log what I do), off unless they
         // switched it on. While it is on, anything that goes wrong from
         // here leaves a line in it (see Log), including the errors nothing
         // else catches.
@@ -74,6 +74,12 @@ static class Program
         using var tray = new TrayIcon();
         var dashboard = new Wpf.DashboardWindow();
 
+        // Steering (see Steering.cs) keeps quiet while the dashboard is the
+        // window in front, so its own switch can be reached without
+        // steering into it. The window has its handle from its constructor.
+        var dashboardHandle = new System.Windows.Interop.WindowInteropHelper(dashboard).Handle;
+        Steering.Suspended = () => NativeInput.GetFocusedWindow() == dashboardHandle;
+
         voice.CommandRecognized += word =>
         {
             if (word == VoiceEngine.StopWord)
@@ -97,9 +103,42 @@ static class Program
                 return;
             }
 
+            // On the microphone's thread while a profile switch on the UI
+            // thread may be swapping the maps: a word with no behaviour at
+            // this instant is dropped, not a crash.
+            if (!KeyMap.Behaviors.TryGetValue(word, out var behavior))
+                return;
             var keys = KeyMap.GetAllKeys(word);
-            var behavior = KeyMap.Behaviors[word];
             Task.Run(() => KeyExecutor.Execute(word, keys, behavior));
+        };
+
+        // What the spoken words hold is let go of whenever nothing can be
+        // said any more (Listening paused, the microphone lost): a mouse
+        // or keyboard hold can still be ended by pressing its button
+        // again, a spoken one cannot. The same goes for steering when a
+        // word is its switch: the band would otherwise hold the pointer
+        // with no way to say the word that frees it.
+        static void ReleaseSpokenHolds()
+        {
+            foreach (var word in KeyMap.RemappableWords)
+                KeyExecutor.ForceRelease(word);
+            if (KeyMap.RemappableWords.Any(w => KeyMap.Behaviors.TryGetValue(w, out var b) && b.Steering))
+                Steering.LetGo();
+        }
+
+        // The microphone going away (see VoiceEngine.MicrophoneLost): the
+        // engine keeps trying it every few seconds; meanwhile the tray says
+        // so, and the log gets the reason.
+        voice.MicrophoneLost += ex =>
+        {
+            Log.Error(ex == null ? "microphone stopped (no reason given)" : $"microphone stopped: {ex.GetType().Name}: {ex.Message}");
+            Task.Run(ReleaseSpokenHolds);
+            app.Dispatcher.InvokeAsync(() => tray.SetMicrophoneLost(true));
+        };
+        voice.MicrophoneBack += () =>
+        {
+            Log.Info("microphone back");
+            app.Dispatcher.InvokeAsync(() => tray.SetMicrophoneLost(false));
         };
 
         // Runs a mouse button's or a Keyboard-page key's mapping, after
@@ -123,6 +162,31 @@ static class Program
             // and the two never collide.
             RunMapping(id, MouseMap.GetAllKeys(id), MouseMap.Behaviors[id]);
         };
+
+        // Push up and Push down (see Steering.cs): the pointer pushed past a
+        // third of the stretch presses the push's mapping like a button
+        // press would, and coming back lets go. Releasing calls Stop, so
+        // Hold or Repeat with Infinite lasts exactly as long as the push,
+        // and a Tap just taps once per push.
+        //
+        // A press and a release a moment apart must not swap places: a
+        // release's Stop landing before the press's Execute has engaged
+        // would stop nothing and leave the hold on for good. Execute runs
+        // an infinite hold or repeat until it is stopped, so the two cannot
+        // share one queue; instead the release waits, briefly, until the
+        // press is running (KeyExecutor.IsRunning) and stops it then. A
+        // Tap is over before the wait ends, and its Stop is a no-op.
+        Steering.PushPressed += id =>
+        {
+            if (SteeringMap.Enabled.TryGetValue(id, out bool on) && on)
+                RunMapping(id, SteeringMap.GetAllKeys(id), SteeringMap.Behaviors[id]);
+        };
+        Steering.PushReleased += id => Task.Run(async () =>
+        {
+            for (int i = 0; i < 15 && !KeyExecutor.IsRunning(id); i++)
+                await Task.Delay(10);
+            KeyExecutor.Stop(id);
+        });
 
         // Two rapid Caps Lock taps on a real keyboard: a panic button that
         // works no matter what is mapped (the same effect as saying "press
@@ -157,8 +221,7 @@ static class Program
             if (ListeningMode.IsPaused)
             {
                 voice.Pause();
-                foreach (var word in KeyMap.RemappableWords)
-                    KeyExecutor.ForceRelease(word);
+                ReleaseSpokenHolds();
             }
             else
             {

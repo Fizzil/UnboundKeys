@@ -18,13 +18,19 @@
 # ASCII only: Windows PowerShell reads this file as ANSI.
 #
 # To retake only some pictures, name them: -Only "Mouse,Settings". The names
-# are Mouse, Keyboard-Page, Voice, Editor, Settings, Help, and Keyboard for
-# the two pictures of the on-screen keyboard itself.
+# are Mouse, Keyboard-Page, Voice, Steering, Editor, Settings, Help, and
+# Keyboard for the two pictures of the on-screen keyboard itself.
+#
+# Two rounds for a release (Fizzil): everything in the everyday profile,
+# then -Only "Steering" in the racing profile, where Default is active. An
+# editor picture of the racing setup: -Only "Editor" -EditorChip "Throttle"
+# -EditorFile "UBK-Editor-Race.png".
 param(
   [string]$Out = (Join-Path $PSScriptRoot "..\Assets\screenshots"),
   [string]$Method = "sendinput",  # "manual": Mini/Maxi were clicked by hand; capture what shows
   [string]$Only = "",             # comma-separated picture names; empty takes them all
-  [string]$EditorChip = "W"       # the Mouse-page chip whose editor is pictured (its text is what the button sends)
+  [string]$EditorChip = "W",      # the Mouse-page chip whose editor is pictured (its text is what the button sends)
+  [string]$EditorFile = "UBK-Editor.png"
 )
 $wanted = @($Only.Split(',') | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 function Want($name) { return ($wanted.Count -eq 0) -or ($wanted -contains $name) }
@@ -231,6 +237,7 @@ Raise-Window $dash
 if (Want "Mouse")         { Invoke-Button $dash "Mouse";    Save-Window $dash "UBK-Mouse.png" }
 if (Want "Keyboard-Page") { Invoke-Button $dash "Keyboard"; Save-Window $dash "UBK-Keyboard-Page.png" }
 if (Want "Voice")         { Invoke-Button $dash "Voice";    Save-Window $dash "UBK-Voice.png" }
+if (Want "Steering")      { Invoke-Button $dash "Steering"; Save-Window $dash "UBK-Steering.png" }
 if (Want "Editor") {
   # A mouse button's editor, for its Single press / Double press segments
   # and Reset both (4.10.0): the Mouse-page chip named by -EditorChip, the
@@ -248,11 +255,23 @@ if (Want "Editor") {
   # duration, Infinite and Infinite pause rows, then Tap puts it back.
   $wasTap = ($null -eq (Find-Text $dash "Duration"))
   if ($wasTap) { Invoke-Button $dash "Repeat" 900 }
-  Save-Window $dash "UBK-Editor.png"
+  Save-Window $dash $EditorFile
   if ($wasTap) { Invoke-Button $dash "Tap" 600 }
 }
 if (Want "Settings")      { Invoke-Button $dash "Settings"; Save-Window $dash "UBK-Settings.png" }
-if (Want "Help")          { Invoke-Button $dash "Help";     Save-Window $dash "UBK-Help.png" }
+if (Want "Help") {
+  # Help left the rail (4.12.0): it is the ? in the page header, which has
+  # no automation name yet, so go through Settings > HELP > Open Help. The
+  # fold's header is a button around a text block named HELP.
+  Invoke-Button $dash "Settings"
+  if ($null -ne (Find-Button $dash "Help")) {
+    Invoke-Button $dash "Help"
+  } else {
+    Invoke-Button $dash "HELP" 500
+    Invoke-Button $dash "Open Help"
+  }
+  Save-Window $dash "UBK-Help.png"
+}
 
 if (Want "Keyboard") {
   # The on-screen keyboard, at Large for a clear picture. Its window has

@@ -19,7 +19,7 @@
                 </Canvas.Clip>
                 <Rectangle x:Name="LeftButton" Canvas.Left="20" Canvas.Top="10" Width="76" Height="140"
                            Fill="{DynamicResource ButtonBrush}" Stroke="{DynamicResource CardBorderBrush}" StrokeThickness="1"
-                           ToolTip="Left click always opens UnboundKeys, so it can't be remapped"/>
+                           ToolTip="Left Click is never remapped, so you can always click."/>
                 <Rectangle x:Name="RightButton" Canvas.Left="104" Canvas.Top="10" Width="76" Height="140"
                            Stroke="{DynamicResource CardBorderBrush}" StrokeThickness="1" Cursor="Hand"/>
             </Canvas>

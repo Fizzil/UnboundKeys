@@ -33,6 +33,16 @@ public partial class HelpPage : IDashboardPage
         AddLine("Two things per button or key", "switch on Double press at the bottom of a mouse button's or a keyboard key's editor, and Single press and Double press appear at its top, each a mapping of its own. Each way of pressing starts its mapping and stops it again, and starting one stops the other. Switching it off clears the double press.");
         AddLine("Timing", "with a double press set, a single press lands a moment later, once no second press is coming. A button or key with no double press set is as quick as ever.");
 
+        AddHeader("STEERING", topMargin: 6);
+        AddLine("A rubber band on the pointer", "while steering is on: the pointer is held near the middle of the screen, moves out as far as the stretch line, and springs back when you stop. Sideways is the steering: the further out, the harder the turn.");
+        AddLine("Starts and stops steering", "is a switch in every mapping's editor, off to begin with: switch it on and that word, button or key turns steering on and off. While it is on, the mapping sends only Throttle or Brake and no other key, so \"press nine\" with it on no longer types a 9.");
+        AddLine("Default, on the Steering page", "sets up racing in one click: Middle Button sends Throttle with Hold, Infinite and Starts and stops steering, so one click starts the race and the next ends it, and moving the mouse down applies the brake for as long as you hold it there. Keep the two together: the click that lifts the throttle also ends steering, so slowing down is the brake's job. Then the Mouse page opens; change any of it at any time.");
+        AddLine("Throttle and Brake", "are in the key picker's Controller group, for any word, button, key or move. They work with steering off too: a held pedal plugs the controller in on its own.");
+        AddLine("Move up and Move down", "are how you brake and accelerate while steering is on. Give them the pedals on the Steering page (Default puts Brake on Move down), and moving the pointer down holds the brake for as long as you hold it there, letting go the moment the pointer comes back. The throttle shares the steering button on purpose: with one joystick, turning and accelerating at the same time is hard, so the accelerator stays down for the whole race and the brake is how you set your speed.");
+        AddLine("Stretch", "on the Steering page: how far the pointer can go from the centre, as a share of the way to the screen's edge: 10 % to start, from 5 % to 100 % in steps of 5 %. The stretch, Move up and Move down are the same in every profile.");
+        AddLine("On and off", "the Steering page says whether steering is on and which words, buttons or keys switch it. It is off at every start; Stop, the other safety nets and another window coming in front of the game switch it off, and the band lets go while this dashboard is in front and while the left button is held.");
+        AddLine("The controller line", "on the Steering page reads \"Virtual Xbox controller: ready.\" once the free ViGEmBus driver is installed; until then, Get the ViGEmBus driver opens its download page (github.com/nefarius/ViGEmBus), installed once. Without it the band still works, but nothing drives the car.");
+
         AddHeader("REMAPPING MODES", topMargin: 6);
         AddLine("Tap", "presses all the keys together, once. Right for shortcuts like Ctrl + X.");
         AddLine("Repeat", "presses the keys one at a time, ten times a second: Key 1, Key 2 and so on, then back to Key 1, for the duration. Never together, so use Tap for shortcuts.");
@@ -40,33 +50,35 @@ public partial class HelpPage : IDashboardPage
         AddLine("Hold", "holds all the keys down together for the duration, then lets go. Repeats while held, like a key held on a real keyboard, so a held Backspace deletes a run.");
         AddLine("Infinite", "keeps pressing the keys repeatedly, or holding them, until you say the word or press the button again.");
         AddLine("Say or press it again", "to stop a Repeat or Hold early, Infinite or not.");
-        AddLine("Infinite pause", "in the editor, under Infinite: pauses every infinite repeat for the time you set (1.0 s to start) while this key fires, then they resume. Then set the key's Mode to Repeat or Hold for the same time, so it actually presses the key during the pause: Repeat for an instant ability, Hold for a cast or a channel.");
+        AddLine("One Infinite hold at a time", "for each kind of input: the words, the mouse buttons with Move up and Move down, and the keyboard keys (and the same for an Infinite repeat). A new one stops the old one, which is how \"run backward\" stops \"run forward\".");
+        AddLine("Infinite pause", "in the editor, below Infinite, is one or the other with it: switching one on switches the other off, and Tap clears both. It pauses every infinite repeat for the time you set (1.0 s to start, in steps of 0.1 s) while this key fires; set the key's Mode to Repeat or Hold for the same time, so it actually presses the key during the pause: Repeat for an instant ability, Hold for a cast or a channel.");
 
         AddLine("The small signs beside a mapping", "say how it is pressed: R for Repeat, a circling arrow for Rotation, H for Hold, ∞ for Infinite, P for Infinite pause, and on the Mouse page D for a button with a double press. A plain Tap shows none. Hover one for its name; on the Keyboard page, hover a lit key.");
 
         AddHeader("SAFETY NETS", topMargin: 6);
-        AddLine("Stop, on the rail", "lets go of everything, whatever is mapped, with one click.");
+        AddLine("Stop, on the rail", "lets go of everything, whatever is mapped, with one click, and switches steering off.");
         AddLine($"\"press {VoiceEngine.StopWord}\"", "does the same by voice.");
         AddLine("Caps, twice quickly", "on the on-screen keyboard, or a real Caps Lock key, releases everything, lifts Fade, and shows or hides this dashboard.");
-        AddLine("Switching windows", "releases everything too, so alt-tab or a new browser tab never leaves a key stuck.");
+        AddLine("Switching windows", "lets go of every Infinite hold and repeat and switches steering off, so alt-tab never leaves a key stuck; a new browser tab lets go of the holds and repeats too. A timed Hold or Repeat runs out its own time, and a hold of only Throttle or Brake is kept when just the browser tab's title changes.");
         AddLine("Left Click", "is never remapped, so you can always click.");
 
         AddHeader("ON-SCREEN KEYBOARD", topMargin: 6);
         AddLine("Shift, Ctrl, Alt, Win", "stick: click one, then the key to combine it with.");
         AddLine("Hold a key", "to repeat it.");
         AddLine("Word suggestions", "finish the word when clicked. With \"Smart predictive text\" on (Keyboard page, off by default) your own words come first; \"Open the list\" lets you read and edit them, \"Clear the list\" forgets them.");
-        AddLine("Menu, Fade, Mini, Maxi", "show or hide this dashboard, dim it, collapse it to a strip, bring it back. Drag it by the grip on its right edge.");
+        AddLine("Menu, Fade, Mini, Maxi", "show or hide this dashboard, dim it, collapse it to a strip, bring it back. Drag it by the handle on its right edge.");
         AddLine("Remapping a key", "happens on the Keyboard page. A remapped key is caught on a real keyboard too.");
 
         AddHeader("GOOD TO KNOW", topMargin: 6);
         AddLine("Closing this window", "hides it. UnboundKeys keeps running in the tray by the clock; click the icon there, press Menu on the on-screen keyboard, double-tap Caps Lock on a real keyboard, or say \"press menu\". Quit is at the bottom of the rail, two clicks to confirm (and in Settings).");
-        AddLine("The permission prompt", "appears because UnboundKeys runs as administrator, so its key presses reach games that run elevated. Start with Windows, in Settings, starts it that way at sign-in with no prompt.");
-        AddLine("Profiles", "are games, each with a theme and up to ten sub-profiles for classes or loadouts. Switch either from the chip at the bottom left. Rename one in Settings with the on-screen name keyboard: hold a key to repeat it, click Shift for a capital.");
-        AddLine("Reset, in Settings", "has two buttons, each asking \"Are you sure?\" first. Reset profile puts the active profile's mappings back to default. Reset app deletes everything the app keeps and starts it again as new; that cannot be undone.");
-        AddLine("Action logger", "in Settings, off by default, is used for debugging and for building new features. While it is on, the app notes its starts, errors and the changes you make here; while it is off, nothing is written.");
+        AddLine("The permission prompt", "appears because UnboundKeys runs as administrator, so its key presses reach games that run elevated. Start with Windows, in Settings, starts it that way at sign-in with no prompt, and Start with voice keys paused brings it up with Listening off.");
+        AddLine("Profiles", "are games, each with a theme and up to ten sub-profiles for classes or loadouts. Switch from the chip at the bottom left: click a profile to show its sub-profiles, then a sub-profile; Manage profiles… opens them in Settings, where the on-screen name keyboard renames them (hold a key to repeat it, click Shift for a capital).");
+        AddLine("Reset, in Settings", "has two buttons, each asking \"Are you sure?\" first. Reset profile puts the active profile's mappings back to default; Reset app deletes everything the app keeps and starts it again as new, and cannot be undone.");
+        AddLine("Reset both, in the editor", "asks \"Are you sure?\" too, since it resets two mappings: click again to confirm. Reset this mapping is one click.");
+        AddLine("Log what I do", "in Settings, off by default: switch it on and the app also notes its starts, stops and the changes you make here, which is what finding a bug usually needs. Errors and crashes are always noted, switch on or off, so a fault can be found; nothing you type or say is ever written.");
         AddLine("Updates", "are checked only when you click Check for updates in Settings, and can be installed from there. A shortcut you made to the app is pointed at the newest version each time it starts.");
         // In bold (Fizzil): what the app keeps on the PC should be plain to see.
-        AddLine("Everything is saved in", @"%AppData%\UnboundKeys: your profiles and mappings in settings.json (with a backup beside it), the words kept by ""Smart predictive text"" in learned-words.txt if you switch that on, and the action logger's notes in log.txt if you switch that on. The full manual is in the GitHub repository.", bold: true);
+        AddLine("Everything is saved in", @"%AppData%\UnboundKeys: your profiles and mappings in settings.json (with a backup beside it), the words kept by ""Smart predictive text"" in learned-words.txt if you switch that on, and log.txt: errors always, what you do if you switch Log what I do on. The full manual is in the GitHub repository.", bold: true);
     }
 
     // Nothing on this page changes underneath it.

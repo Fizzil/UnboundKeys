@@ -47,6 +47,10 @@ public partial class DashboardShell
         var mousePage = new MousePage();
         mousePage.EditRequested += OpenEditor;
         _pages[DashboardSection.Mouse] = mousePage;
+        var steeringPage = new SteeringPage();
+        steeringPage.EditRequested += OpenEditor;
+        steeringPage.NavigateRequested += ShowSection;
+        _pages[DashboardSection.Steering] = steeringPage;
         var voicePage = new VoicePage();
         voicePage.EditRequested += OpenEditor;
         _pages[DashboardSection.Voice] = voicePage;
@@ -60,6 +64,7 @@ public partial class DashboardShell
         settingsPage.SubProfileSelected += SwitchToSubProfile;
         settingsPage.ResetAllRequested += ResetAllMappings;
         settingsPage.QuitRequested += () => QuitRequested?.Invoke();
+        settingsPage.HelpRequested += () => ShowSection(DashboardSection.Help);
         settingsPage.ResetAppRequested += () => ResetAppRequested?.Invoke();
         _pages[DashboardSection.Settings] = settingsPage;
         _pages[DashboardSection.Help] = new HelpPage();
@@ -92,6 +97,7 @@ public partial class DashboardShell
         _section = section;
         _editor = null;
         Rail.SetActive(section);
+        HelpChromeButton.Tag = section == DashboardSection.Help;
         BackButton.Visibility = Visibility.Collapsed;
         if (_pages[section] is IDashboardPage page)
         {
@@ -164,7 +170,11 @@ public partial class DashboardShell
         // Logged with the mapping changes (see RemapStore.LogChange), so a
         // change nobody meant can be traced to the editor it came through.
         Log.Info($"editor opened: {title} ({id})");
-        _editor = source is MouseMapSource or VirtualKeyMapSource ? BuildGestureEditor(source, id, title) : NewCard(source, id);
+        // Push up and Push down (SteeringMapSource) have one way of being
+        // pressed, so they get the plain editor, as a word does: no Single
+        // press / Double press.
+        bool twoWays = source is MouseMapSource or VirtualKeyMapSource;
+        _editor = twoWays ? BuildGestureEditor(source, id, title) : NewCard(source, id);
         BackButton.Visibility = Visibility.Visible;
         PageTitle.Text = title;
         PageHost.Content = _editor;
@@ -174,7 +184,6 @@ public partial class DashboardShell
     private RemapCard NewCard(IRemapSource source, string id, bool? doublePress = null)
     {
         var card = new RemapCard(source, id, doublePress);
-        card.ResetAllRequested += ResetAllMappings;
         return card;
     }
 
@@ -309,8 +318,8 @@ public partial class DashboardShell
         ShowSection(_section);
     }
 
-    // Reached from Settings' Reset All and from a card's own triple-tap
-    // Reset All — every mapping of every kind, then the page redrawn.
+    // Reached from Settings' Reset profile — every mapping of every kind,
+    // then the page redrawn.
     private void ResetAllMappings()
     {
         KeyMap.ResetAll();
@@ -394,7 +403,11 @@ public partial class DashboardShell
             HorizontalAlignment = System.Windows.HorizontalAlignment.Left,
         };
         manage.SetResourceReference(StyleProperty, "SecondaryButtonStyle");
-        manage.Click += (_, _) => ShowSection(DashboardSection.Settings);
+        manage.Click += (_, _) =>
+        {
+            ShowSection(DashboardSection.Settings);
+            ((SettingsPage)_pages[DashboardSection.Settings]).ShowProfiles();
+        };
         FlyoutList.Children.Add(manage);
     }
 
@@ -440,6 +453,9 @@ public partial class DashboardShell
     }
 
     private void FlyoutDismiss_Click(object sender, MouseButtonEventArgs e) => CloseProfileFlyout();
+
+    private void Help_Click(object sender, RoutedEventArgs e) => ShowSection(DashboardSection.Help);
+
 
     private void Minimize_Click(object sender, RoutedEventArgs e) => MinimizeRequested?.Invoke();
     // Only the dashboard goes away (it hides — see DashboardWindow); an

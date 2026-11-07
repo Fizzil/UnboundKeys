@@ -187,8 +187,20 @@ internal static class Settings
         // The Mouse page start card has been read (Got it clicked) once.
         public bool StartCardDismissed { get; set; }
 
+        // Steering's settings (see Steering.cs), app-wide so they work from
+        // whichever profile is active: the stretch (a share of the way from
+        // the centre to the edge) and the Push up / Push down mappings,
+        // shaped like a mouse button's. A file from before this has none
+        // and reads the defaults; a stretch left in an old sub-profile is
+        // ignored.
+        public double SteeringStretch { get; set; } = Steering.DefaultStretch;
+        public Dictionary<string, bool> SteeringEnabled { get; set; } = new();
+        public Dictionary<string, ushort> SteeringKeyMap { get; set; } = new();
+        public Dictionary<string, List<ushort>> SteeringExtraKeys { get; set; } = new();
+        public Dictionary<string, KeyBehavior> SteeringBehaviors { get; set; } = new();
+
         // Whether the app keeps a log (see Log). Off unless switched on in
-        // Settings > Action logger.
+        // Settings > Log what I do.
         public bool WriteLog { get; set; }
 
         // Whether the on-screen keyboard keeps the words typed on it for
@@ -226,6 +238,12 @@ internal static class Settings
             if (saved != null)
                 return saved;
             Log.Error("settings.json could not be read; trying settings.json.bak");
+            // The unreadable file is kept as settings.json.unreadable: the
+            // next save would otherwise make it the backup (see Write) and
+            // the last good file would be gone with it, and the broken one
+            // is what explains what happened.
+            try { File.Copy(FilePath, FilePath + ".unreadable", overwrite: true); }
+            catch (Exception ex) { Log.Error("keeping the unreadable settings.json", ex); }
             saved = ReadFrom(BackupPath);
             if (saved != null)
                 return saved;
@@ -664,6 +682,48 @@ internal static class Settings
 
     public static void SaveVirtualProfile(string profile, Dictionary<string, ushort> keyMap, Dictionary<string, List<ushort>> extraKeys, Dictionary<string, KeyBehavior> behaviors) =>
         SaveFields(profile, d => { d.VirtualKeyMap = keyMap; d.VirtualExtraKeys = extraKeys; d.VirtualBehaviors = behaviors; });
+
+    // Steering's settings are the app's, not a profile's (Fizzil: set up
+    // once, then work from whichever profile is open), so none of these
+    // takes a profile and none goes through SaveFields.
+    public static double LoadSteeringStretch() => Read().SteeringStretch;
+
+    public static void SaveSteeringStretch(double share)
+    {
+        var saved = Read();
+        saved.SteeringStretch = share;
+        Write(saved);
+    }
+
+    private static Dictionary<string, T> OverlaySteering<T>(Dictionary<string, T> defaults, Dictionary<string, T> saved)
+    {
+        foreach (var (id, value) in saved)
+            if (defaults.ContainsKey(id))
+                defaults[id] = value;
+        return defaults;
+    }
+
+    public static Dictionary<string, bool> LoadSteeringEnabled(Dictionary<string, bool> defaults) =>
+        OverlaySteering(defaults, Read().SteeringEnabled);
+
+    public static Dictionary<string, ushort> LoadSteeringKeyMap(Dictionary<string, ushort> defaults) =>
+        OverlaySteering(defaults, Read().SteeringKeyMap);
+
+    public static Dictionary<string, List<ushort>> LoadSteeringExtraKeys(Dictionary<string, List<ushort>> defaults) =>
+        OverlaySteering(defaults, Read().SteeringExtraKeys);
+
+    public static Dictionary<string, KeyBehavior> LoadSteeringBehaviors(Dictionary<string, KeyBehavior> defaults) =>
+        OverlaySteering(defaults, Read().SteeringBehaviors);
+
+    public static void SaveSteeringMap(Dictionary<string, bool> enabled, Dictionary<string, ushort> keyMap, Dictionary<string, List<ushort>> extraKeys, Dictionary<string, KeyBehavior> behaviors)
+    {
+        var saved = Read();
+        saved.SteeringEnabled = enabled;
+        saved.SteeringKeyMap = keyMap;
+        saved.SteeringExtraKeys = extraKeys;
+        saved.SteeringBehaviors = behaviors;
+        Write(saved);
+    }
 
     // Creates a game with the given defaults as its one "Default"
     // sub-profile if it doesn't already exist — a no-op if it does, so this

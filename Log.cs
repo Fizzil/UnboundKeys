@@ -2,13 +2,16 @@ using System.IO;
 
 namespace UnboundKeys;
 
-// The action logger: a small log beside the settings file, used for
+// The log: a small file beside the settings file, used for
 // debugging and for building new features (a professional review's first
 // red flag: errors were swallowed without a trace). OFF unless the user
-// switches it on (Settings > Action logger; Fizzil: an app should not keep
+// switches it on (Settings > Log > Log what I do; Fizzil: an app should not keep
 // a file about what you do unless you asked it to), and every line goes
-// through Write below, so while it is off nothing at all is written,
-// errors and crashes included. %AppData%\UnboundKeys\log.txt, plain text,
+// through Write below. Errors and crashes are the exception: they are
+// written whether the switch is on or off (the 2026-11-07 review: with
+// the switch off, a crash, an unreadable settings file or a lost
+// microphone left no trace at all), and they never carry what was typed
+// or said. The switch controls the rest. %AppData%\UnboundKeys\log.txt, plain text,
 // one line per event; at 256 KB it rolls over to log.txt.old, so it can
 // never grow without bound. What goes in: starts, stops, errors, and the
 // changes made in the dashboard (a mapping's keys or mode, the profile,
@@ -64,7 +67,7 @@ public static class Log
 
     private static void Write(string level, string message)
     {
-        if (!Enabled)
+        if (!Enabled && level == "info ")
             return;
         try
         {

@@ -109,6 +109,18 @@
                  Double press tabs (see DashboardShell.BuildGestureEditor);
                  off clears the double press. The hint is Fizzil's wording,
                  long enough to wrap rather than trail off. -->
+            <!-- Steering (Fizzil, 2026-11-06): no new spoken word, so a
+                 word, button or key with this on is the steering switch
+                 (see Steering.cs) and sends nothing of its own. -->
+            <Button x:Name="SteeringButton" Click="SteeringButton_Click" Style="{StaticResource RailToggleStyle}"
+                    Height="Auto" MinHeight="48" Padding="12,6,12,6" Margin="4,0,4,0">
+                <StackPanel>
+                    <TextBlock Text="Starts and stops steering"/>
+                    <TextBlock Text="This word, button or key switches mouse steering on and off. Throttle or Brake on it go along, so one button can be steering plus throttle; any other key is not sent. Stop also stops steering; the Steering page has the rest."
+                               Style="{StaticResource InlineHintStyle}" TextWrapping="Wrap" TextTrimming="None"/>
+                </StackPanel>
+            </Button>
+
             <Button x:Name="DoublePressButton" Click="DoublePressButton_Click" Style="{StaticResource RailToggleStyle}"
                     Height="Auto" MinHeight="48" Padding="12,6,12,6" Margin="4,0,4,0" Visibility="Collapsed">
                 <StackPanel>
@@ -122,16 +134,15 @@
 
             <!-- Reset both (Fizzil): this mapping and the other way of
                  pressing the same button or key (see Gestures), shown only
-                 while Double press is on. Reset All is hidden until Reset is tapped
-                 three times fast (see ResetButton_Click) — a shortcut, not the
-                 only route: Settings has a visible one too. -->
+                 while Double press is on. Reset this mapping is one click; Reset
+                 both asks "Are you sure?" (see the constructor), and its MinWidth
+                 keeps the row from shifting under the pointer when the label
+                 changes. Reset every mapping lives in Settings (Reset profile). -->
             <StackPanel Orientation="Horizontal" Margin="8,0,0,0">
-                <Button x:Name="ResetButton" Content="Reset this mapping" Click="ResetButton_Click"
+                <Button x:Name="ResetButton" Content="Reset this mapping"
                         Style="{StaticResource SecondaryButtonStyle}" Height="36" Padding="12,0,12,0"/>
-                <Button x:Name="ResetBothButton" Content="Reset both" Click="ResetBothButton_Click" Visibility="Collapsed"
+                <Button x:Name="ResetBothButton" Content="Reset both" Visibility="Collapsed" MinWidth="120"
                         ToolTip="Resets the single press and the double press"
-                        Style="{StaticResource SecondaryButtonStyle}" Height="36" Padding="12,0,12,0" Margin="8,0,0,0"/>
-                <Button x:Name="ResetAllButton" Content="Reset every mapping" Click="ResetAllButton_Click" Visibility="Collapsed"
                         Style="{StaticResource SecondaryButtonStyle}" Height="36" Padding="12,0,12,0" Margin="8,0,0,0"/>
             </StackPanel>
 
