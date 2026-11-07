@@ -10,27 +10,27 @@ Remap mouse buttons, spoken words and an on-screen keyboard to keyboard keys, wi
   <img src="Assets/screenshots/UBK-Voice.png" width="32%" alt="The Voice page: the always-available commands and the ten spoken words as a keypad" />
 </p>
 <p float="left">
-  <img src="Assets/screenshots/UBK-Editor.png" width="32%" alt="A mouse button's editor: its keys, Tap / Repeat / Rotation / Hold, duration, Infinite, the Infinite pause, and the Double press switch at the bottom" />
-  <img src="Assets/screenshots/UBK-Settings.png" width="32%" alt="Settings: eight fold-away sections, each summarising its state while closed" />
+  <img src="Assets/screenshots/UBK-Editor.png" width="32%" alt="A mouse button's editor: its keys, Tap / Repeat / Rotation / Hold, duration, Infinite, the Infinite pause, and the Starts and stops steering and Double press switches at the bottom" />
+  <img src="Assets/screenshots/UBK-Settings.png" width="32%" alt="Settings: nine fold-away sections, each summarising its state while closed" />
   <img src="Assets/screenshots/UBK-Help.png" width="32%" alt="The Help page: the manual in one page, one fold per topic" />
 </p>
 
-<img src="Assets/screenshots/UBK-Keyboard.png" width="100%" alt="The on-screen keyboard, with word suggestions above the keys and Menu, Fade, Mini and the drag grip in its top-right corner" />
+<img src="Assets/screenshots/UBK-Keyboard.png" width="100%" alt="The on-screen keyboard, with word suggestions above the keys and Menu, Fade, Mini and the drag handle in its top-right corner" />
 <img src="Assets/screenshots/UBK-Keyboard-Mini.png" width="100%" alt="The keyboard collapsed to its Mini strip" />
 
 ## What it does
 
 - **Voice keys** — say "press one" through "press ten" to send a key. Each word can send any key, or a combo of up to six, tapped once, held down, or repeated — for a set time, or until you say it again.
-- **Mouse keys** — remap Right Click, Middle Click, Mouse 4/5 and Wheel Up/Down the same way, and each button can do two things if you switch on Double press in its editor: one mapping for a single press and one for a double press, each started and stopped by its own way of pressing. The keys on the Keyboard page have the same two. Left Click is never remapped, so you can always click.
+- **Mouse keys** — remap the Right Button, Middle Button, Mouse 4 and 5, Wheel Up and Wheel Down the same way, and each button can do two things if you switch on Double press in its editor: one mapping for a single press and one for a double press, each started and stopped by its own way of pressing. The keys on the Keyboard page have the same two. Left Click is never remapped, so you can always click.
 - **On-screen keyboard** — a full keyboard you type on with the mouse: sticky Shift/Ctrl/Alt/Win for combos, hold a key to repeat it, a strip of word suggestions above the keys (it can learn the words you use, if you switch that on), a collapsible Mini strip, and Fade and Menu keys. Its letter and number keys can be remapped too, and remapping one also catches that key on a real keyboard. Every key clicks as it is pressed; the Keyboard page can switch that off. Leave it open when you quit and it's back where it was on the next start.
 - **Profiles** — up to ten, one per game, each with its own color theme and up to ten sub-profiles for classes or loadouts, switched from the dashboard. New ones are named with the mouse; no typing needed anywhere in the app.
 - **Rotation** — a Mode that presses all of a mapping's keys in order every tick, so the game takes the first that's ready: a one-button rotation in your own priority order, with no cooldown data to maintain.
-- **Steering** — for racing games with a joystick-like mouse: the pointer is held near the middle of the screen on a rubber band, and a built-in virtual Xbox controller turns its position into steering, with Throttle and Brake as keys you map to any button or to pushing the mouse up or down. Needs the free ViGEmBus driver, installed once from the Steering page.
+- **Steering** — for racing games with a joystick-like mouse: the pointer is held near the middle of the screen on a rubber band, and a built-in Virtual Xbox controller turns its sideways position into steering. Throttle and Brake are keys you map to any button, key or word, or to moving the mouse up or down, and any mapping can be the switch that starts and stops steering. One click of Default on the Steering page makes the middle button your throttle and steering switch, and moving down your brake. Needs the free ViGEmBus driver, installed once from the Steering page.
 - **Infinite pause** — for a key that must cut into an infinite repeat: every infinite repeat pauses for a time you set while the key fires, then carries on.
 - **Built for a mouse** — everything works with left-click alone (no right-click, no scroll wheel, no keyboard), so it keeps working even when those are remapped, and the dashboard never takes focus away from your game.
-- **Safety nets** — click Stop on the rail, say "press stop", or click the on-screen keyboard's Caps twice quickly, to release anything held or repeating. "Press menu" shows or hides the dashboard and "press fade" lifts Fade, both hands-free.
-- **Runs fully offline** — speech recognition ([Vosk](https://alphacephei.com/vosk/)) and word suggestions happen entirely on your machine. Nothing is sent anywhere. The one exception is Settings → Check for updates, which asks GitHub for the newest release only when you click it.
-- **Keeps nothing you didn't ask for** — the action logger (for debugging) and the keyboard's smart predictive text, which learns the words you type, are both off until you switch them on, and its word list can be opened, edited or cleared at any time.
+- **Safety nets** — click Stop on the rail, say "press stop", or click the on-screen keyboard's Caps twice quickly, to release anything held or repeating and switch steering off. "Press menu" shows or hides the dashboard and "press fade" lifts Fade, both hands-free.
+- **Runs fully offline** — speech recognition ([Vosk](https://alphacephei.com/vosk/)) and word suggestions happen entirely on your machine. Nothing is sent anywhere. There are two exceptions, both only when you click them: Settings → Check for updates, which asks GitHub for the newest release, and the Steering page's Get the ViGEmBus driver button, shown only while the driver is missing, which opens its download page in your browser.
+- **Keeps nothing you didn't ask for** — the action logger (for debugging) and the keyboard's smart predictive text, which learns the words you type, are both off until you switch them on, and its word list can be opened, edited or cleared at any time. The one thing always kept is a line for each error or crash, in a small log file on your PC, so a fault can be found; nothing you type or say is ever written to it.
 
 See [MANUAL.md](MANUAL.md) for the full details — every command, how each setting behaves, and what the dashboard does.
 

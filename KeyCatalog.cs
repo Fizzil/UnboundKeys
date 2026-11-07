@@ -66,7 +66,8 @@ public static class KeyCatalog
     };
 
     // The virtual pad's pedals (see PadKeys): pressing one holds the pedal
-    // on the pad Steering makes, and does nothing while steering is off.
+    // on the pad Steering makes, steering on or off (a held pedal plugs the
+    // pad in on its own, see Steering.SetPadPedal).
     private static readonly Entry[] Controller =
     {
         new("Throttle", PadKeys.Throttle),
