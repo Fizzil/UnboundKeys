@@ -64,6 +64,7 @@ public partial class DashboardShell
         settingsPage.SubProfileSelected += SwitchToSubProfile;
         settingsPage.ResetAllRequested += ResetAllMappings;
         settingsPage.QuitRequested += () => QuitRequested?.Invoke();
+        settingsPage.HelpRequested += () => ShowSection(DashboardSection.Help);
         settingsPage.ResetAppRequested += () => ResetAppRequested?.Invoke();
         _pages[DashboardSection.Settings] = settingsPage;
         _pages[DashboardSection.Help] = new HelpPage();
@@ -96,6 +97,7 @@ public partial class DashboardShell
         _section = section;
         _editor = null;
         Rail.SetActive(section);
+        HelpChromeButton.Tag = section == DashboardSection.Help;
         BackButton.Visibility = Visibility.Collapsed;
         if (_pages[section] is IDashboardPage page)
         {
@@ -402,7 +404,11 @@ public partial class DashboardShell
             HorizontalAlignment = System.Windows.HorizontalAlignment.Left,
         };
         manage.SetResourceReference(StyleProperty, "SecondaryButtonStyle");
-        manage.Click += (_, _) => ShowSection(DashboardSection.Settings);
+        manage.Click += (_, _) =>
+        {
+            ShowSection(DashboardSection.Settings);
+            ((SettingsPage)_pages[DashboardSection.Settings]).ShowProfiles();
+        };
         FlyoutList.Children.Add(manage);
     }
 
@@ -448,6 +454,9 @@ public partial class DashboardShell
     }
 
     private void FlyoutDismiss_Click(object sender, MouseButtonEventArgs e) => CloseProfileFlyout();
+
+    private void Help_Click(object sender, RoutedEventArgs e) => ShowSection(DashboardSection.Help);
+
 
     private void Minimize_Click(object sender, RoutedEventArgs e) => MinimizeRequested?.Invoke();
     // Only the dashboard goes away (it hides — see DashboardWindow); an

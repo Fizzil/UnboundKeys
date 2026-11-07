@@ -54,12 +54,6 @@
                     <TextBlock Text="Settings" VerticalAlignment="Center"/>
                 </StackPanel>
             </Button>
-            <Button x:Name="HelpButton" Style="{StaticResource NavRailButtonStyle}" Click="Nav_Click">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="&#xE897;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                    <TextBlock Text="Help" VerticalAlignment="Center"/>
-                </StackPanel>
-            </Button>
         </StackPanel>
 
         <StackPanel Grid.Row="2" Margin="0,0,0,8">

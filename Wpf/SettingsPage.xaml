@@ -102,6 +102,23 @@
             </Grid>
         </local:FoldSection>
 
+        <!-- Help, findable from Settings too (Fizzil), the way Quit is: the
+             ? in the page header is the quick route, this fold the one
+             people looking through Settings will meet. -->
+        <local:FoldSection x:Name="HelpFold" Title="HELP">
+            <Grid Height="48">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="The manual in one page, one fold per topic. It is also the ? at the top right, on every page."
+                           FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" Margin="12,0,12,0"
+                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+                <Button x:Name="HelpButton" Grid.Column="1" Content="Open Help" Width="120" Height="36" FontSize="13"
+                        Margin="0,0,8,0" Style="{StaticResource SecondaryButtonStyle}"/>
+            </Grid>
+        </local:FoldSection>
+
         <local:FoldSection x:Name="AboutFold" Title="ABOUT">
             <StackPanel>
                 <TextBlock x:Name="AboutText" FontSize="12" Margin="12,0,12,8" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}"/>

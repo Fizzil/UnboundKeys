@@ -10,7 +10,7 @@
          (no wheel — a remapped wheel is swallowed by the mouse hook even
          over this window; no scrollbar — a small target that never
          matched the theme). Fills whatever window hosts it; the window
-         itself is the fixed 720×540. -->
+         itself is the fixed 720×560. -->
     <Grid x:Name="Root">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="160"/>
@@ -40,6 +40,24 @@
                     <TextBlock x:Name="PageTitle" Style="{StaticResource PageTitleStyle}"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <!-- Help lives up here, on every page, like Discord's own
+                         help icon in its channel header; it lights (Tag) while
+                         the Help page is showing. It left the rail when
+                         Steering's row pushed it off the bottom (Fizzil).
+                         Always in the accent, the switches' bright orange
+                         (Fizzil asked), the one standing exception to
+                         "accent only for active states". -->
+                    <Button x:Name="HelpChromeButton" FontSize="17" Style="{StaticResource WindowButtonStyle}" Foreground="{DynamicResource AccentBrush}" ToolTip="Help" Click="Help_Click" Margin="0,0,6,0">
+                        <!-- The glyph glows (Fizzil: a backlight, not just the
+                             theme's colour): the accent as a soft shadow with
+                             no offset, on the glyph alone so the hover fill
+                             stays flat. -->
+                        <TextBlock Text="&#xE897;" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <TextBlock.Effect>
+                                <DropShadowEffect Color="{DynamicResource AccentColor}" ShadowDepth="0" BlurRadius="12" Opacity="0.9"/>
+                            </TextBlock.Effect>
+                        </TextBlock>
+                    </Button>
                     <Button Content="&#xE921;" Style="{StaticResource WindowButtonStyle}" ToolTip="Minimize" Click="Minimize_Click"/>
                     <Button Content="&#xE8BB;" Style="{StaticResource WindowButtonStyle}" ToolTip="Hide. UnboundKeys keeps running in the tray; Quit is at the bottom of the rail." Click="Close_Click"/>
                 </StackPanel>
