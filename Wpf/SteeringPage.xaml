@@ -16,7 +16,7 @@
              profile holds the racing setup on the ordinary pages. -->
         <!-- The one-button way, ready made (Fizzil): Middle Button gets
              Throttle, Hold, Infinite and Starts and stops steering in the
-             active profile, Move down gets Brake as a one-second Hold, and
+             active profile, Move down gets Brake as a ten-second Hold, and
              the Mouse page opens on it. -->
         <TextBlock Text="Click Default for a ready-made racing setup: the middle button is your throttle and switches steering on, and pushing the mouse down brakes. You can change any of it at any time."
                    FontSize="11" TextWrapping="Wrap" Margin="12,4,12,8" Foreground="{DynamicResource TextSecondaryBrush}"/>

@@ -43,18 +43,21 @@ public partial class SteeringPage : IDashboardPage
         // sends Throttle in Hold with Infinite and starts and stops steering,
         // so one press is race on and the next is race off. Then the Mouse
         // page, where the Middle Button row shows it.
-        // Moving down brakes, as a one-second Hold, not Infinite (Fizzil):
+        // Moving down brakes, as a ten-second Hold, not Infinite (Fizzil):
         // only one infinite hold runs per source, and the pushes share the
         // mouse buttons' slot, so an infinite brake bumped the throttle off
         // on the pointer's first dip and left the middle button's hold out
         // of phase with steering (steering came on, the car did not go). A
-        // timed hold never claims that slot.
+        // timed hold never claims that slot. Ten seconds, not one: the
+        // push's release ends the hold early, so a tap brakes for a tap,
+        // and a long push brakes all the way to a stop (play-tested: one
+        // second ran out mid-push at full speed and the car kept going).
         DefaultButton.Click += (_, _) =>
         {
             MouseMap.Rebind("middle", PadKeys.Throttle);
             MouseMap.SetBehavior("middle", new KeyBehavior { Hold = true, Infinite = true, Steering = true });
             SteeringMap.Rebind("pushdown", PadKeys.Brake);
-            SteeringMap.SetBehavior("pushdown", new KeyBehavior { Hold = true, DurationSeconds = 1 });
+            SteeringMap.SetBehavior("pushdown", new KeyBehavior { Hold = true, DurationSeconds = 10 });
             Refresh();
             NavigateRequested?.Invoke(DashboardSection.Mouse);
         };
