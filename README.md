@@ -14,6 +14,9 @@ Remap mouse buttons, spoken words and an on-screen keyboard to keyboard keys, wi
   <img src="Assets/screenshots/UBK-Settings.png" width="32%" alt="Settings: nine fold-away sections, each summarising its state while closed" />
   <img src="Assets/screenshots/UBK-Help.png" width="32%" alt="The Help page: the manual in one page, one fold per topic" />
 </p>
+<p float="left">
+  <img src="Assets/screenshots/UBK-Steering.png" width="32%" alt="The Steering page with the Default setup active: the Middle Button starts and stops racing, Move down brakes, the stretch at 10 %" />
+</p>
 
 <img src="Assets/screenshots/UBK-Keyboard.png" width="100%" alt="The on-screen keyboard, with word suggestions above the keys and Menu, Fade, Mini and the drag handle in its top-right corner" />
 <img src="Assets/screenshots/UBK-Keyboard-Mini.png" width="100%" alt="The keyboard collapsed to its Mini strip" />
