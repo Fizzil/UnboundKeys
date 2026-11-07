@@ -174,7 +174,6 @@ public partial class DashboardShell
     private RemapCard NewCard(IRemapSource source, string id, bool? doublePress = null)
     {
         var card = new RemapCard(source, id, doublePress);
-        card.ResetAllRequested += ResetAllMappings;
         return card;
     }
 
@@ -309,8 +308,8 @@ public partial class DashboardShell
         ShowSection(_section);
     }
 
-    // Reached from Settings' Reset All and from a card's own triple-tap
-    // Reset All — every mapping of every kind, then the page redrawn.
+    // Reached from Settings' Reset profile — every mapping of every kind,
+    // then the page redrawn.
     private void ResetAllMappings()
     {
         KeyMap.ResetAll();

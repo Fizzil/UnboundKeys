@@ -15,15 +15,11 @@ namespace UnboundKeys.Wpf;
 // rows: the complete editor for one mapping (a spoken word, a mouse
 // button, or an on-screen key) — its keys, Mode (Tap / Repeat / Hold),
 // Duration and Infinite, per-key gaps, and Reset. Driven entirely
-// through IRemapSource, so the same control serves all three. Reset All
-// is the one thing it can't do alone: it raises ResetAllRequested and
-// lets whatever hosts it reset every mapping.
+// through IRemapSource, so the same control serves all three.
 public partial class RemapCard
 {
     private readonly IRemapSource _source;
     private readonly string _id;
-
-    internal event Action? ResetAllRequested;
 
     // The Double press switch was flipped (true = on); the host shows or
     // hides the Single press / Double press tabs.
@@ -39,8 +35,6 @@ public partial class RemapCard
     private bool _priorityOn;
     private double _prioritySeconds;
     private bool _doublePressOn;
-    private int _resetTapCount;
-    private readonly DispatcherTimer _resetTapTimer = new() { Interval = TimeSpan.FromMilliseconds(600) };
 
     // internal, not public — the generated UserControl partial class
     // itself has to stay public for the XAML loader, but nothing outside
@@ -71,11 +65,16 @@ public partial class RemapCard
             SaveBehavior();
         }
 
-        _resetTapTimer.Tick += (_, _) =>
+        // Both resets wipe a mapping with no undo, so each asks "Are you
+        // sure?" first (Fizzil), the same two-click as Quit and Reset profile.
+        ConfirmDeleteBehavior.AttachTo(ResetButton, ResetCard, "Are you sure?");
+        ConfirmDeleteBehavior.AttachTo(ResetBothButton, () =>
         {
-            _resetTapCount = 0;
-            _resetTapTimer.Stop();
-        };
+            // The other way of pressing the same button or key; its card is
+            // not on screen, a fresh one reads the reset state when picked.
+            _source.ResetToDefault(Gestures.Sibling(_id));
+            ResetCard();
+        }, "Are you sure?");
 
         RebuildKeyGroup();
         UpdateModeVisuals();
@@ -322,7 +321,10 @@ public partial class RemapCard
             var categoryButton = new Button { Content = content };
             categoryButton.SetResourceReference(StyleProperty, "CategoryNavButtonStyle");
             var keysHere = keys;
-            categoryButton.MouseEnter += (_, _) => ShowCategory(categoryButton, sample, keysHere);
+            // A click, not a hover (Fizzil): his mouse path from a category
+            // down to a key crosses the other categories and would swap the
+            // list mid-aim.
+            categoryButton.Click += (_, _) => ShowCategory(categoryButton, sample, keysHere);
             nav.Children.Add(categoryButton);
 
             // The first category is the fallback; the one holding the
@@ -544,42 +546,6 @@ public partial class RemapCard
         UpdateDurationText();
         SetElementVisible(TimingPanel, _repeatOn || _holdOn, animate: true);
         RefreshPauseRows(animate: true);
-        ResetAllButton.Visibility = Visibility.Collapsed;
-    }
-
-    // Easter egg kept from the WinForms card: three taps within 600ms
-    // reveal "Reset every mapping" next to it. Every tap resets THIS
-    // mapping immediately regardless.
-    private void ResetButton_Click(object sender, RoutedEventArgs e)
-    {
-        _resetTapCount++;
-        _resetTapTimer.Stop();
-        _resetTapTimer.Start();
-
-        ResetCard();
-
-        if (_resetTapCount == 3)
-        {
-            _resetTapCount = 0;
-            ResetAllButton.Visibility = Visibility.Visible;
-        }
-    }
-
-    // "Reset both" (Fizzil): this mapping and the other way of pressing the
-    // same button or key, in one click. The other way's card is not on
-    // screen; a fresh one reads the reset state when its segment is picked.
-    private void ResetBothButton_Click(object sender, RoutedEventArgs e)
-    {
-        _source.ResetToDefault(Gestures.Sibling(_id));
-        ResetCard();
-    }
-
-    // This card resets itself; the host (DashboardShell) resets every
-    // other mapping in response to the event.
-    private void ResetAllButton_Click(object sender, RoutedEventArgs e)
-    {
-        ResetCard();
-        ResetAllRequested?.Invoke();
     }
 
     // ---- Show/hide with animation ----
