@@ -134,12 +134,12 @@
 
             <!-- Reset both (Fizzil): this mapping and the other way of
                  pressing the same button or key (see Gestures), shown only
-                 while Double press is on. Both resets ask "Are you sure?" (see the
-                 constructor); the MinWidths keep the buttons from shifting under
-                 the pointer when the label changes. Reset every mapping lives in
-                 Settings (Reset profile). -->
+                 while Double press is on. Reset this mapping is one click; Reset
+                 both asks "Are you sure?" (see the constructor), and its MinWidth
+                 keeps the row from shifting under the pointer when the label
+                 changes. Reset every mapping lives in Settings (Reset profile). -->
             <StackPanel Orientation="Horizontal" Margin="8,0,0,0">
-                <Button x:Name="ResetButton" Content="Reset this mapping" MinWidth="160"
+                <Button x:Name="ResetButton" Content="Reset this mapping"
                         Style="{StaticResource SecondaryButtonStyle}" Height="36" Padding="12,0,12,0"/>
                 <Button x:Name="ResetBothButton" Content="Reset both" Visibility="Collapsed" MinWidth="120"
                         ToolTip="Resets the single press and the double press"

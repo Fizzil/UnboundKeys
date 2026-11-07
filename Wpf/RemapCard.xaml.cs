@@ -69,9 +69,12 @@ public partial class RemapCard
             SaveBehavior();
         }
 
-        // Both resets wipe a mapping with no undo, so each asks "Are you
-        // sure?" first (Fizzil), the same two-click as Quit and Reset profile.
-        ConfirmDeleteBehavior.AttachTo(ResetButton, ResetCard, "Are you sure?");
+        // Reset this mapping is one click (Fizzil: when quickly remapping
+        // something, tapping it once to clear the field feels good; it was
+        // briefly a two-click and went back). Reset both wipes two
+        // mappings, so it asks "Are you sure?" first, the same two-click
+        // as Quit and Reset profile.
+        ResetButton.Click += (_, _) => ResetCard();
         ConfirmDeleteBehavior.AttachTo(ResetBothButton, () =>
         {
             // The other way of pressing the same button or key; its card is
