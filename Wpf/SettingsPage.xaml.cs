@@ -81,7 +81,7 @@ public partial class SettingsPage : IDashboardPage
         ConfirmDeleteBehavior.AttachTo(ResetAppButton, () => ResetAppRequested?.Invoke(), "Are you sure?");
         ConfirmDeleteBehavior.AttachTo(QuitButton, () => QuitRequested?.Invoke(), "Are you sure?");
         HelpButton.Click += (_, _) => HelpRequested?.Invoke();
-        // The action logger is the user's choice, off unless switched on
+        // Log what I do is the user's choice, off unless switched on
         // here (Fizzil). The switch takes effect at once; the lines it
         // writes mark where a stretch of logging begins and ends.
         WriteLogToggle.Tag = Settings.LoadWriteLog();

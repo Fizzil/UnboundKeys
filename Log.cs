@@ -2,7 +2,7 @@ using System.IO;
 
 namespace UnboundKeys;
 
-// The action logger: a small log beside the settings file, used for
+// The log: a small file beside the settings file, used for
 // debugging and for building new features (a professional review's first
 // red flag: errors were swallowed without a trace). OFF unless the user
 // switches it on (Settings > Log > Log what I do; Fizzil: an app should not keep

@@ -48,7 +48,7 @@ internal static class SettingsTests
         Check(!File.Exists(_file), "reading alone writes nothing to disk");
     }
 
-    // The log is the user's choice (Settings > Action logger): off writes
+    // The log is the user's choice (Settings > Log what I do): off writes
     // no ordinary lines; errors and crashes are written either way (the
     // 2026-11-07 review: a fault with the switch off left no trace); on
     // writes everything. Left on at the end, as the damaged-file checks
