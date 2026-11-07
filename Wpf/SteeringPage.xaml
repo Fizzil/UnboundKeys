@@ -46,7 +46,7 @@
         <!-- Heading, description, then the control, the same shape as the
              sections above and below (Fizzil). -->
         <TextBlock Text="STRETCH" Style="{StaticResource SectionHeaderStyle}" Margin="0,8,0,4"/>
-        <TextBlock Text="How far the pointer can be pulled from the centre of the screen. The further you push left or right, the harder you turn; stop pushing and the pointer springs back to the centre."
+        <TextBlock Text="How far the mouse can be pulled from the centre of the screen. The further you push left or right, the harder you turn; stop pushing and the mouse springs back to the centre."
                    FontSize="11" TextWrapping="Wrap" Margin="12,0,12,4" Foreground="{DynamicResource TextSecondaryBrush}"/>
         <Grid Height="44" Margin="4,0,4,0">
             <Grid.ColumnDefinitions>
