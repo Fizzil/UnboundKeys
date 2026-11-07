@@ -47,7 +47,7 @@
                          Always in the accent, the switches' bright orange
                          (Fizzil asked), the one standing exception to
                          "accent only for active states". -->
-                    <Button x:Name="HelpChromeButton" FontSize="17" Style="{StaticResource WindowButtonStyle}" Foreground="{DynamicResource AccentBrush}" ToolTip="Help" Click="Help_Click" Margin="0,0,6,0">
+                    <Button x:Name="HelpChromeButton" FontSize="15" Style="{StaticResource WindowButtonStyle}" Foreground="{DynamicResource AccentBrush}" ToolTip="Help" Click="Help_Click" Margin="0,0,6,0">
                         <!-- The glyph glows (Fizzil: a backlight, not just the
                              theme's colour): the accent as a soft shadow with
                              no offset, on the glyph alone so the hover fill
