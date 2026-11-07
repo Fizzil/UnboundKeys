@@ -200,7 +200,7 @@ internal static class Settings
         public Dictionary<string, KeyBehavior> SteeringBehaviors { get; set; } = new();
 
         // Whether the app keeps a log (see Log). Off unless switched on in
-        // Settings > Action logger.
+        // Settings > Log what I do.
         public bool WriteLog { get; set; }
 
         // Whether the on-screen keyboard keeps the words typed on it for

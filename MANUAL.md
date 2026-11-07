@@ -113,13 +113,13 @@ A profile is a game. Each one has its own colour theme and up to ten **sub-profi
 
 ## Settings
 
-Settings has nine sections: **Theme**, **Profiles**, **Startup**, **Updates**, **Action logger**, **Reset**, **Quit**, **Help** and **About**. Each folds under its heading and, while closed, shows a one-line summary of its state; click the heading to open it.
+Settings has nine sections: **Theme**, **Profiles**, **Startup**, **Updates**, **Log**, **Reset**, **Quit**, **Help** and **About**. Each folds under its heading and, while closed, shows a one-line summary of its state; click the heading to open it.
 
 - **Theme** — Red, Green or Blue; the choice is saved with the current profile.
 - **Profiles** — as above; the heading folds the list away to save room, click it to open.
 - **Startup** — **Start with Windows** starts UnboundKeys when you sign in, through a scheduled task that runs it as administrator without the permission prompt. **Start with voice keys paused** applies to that automatic start only: the app comes up with Listening off until you flip it on. The task is refreshed each time the app starts, so it keeps pointing at the copy you last ran, updates included.
 - **Updates** — **Check for updates** asks Fizzil's GitHub for the newest release, only when you click it and confirm. If a newer version exists, the same card can download and install it: the new version unpacks into a folder beside the current one, starts, and this one quits. The download is checked against the SHA-256 fingerprint GitHub lists for it, and one that does not match is thrown away rather than installed. Profiles and mappings carry over; the old folder stays until you delete it. A shortcut you made to UnboundKeys (on the desktop, in the Start menu or pinned to the taskbar) is pointed at the newest version each time the app starts, so it keeps opening the version you last ran.
-- **Action logger** — off by default; see Saved data below. **Open log folder** shows the log file.
+- **Log** — **Log what I do**, off by default; see Saved data below. **Open log folder** shows the log file.
 - **Reset profile** — every mapping in the active profile's current sub-profile back to its default (Steering's Move up and Move down are the app's, and stay). The button asks "Are you sure?"; click it again to confirm.
 - **Reset app** — deletes everything the app keeps (every profile and mapping, the settings and their backup, the kept words, the log and the Start with Windows task) and starts the app again as a fresh install. It asks "Are you sure?" first, and it cannot be undone.
 - **Quit** — completely shuts down UnboundKeys and shuts down all key mappings (two clicks).
@@ -130,7 +130,7 @@ Settings has nine sections: **Theme**, **Profiles**, **Startup**, **Updates**, *
 
 Everything is saved to `%AppData%\UnboundKeys\settings.json` — profiles and mappings, the active profile and theme, Steering's stretch and its Move up and Move down, the dashboard's and keyboard's positions and the keyboard's size — and reloaded next launch. Each save writes a new file and swaps it in, keeping the previous one as `settings.json.bak`; if `settings.json` is ever unreadable, the backup is used instead, and the unreadable file is kept as `settings.json.unreadable`. If you switch on **Smart predictive text**, the keyboard's learned words are in `%AppData%\UnboundKeys\learned-words.txt`, until you clear the list.
 
-UnboundKeys keeps a small log, `%AppData%\UnboundKeys\log.txt`. Errors and crashes are always written there, logger on or off, so a fault can be found afterwards. The **action logger**, used for debugging and for building new features, adds the rest: it is **off** unless you switch it on in Settings → **Action logger**, and while it is on the app also notes its starts, stops and the changes you make in the dashboard (a mapping's keys or mode, the profile). Nothing you type or say is ever written there. Past 256 KB the file starts again, keeping the previous one as `log.txt.old`. If something goes wrong, switch it on, make it happen again, and that file (**Open log folder**) is the first thing to look at, or to send along.
+UnboundKeys keeps a small log, `%AppData%\UnboundKeys\log.txt`. Errors and crashes are always written there, logger on or off, so a fault can be found afterwards. **Log what I do**, in Settings → **Log**, adds the rest, for debugging and for building new features: it is **off** unless you switch it on, and while it is on the app also notes its starts, stops and the changes you make in the dashboard (a mapping's keys or mode, the profile). Nothing you type or say is ever written there. Past 256 KB the file starts again, keeping the previous one as `log.txt.old`. If something goes wrong, switch it on, make it happen again, and that file (**Open log folder**) is the first thing to look at, or to send along.
 
 ## Troubleshooting
 

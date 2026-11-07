@@ -19,7 +19,7 @@ static class Program
         if (!SingleInstance.Claim())
             return;
 
-        // The log is the user's choice (Settings > Action logger), off unless they
+        // The log is the user's choice (Settings > Log what I do), off unless they
         // switched it on. While it is on, anything that goes wrong from
         // here leaves a line in it (see Log), including the errors nothing
         // else catches.

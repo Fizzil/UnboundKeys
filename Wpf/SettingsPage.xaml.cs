@@ -85,18 +85,18 @@ public partial class SettingsPage : IDashboardPage
         // here (Fizzil). The switch takes effect at once; the lines it
         // writes mark where a stretch of logging begins and ends.
         WriteLogToggle.Tag = Settings.LoadWriteLog();
-        LoggerFold.Summary = WriteLogToggle.Tag is true ? "On" : "Off";
+        LoggerFold.Summary = WriteLogToggle.Tag is true ? "Errors and what you do" : "Errors only";
         WriteLogToggle.Click += (_, _) =>
         {
             bool on = !(WriteLogToggle.Tag is true);
             if (!on)
-                Log.Info("action logger switched off");
+                Log.Info("log what I do switched off");
             Settings.SaveWriteLog(on);
             Log.Enabled = on;
             WriteLogToggle.Tag = on;
-            LoggerFold.Summary = on ? "On" : "Off";
+            LoggerFold.Summary = on ? "Errors and what you do" : "Errors only";
             if (on)
-                Log.Info($"action logger switched on, {typeof(SettingsPage).Assembly.GetName().Version}");
+                Log.Info($"log what I do switched on, {typeof(SettingsPage).Assembly.GetName().Version}");
         };
         // The log selected in Explorer, or just its folder while there is
         // no log file yet (the log off since the start).

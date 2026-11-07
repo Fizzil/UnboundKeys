@@ -75,10 +75,10 @@ public partial class HelpPage : IDashboardPage
         AddLine("Profiles", "are games, each with a theme and up to ten sub-profiles for classes or loadouts. Switch from the chip at the bottom left: click a profile to show its sub-profiles, then a sub-profile; Manage profiles… opens them in Settings, where the on-screen name keyboard renames them (hold a key to repeat it, click Shift for a capital).");
         AddLine("Reset, in Settings", "has two buttons, each asking \"Are you sure?\" first. Reset profile puts the active profile's mappings back to default; Reset app deletes everything the app keeps and starts it again as new, and cannot be undone.");
         AddLine("Reset both, in the editor", "asks \"Are you sure?\" too, since it resets two mappings: click again to confirm. Reset this mapping is one click.");
-        AddLine("Action logger", "in Settings, off by default, is for debugging and building new features: while it is on, the app also notes its starts, stops and the changes you make here. Errors and crashes are always noted, logger on or off, so a fault can be found; nothing you type or say is ever written.");
+        AddLine("Log what I do", "in Settings, off by default: switch it on and the app also notes its starts, stops and the changes you make here, which is what finding a bug usually needs. Errors and crashes are always noted, switch on or off, so a fault can be found; nothing you type or say is ever written.");
         AddLine("Updates", "are checked only when you click Check for updates in Settings, and can be installed from there. A shortcut you made to the app is pointed at the newest version each time it starts.");
         // In bold (Fizzil): what the app keeps on the PC should be plain to see.
-        AddLine("Everything is saved in", @"%AppData%\UnboundKeys: your profiles and mappings in settings.json (with a backup beside it), the words kept by ""Smart predictive text"" in learned-words.txt if you switch that on, and log.txt: errors always, the action logger's notes if you switch that on. The full manual is in the GitHub repository.", bold: true);
+        AddLine("Everything is saved in", @"%AppData%\UnboundKeys: your profiles and mappings in settings.json (with a backup beside it), the words kept by ""Smart predictive text"" in learned-words.txt if you switch that on, and log.txt: errors always, what you do if you switch Log what I do on. The full manual is in the GitHub repository.", bold: true);
     }
 
     // Nothing on this page changes underneath it.

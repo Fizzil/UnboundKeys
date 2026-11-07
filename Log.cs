@@ -5,7 +5,7 @@ namespace UnboundKeys;
 // The action logger: a small log beside the settings file, used for
 // debugging and for building new features (a professional review's first
 // red flag: errors were swallowed without a trace). OFF unless the user
-// switches it on (Settings > Action logger; Fizzil: an app should not keep
+// switches it on (Settings > Log > Log what I do; Fizzil: an app should not keep
 // a file about what you do unless you asked it to), and every line goes
 // through Write below. Errors and crashes are the exception: they are
 // written whether the switch is on or off (the 2026-11-07 review: with
