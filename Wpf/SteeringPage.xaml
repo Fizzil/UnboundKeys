@@ -41,26 +41,25 @@
             <Button x:Name="GoKeyboardButton" Content="Keyboard" Width="150" Margin="0,0,8,0" Style="{StaticResource OutlineButtonStyle}"/>
             <Button x:Name="GoVoiceButton" Content="Voice" Width="150" Style="{StaticResource OutlineButtonStyle}"/>
         </StackPanel>
-        <TextBlock x:Name="StateText" FontSize="13" TextWrapping="Wrap" Margin="16,2,12,2" Foreground="{DynamicResource TextPrimaryBrush}"/>
-        <TextBlock Text="Holds the pointer in the centre of the screen. The further you push left or right, the harder you turn. Stop pushing and the pointer springs back to the centre."
-                   Style="{StaticResource RowHintStyle}"/>
+        <TextBlock x:Name="StateText" FontSize="13" TextWrapping="Wrap" Margin="12,2,12,2" Foreground="{DynamicResource TextPrimaryBrush}"/>
 
+        <!-- Heading, description, then the control, the same shape as the
+             sections above and below (Fizzil). -->
+        <TextBlock Text="STRETCH" Style="{StaticResource SectionHeaderStyle}" Margin="0,8,0,4"/>
+        <TextBlock Text="How far the pointer can be pulled from the centre of the screen, as a share of the way to its edge. The further you push left or right, the harder you turn; stop pushing and the pointer springs back to the centre."
+                   FontSize="11" TextWrapping="Wrap" Margin="12,0,12,4" Foreground="{DynamicResource TextSecondaryBrush}"/>
         <Grid Height="44" Margin="4,0,4,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            <TextBlock Text="Stretch" Style="{StaticResource RowLabelStyle}"/>
-            <TextBlock x:Name="StretchText" Grid.Column="1" Style="{StaticResource ValueTextStyle}"/>
-            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
+            <TextBlock x:Name="StretchText" Style="{StaticResource RowLabelStyle}"/>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
                 <Button x:Name="StretchMinusButton" Content="−5 %" Style="{StaticResource StepButtonStyle}"/>
                 <Button x:Name="StretchPlusButton" Content="+5 %" Style="{StaticResource StepButtonStyle}"/>
                 <Button x:Name="StretchResetButton" Content="Reset" Style="{StaticResource StepButtonStyle}"/>
             </StackPanel>
         </Grid>
-        <TextBlock Text="How far the pointer can be pulled from the centre."
-                   Style="{StaticResource RowHintStyle}"/>
 
         <!-- Push up and Push down: mappings pressed by pushing the pointer
              up or down the band, not by a button (see MouseCatalog.Pushes).
