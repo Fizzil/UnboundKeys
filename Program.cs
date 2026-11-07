@@ -103,9 +103,42 @@ static class Program
                 return;
             }
 
+            // On the microphone's thread while a profile switch on the UI
+            // thread may be swapping the maps: a word with no behaviour at
+            // this instant is dropped, not a crash.
+            if (!KeyMap.Behaviors.TryGetValue(word, out var behavior))
+                return;
             var keys = KeyMap.GetAllKeys(word);
-            var behavior = KeyMap.Behaviors[word];
             Task.Run(() => KeyExecutor.Execute(word, keys, behavior));
+        };
+
+        // What the spoken words hold is let go of whenever nothing can be
+        // said any more (Listening paused, the microphone lost): a mouse
+        // or keyboard hold can still be ended by pressing its button
+        // again, a spoken one cannot. The same goes for steering when a
+        // word is its switch: the band would otherwise hold the pointer
+        // with no way to say the word that frees it.
+        static void ReleaseSpokenHolds()
+        {
+            foreach (var word in KeyMap.RemappableWords)
+                KeyExecutor.ForceRelease(word);
+            if (KeyMap.RemappableWords.Any(w => KeyMap.Behaviors.TryGetValue(w, out var b) && b.Steering))
+                Steering.LetGo();
+        }
+
+        // The microphone going away (see VoiceEngine.MicrophoneLost): the
+        // engine keeps trying it every few seconds; meanwhile the tray says
+        // so, and the log gets the reason.
+        voice.MicrophoneLost += ex =>
+        {
+            Log.Error(ex == null ? "microphone stopped (no reason given)" : $"microphone stopped: {ex.GetType().Name}: {ex.Message}");
+            Task.Run(ReleaseSpokenHolds);
+            app.Dispatcher.InvokeAsync(() => tray.SetMicrophoneLost(true));
+        };
+        voice.MicrophoneBack += () =>
+        {
+            Log.Info("microphone back");
+            app.Dispatcher.InvokeAsync(() => tray.SetMicrophoneLost(false));
         };
 
         // Runs a mouse button's or a Keyboard-page key's mapping, after
@@ -188,8 +221,7 @@ static class Program
             if (ListeningMode.IsPaused)
             {
                 voice.Pause();
-                foreach (var word in KeyMap.RemappableWords)
-                    KeyExecutor.ForceRelease(word);
+                ReleaseSpokenHolds();
             }
             else
             {

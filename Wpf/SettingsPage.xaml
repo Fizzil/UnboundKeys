@@ -43,7 +43,7 @@
         <local:FoldSection x:Name="LoggerFold" Title="ACTION LOGGER">
             <StackPanel>
                 <Button x:Name="WriteLogToggle" Content="Action logger" Style="{StaticResource RailToggleStyle}" Margin="4,0,4,0"/>
-                <TextBlock Text="Off by default. Used for debugging and for building new features: while it is on, the app notes its starts, errors and the changes you make in this dashboard (a mapping's keys or mode, the profile) in a text file on this PC. While it is off, nothing is written."
+                <TextBlock Text="Off by default. Used for debugging and for building new features: while it is on, the app notes its starts, errors and the changes you make in this dashboard (a mapping's keys or mode, the profile) in a text file on this PC. While it is off, only errors are written, so a fault can still be found. Nothing you type or say is ever written."
                            FontSize="11" TextWrapping="Wrap" Margin="16,0,12,4" Foreground="{DynamicResource TextSecondaryBrush}"/>
                 <Grid Height="44" Margin="4,0,4,4">
                     <Grid.ColumnDefinitions>

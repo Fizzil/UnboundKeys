@@ -238,6 +238,12 @@ internal static class Settings
             if (saved != null)
                 return saved;
             Log.Error("settings.json could not be read; trying settings.json.bak");
+            // The unreadable file is kept as settings.json.unreadable: the
+            // next save would otherwise make it the backup (see Write) and
+            // the last good file would be gone with it, and the broken one
+            // is what explains what happened.
+            try { File.Copy(FilePath, FilePath + ".unreadable", overwrite: true); }
+            catch (Exception ex) { Log.Error("keeping the unreadable settings.json", ex); }
             saved = ReadFrom(BackupPath);
             if (saved != null)
                 return saved;

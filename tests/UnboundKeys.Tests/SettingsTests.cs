@@ -48,9 +48,11 @@ internal static class SettingsTests
         Check(!File.Exists(_file), "reading alone writes nothing to disk");
     }
 
-    // The log is the user's choice (Settings > Action logger): off writes nothing
-    // at all, errors and crashes included; on writes. Left on at the end,
-    // as the damaged-file checks further down read the log.
+    // The log is the user's choice (Settings > Action logger): off writes
+    // no ordinary lines; errors and crashes are written either way (the
+    // 2026-11-07 review: a fault with the switch off left no trace); on
+    // writes everything. Left on at the end, as the damaged-file checks
+    // further down read the log.
     private static void LogSwitch()
     {
         Settings.SaveWriteLog(true);
@@ -61,10 +63,12 @@ internal static class SettingsTests
         Log.Enabled = false;
         long before = File.Exists(_log) ? new FileInfo(_log).Length : 0;
         Log.Info("a line while off");
+        long afterInfo = File.Exists(_log) ? new FileInfo(_log).Length : 0;
+        Check(afterInfo == before, "switched off, an ordinary line is not written");
         Log.Error("an error while off");
         Log.Crash("a crash while off", new InvalidOperationException("test"));
-        long after = File.Exists(_log) ? new FileInfo(_log).Length : 0;
-        Check(after == before, "switched off, nothing is written, errors and crashes included");
+        string text = File.Exists(_log) ? File.ReadAllText(_log) : "";
+        Check(text.Contains("an error while off") && text.Contains("a crash while off"), "but an error and a crash are, so a fault leaves a trace");
 
         Log.Enabled = true;
         Log.Info("a line while on");
