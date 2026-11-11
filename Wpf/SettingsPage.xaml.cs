@@ -125,7 +125,6 @@ public partial class SettingsPage : IDashboardPage
         UpdatesFold.Summary = "Only if you want it";
         ResetFold.Summary = "Two clicks to confirm";
         QuitFold.Summary = "Completely shut down UnboundKeys";
-        HelpFold.Summary = "The manual, one fold per topic";
         StartWithWindowsToggle.Click += (_, _) => ToggleStartWithWindows();
         AutoStartPausedToggle.Click += (_, _) =>
         {

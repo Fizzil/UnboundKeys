@@ -262,6 +262,25 @@ internal static class NativeInput
     [DllImport("user32.dll")]
     private static extern short GetAsyncKeyState(int vKey);
 
+    [DllImport("user32.dll")]
+    private static extern IntPtr WindowFromPoint(POINT point);
+
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(IntPtr window, out uint processId);
+
+    // Whether the window under a screen pixel (the hook's own coordinates)
+    // is one of UnboundKeys' own: the dashboard, the on-screen keyboard,
+    // the overlay icon. A right-click there is the window's (see
+    // MouseInputWatcher), even with the right button mapped.
+    public static bool IsOwnWindowAt(int x, int y)
+    {
+        var window = WindowFromPoint(new POINT { x = x, y = y });
+        if (window == IntPtr.Zero)
+            return false;
+        GetWindowThreadProcessId(window, out uint processId);
+        return processId == (uint)Environment.ProcessId;
+    }
+
     // Whether the left mouse button is down right now, from Windows's own
     // record: Steering's band lets the pointer go while it is (the
     // TetraMouse's left click-and-hold), so there is always a way to drag
