@@ -26,6 +26,7 @@ public sealed class MouseInputWatcher : IDisposable
     public event Action<string>? ButtonPressed;
 
     private readonly PressGestures _gestures;
+    private readonly OwnWindowClicks _ownClicks = new();
 
     public MouseInputWatcher()
     {
@@ -104,6 +105,15 @@ public sealed class MouseInputWatcher : IDisposable
             return _hook.CallNext(nCode, wParam, lParam);
         }
 
+        // A right-click over one of UnboundKeys' own windows is the
+        // window's (Fizzil, 2026-11-11: right-click is Back in the
+        // dashboard), even with the right button mapped, and its up goes
+        // wherever its down went (see OwnWindowClicks).
+        if (msg == WM_RBUTTONDOWN && _ownClicks.Down(NativeInput.IsOwnWindowAt(data.pt.x, data.pt.y)))
+            return _hook.CallNext(nCode, wParam, lParam);
+        if (msg == WM_RBUTTONUP && _ownClicks.Up())
+            return _hook.CallNext(nCode, wParam, lParam);
+
         short highWord = (short)(data.mouseData >> 16);
 
         string? downId = msg switch
@@ -150,5 +160,28 @@ public sealed class MouseInputWatcher : IDisposable
     {
         _gestures.Dispose();
         _hook.Dispose();
+    }
+}
+
+// Keeps a right-click's two halves together (see the hook above): told
+// whether a button-down is over one of UnboundKeys' own windows, it says
+// whether the down goes to that window, and then whether the matching up
+// does: wherever the down went, even if the pointer has moved off the
+// window since, so nothing ever sees half a click.
+public sealed class OwnWindowClicks
+{
+    private bool _downWentToOwnWindow;
+
+    public bool Down(bool overOwnWindow)
+    {
+        _downWentToOwnWindow = overOwnWindow;
+        return overOwnWindow;
+    }
+
+    public bool Up()
+    {
+        bool toOwnWindow = _downWentToOwnWindow;
+        _downWentToOwnWindow = false;
+        return toOwnWindow;
     }
 }

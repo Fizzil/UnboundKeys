@@ -14,7 +14,8 @@ namespace UnboundKeys.Wpf;
 // instead of a floating popup. Navigation is deliberately one level deep
 // — a section's list page, or the editor for one mapping on top of it —
 // so it's three methods (ShowSection / OpenEditor / CloseEditor), not a
-// navigation stack. Positioning next to the overlay icon is still the
+// navigation stack. Help adds one remembered place, where it was opened
+// from, for its ‹ Back (see DashboardBack). Positioning next to the overlay icon is still the
 // overlay's job (Stage C); this control just fills its window.
 public partial class DashboardShell
 {
@@ -27,6 +28,9 @@ public partial class DashboardShell
     private readonly KeyboardPage _keyboardPage;
     private DashboardSection _section = DashboardSection.Mouse;
     private FrameworkElement? _editor;
+    // The open editor as a place to come back to (see DashboardBack).
+    private DashboardPlace? _editorPlace;
+    private readonly DashboardBack _back = new();
     private VirtualKeyboardWindow? _keyboard;
 
     public event Action? MinimizeRequested;
@@ -64,7 +68,7 @@ public partial class DashboardShell
         settingsPage.SubProfileSelected += SwitchToSubProfile;
         settingsPage.ResetAllRequested += ResetAllMappings;
         settingsPage.QuitRequested += () => QuitRequested?.Invoke();
-        settingsPage.HelpRequested += () => ShowSection(DashboardSection.Help);
+        settingsPage.HelpRequested += OpenHelp;
         settingsPage.ResetAppRequested += () => ResetAppRequested?.Invoke();
         _pages[DashboardSection.Settings] = settingsPage;
         _pages[DashboardSection.Help] = new HelpPage();
@@ -96,9 +100,14 @@ public partial class DashboardShell
         CloseProfileFlyout();
         _section = section;
         _editor = null;
+        _editorPlace = null;
+        _back.Shown(section);
         Rail.SetActive(section);
         HelpChromeButton.Tag = section == DashboardSection.Help;
-        BackButton.Visibility = Visibility.Collapsed;
+        // ‹ Back shows on Help when there is somewhere to go back to.
+        BackButton.Visibility = section == DashboardSection.Help && _back.BeforeHelp != null
+            ? Visibility.Visible
+            : Visibility.Collapsed;
         if (_pages[section] is IDashboardPage page)
         {
             page.Refresh();
@@ -175,6 +184,7 @@ public partial class DashboardShell
         // press / Double press.
         bool twoWays = source is MouseMapSource or VirtualKeyMapSource;
         _editor = twoWays ? BuildGestureEditor(source, id, title) : NewCard(source, id);
+        _editorPlace = new DashboardPlace(_section, source, id, title);
         BackButton.Visibility = Visibility.Visible;
         PageTitle.Text = title;
         PageHost.Content = _editor;
@@ -263,7 +273,47 @@ public partial class DashboardShell
         ShowSection(_section);
     }
 
-    private void BackButton_Click(object sender, RoutedEventArgs e) => CloseEditor();
+    private void BackButton_Click(object sender, RoutedEventArgs e) => GoBack();
+
+    // Help, remembering where it was opened from (see DashboardBack): the
+    // ? at the top right and Help in Settings.
+    private void OpenHelp()
+    {
+        _back.HelpOpened(_editor != null && _editorPlace != null ? _editorPlace : new DashboardPlace(_section));
+        ShowSection(DashboardSection.Help);
+    }
+
+    // Back out of an editor to its page, or out of Help to where it was
+    // opened from (see DashboardBack); nothing anywhere else.
+    private void GoBack()
+    {
+        switch (_back.Next(_editor != null, _section))
+        {
+            case DashboardBack.Step.CloseEditor:
+                CloseEditor();
+                break;
+            case DashboardBack.Step.LeaveHelp:
+                var to = _back.BeforeHelp!;
+                ShowSection(to.Section);
+                if (to.Source != null && to.Id != null)
+                    OpenEditor(to.Source, to.Id, to.Title ?? "");
+                break;
+        }
+    }
+
+    // Right-click anywhere is Back (Fizzil, 2026-11-11): out of an editor,
+    // or out of Help, the same as the "‹ Back" button, which stays for the
+    // left button. On a list page it does nothing. It reaches here even
+    // with the right button mapped: over UnboundKeys' own windows the
+    // mouse hook lets a right-click through (see MouseInputWatcher).
+    protected override void OnPreviewMouseRightButtonUp(MouseButtonEventArgs e)
+    {
+        base.OnPreviewMouseRightButtonUp(e);
+        if (_back.Next(_editor != null, _section) == DashboardBack.Step.Nothing)
+            return;
+        GoBack();
+        e.Handled = true;
+    }
 
     // Same KeyMap → MouseMap → VirtualKeyMap → ThemeMode order as
     // DashboardForm.SwitchToProfile (WinForms): KeyMap's own SwitchProfile
@@ -454,7 +504,15 @@ public partial class DashboardShell
 
     private void FlyoutDismiss_Click(object sender, MouseButtonEventArgs e) => CloseProfileFlyout();
 
-    private void Help_Click(object sender, RoutedEventArgs e) => ShowSection(DashboardSection.Help);
+    // The ? toggles (Fizzil): Help, then clicked again, back to where you
+    // were.
+    private void Help_Click(object sender, RoutedEventArgs e)
+    {
+        if (_section == DashboardSection.Help && _editor == null)
+            GoBack();
+        else
+            OpenHelp();
+    }
 
 
     private void Minimize_Click(object sender, RoutedEventArgs e) => MinimizeRequested?.Invoke();

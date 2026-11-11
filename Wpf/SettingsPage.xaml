@@ -106,21 +106,27 @@
         </local:FoldSection>
 
         <!-- Help, findable from Settings too (Fizzil), the way Quit is: the
-             ? in the page header is the quick route, this fold the one
-             people looking through Settings will meet. -->
-        <local:FoldSection x:Name="HelpFold" Title="HELP">
-            <Grid Height="48">
+             ? in the page header is the quick route, this the one people
+             looking through Settings will meet. One click opens the Help
+             page (Fizzil: a button, not a fold to open first); it looks
+             like a fold's header so the list reads the same, with an arrow
+             that points off to the page. -->
+        <Button x:Name="HelpButton" Style="{StaticResource DisclosureHeaderStyle}" Margin="0,10,0,0"
+                AutomationProperties.Name="Help">
+            <Grid>
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="The manual in one page, one fold per topic. It is also the ? at the top right, on every page."
-                           FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" Margin="12,0,12,0"
+                <TextBlock Text="HELP" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="1" Text="Opens the manual, also the ? at the top right" FontSize="12" FontWeight="Normal"
+                           Margin="12,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                            Foreground="{DynamicResource TextSecondaryBrush}"/>
-                <Button x:Name="HelpButton" Grid.Column="1" Content="Open Help" Width="120" Height="36" FontSize="13"
-                        Margin="0,0,8,0" Style="{StaticResource SecondaryButtonStyle}"/>
+                <TextBlock Grid.Column="2" Text="&#xE72A;" FontFamily="Segoe MDL2 Assets" FontSize="12"
+                           VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
             </Grid>
-        </local:FoldSection>
+        </Button>
 
         <local:FoldSection x:Name="AboutFold" Title="ABOUT">
             <StackPanel>

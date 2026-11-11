@@ -261,8 +261,8 @@ if (Want "Editor") {
 if (Want "Settings")      { Invoke-Button $dash "Settings"; Save-Window $dash "UBK-Settings.png" }
 if (Want "Help") {
   # Help left the rail (4.12.0): it is the ? in the page header, which has
-  # no automation name yet, so go through Settings > HELP > Open Help. The
-  # fold's header is a button around a text block named HELP.
+  # no automation name yet, so go through Settings, where HELP is one
+  # button named "Help" since 4.12.1 (before: a fold, HELP > Open Help).
   Invoke-Button $dash "Settings"
   if ($null -ne (Find-Button $dash "Help")) {
     Invoke-Button $dash "Help"

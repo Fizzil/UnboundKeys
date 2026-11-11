@@ -9,11 +9,11 @@ Everything here works with the left mouse button alone: no right-clicks, no scro
 The dashboard is a fixed-size window with five pages down its left side — **Mouse**, **Keyboard**, **Voice**, **Steering** and **Settings** — and, in the bottom-left corner, the current **profile**, a **Listening** switch, a **Fade** switch, **Stop** and **Quit**. The Mouse page starts with a short "start here" card until you click Got it.
 
 - Drag it by its top strip (the app's name, or the page title). It remembers where you leave it.
-- At the top right of every page: the **?**, glowing in the accent colour, opens **Help**; the **—** and **✕** beside it minimize and close the dashboard. Closing only hides it: UnboundKeys keeps running in the system tray (the skull icon by the clock). Click that icon, press **Menu** on the on-screen keyboard, double-tap Caps Lock on a real keyboard, or say **"press menu"**, to bring it back. If Windows has tucked the icon behind the little **^** arrow, drag it out onto the taskbar once. The first time you close it, the tray icon says so.
+- At the top right of every page: the **?**, glowing in the accent colour, opens **Help**, and clicked again takes you back to where you were; the **—** and **✕** beside it minimize and close the dashboard. Closing only hides it: UnboundKeys keeps running in the system tray (the skull icon by the clock). Click that icon, press **Menu** on the on-screen keyboard, double-tap Caps Lock on a real keyboard, or say **"press menu"**, to bring it back. If Windows has tucked the icon behind the little **^** arrow, drag it out onto the taskbar once. The first time you close it, the tray icon says so.
 - **Quit** is the last row of the rail: click it once to arm it, then again within four seconds. (It's in Settings too.)
 - **Stop**, above Quit, lets go of every held or repeating key with one click.
 - It never takes keyboard focus, so a game underneath keeps receiving input while you click around in it.
-- **Help** is this manual in one page, one fold per topic: the voice commands, the modes, steering, the safety nets and the on-screen keyboard tricks. Open it with the **?**, or from Settings → **Help** → **Open Help**.
+- **Help** is this manual in one page, one fold per topic: the voice commands, the modes, steering, the safety nets and the on-screen keyboard tricks. Open it with the **?**, or with **Help** in Settings. To leave it, click **‹ Back**, the **?** again, or right-click anywhere: each takes you back to where you opened it, the page or the editor.
 
 ## Voice commands
 
@@ -55,7 +55,7 @@ For racing games, with a mouse that is really a joystick (a lip- or chin-operate
 
 ## Editing a mapping
 
-Clicking a mouse button, a spoken word or a keyboard key opens its editor page (**‹ Back** returns to the list).
+Clicking a mouse button, a spoken word or a keyboard key opens its editor page (**‹ Back** returns to the list, and so does a right-click anywhere in the dashboard, which also leaves Help; over UnboundKeys' own windows a right-click is always theirs, even in a profile that maps the right button).
 
 - **Keys** — Key 1 is what it sends. **+ Add key** adds more, up to six in all; the **✕** beside an extra key removes it (click it once to arm it, then again). Clicking a key's value opens a picker: click a category on the left, then a key on the right — hover near the top or bottom edge of a long list to scroll it.
 - **Mode** — **Tap** presses the keys together, once (the default). **Repeat** presses them one at a time, again and again. **Rotation** presses all of them in priority order every tick, so the game takes the first that's ready (see below). **Hold** keeps them pressed, repeating like a key held on a real keyboard.
@@ -113,7 +113,7 @@ A profile is a game. Each one has its own colour theme and up to ten **sub-profi
 
 ## Settings
 
-Settings has nine sections: **Theme**, **Profiles**, **Startup**, **Updates**, **Log**, **Reset**, **Quit**, **Help** and **About**. Each folds under its heading and, while closed, shows a one-line summary of its state; click the heading to open it.
+Settings has nine sections: **Theme**, **Profiles**, **Startup**, **Updates**, **Log**, **Reset**, **Quit**, **Help** and **About**. Each but Help folds under its heading and, while closed, shows a one-line summary of its state; click the heading to open it. Help is one button that opens the Help page.
 
 - **Theme** — Red, Green or Blue; the choice is saved with the current profile.
 - **Profiles** — as above; the heading folds the list away to save room, click it to open.
@@ -123,7 +123,7 @@ Settings has nine sections: **Theme**, **Profiles**, **Startup**, **Updates**, *
 - **Reset profile** — every mapping in the active profile's current sub-profile back to its default (Steering's Move up and Move down are the app's, and stay). The button asks "Are you sure?"; click it again to confirm.
 - **Reset app** — deletes everything the app keeps (every profile and mapping, the settings and their backup, the kept words, the log and the Start with Windows task) and starts the app again as a fresh install. It asks "Are you sure?" first, and it cannot be undone.
 - **Quit** — completely shuts down UnboundKeys and shuts down all key mappings (two clicks).
-- **Help** — **Open Help** opens the Help page, the same as the **?** at the top right.
+- **Help** — one click opens the Help page, the same as the **?** at the top right.
 - **About** — the version, and the credit for the word suggestions' list.
 
 ## Saved data
