@@ -11,8 +11,8 @@ Remap mouse buttons, spoken words and an on-screen keyboard to keyboard keys, wi
 </p>
 <p float="left">
   <img src="Assets/screenshots/UBK-Editor.png" width="32%" alt="A mouse button's editor: its keys, Tap / Repeat / Rotation / Hold, duration, Infinite, the Infinite pause, and the Starts and stops steering and Double press switches at the bottom" />
-  <img src="Assets/screenshots/UBK-Settings.png" width="32%" alt="Settings: nine fold-away sections, each summarising its state while closed" />
-  <img src="Assets/screenshots/UBK-Help.png" width="32%" alt="The Help page: the manual in one page, one fold per topic" />
+  <img src="Assets/screenshots/UBK-Settings.png" width="32%" alt="Settings: fold-away sections, each summarising its state while closed, and a one-click Help" />
+  <img src="Assets/screenshots/UBK-Help.png" width="32%" alt="The Help page: the manual in one page, one fold per topic, with Back to where you opened it" />
 </p>
 <p float="left">
   <img src="Assets/screenshots/UBK-Steering.png" width="32%" alt="The Steering page with the Default setup active: the Middle Button starts and stops racing, Move down brakes, the stretch at 10 %" />
