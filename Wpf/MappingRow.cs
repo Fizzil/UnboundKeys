@@ -156,7 +156,7 @@ internal sealed class MappingRow : Grid
     // (Fizzil found "Ctrl" alone misleading).
     public static string ValueOf(IRemapSource source, string id)
     {
-        if (BehaviorOf(source, id).Steering)
+        if (BehaviorOf(source, id).Steering && Features.SteeringEnabled)
             return "Steering";
         string primary = PrimaryOf(source, id);
         if (!source.ExtraWords.TryGetValue(id, out var extras) || extras.Count == 0)
@@ -167,7 +167,7 @@ internal sealed class MappingRow : Grid
     // The main key alone, for the drawn key cap on the Voice page.
     public static string PrimaryOf(IRemapSource source, string id)
     {
-        if (BehaviorOf(source, id).Steering)
+        if (BehaviorOf(source, id).Steering && Features.SteeringEnabled)
             return "Steering";
         string full = source.KeyLabelFor(id);
         int i = full.IndexOf(": ", StringComparison.Ordinal);

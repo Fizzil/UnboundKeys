@@ -82,6 +82,8 @@ public static class KeyCatalog
         new("Escape", 0x1B),
     };
 
+    public const string ControllerCategory = "Controller";
+
     public static readonly (string Category, Entry[] Keys)[] Groups =
     {
         ("Letters", Letters()),
@@ -90,7 +92,7 @@ public static class KeyCatalog
         ("Navigation", Navigation),
         ("Modifiers", Modifiers),
         ("Mouse", MouseButtons),
-        ("Controller", Controller),
+        (ControllerCategory, Controller),
         ("Other", Other),
     };
 

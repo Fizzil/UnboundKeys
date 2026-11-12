@@ -57,6 +57,13 @@ public partial class NavRail
             // Help off the bottom of the fixed-height window (Fizzil).
         };
 
+        // Steering's row is there only while the feature is switched on
+        // (Settings > Features).
+        void ShowFeatures() =>
+            SteeringButton.Visibility = Features.SteeringEnabled ? Visibility.Visible : Visibility.Collapsed;
+        Features.Changed += () => Dispatcher.Invoke(ShowFeatures);
+        ShowFeatures();
+
         var version = typeof(NavRail).Assembly.GetName().Version;
         VersionText.Text = version == null ? "" : $"v{version.Major}.{version.Minor}.{version.Build}";
     }
