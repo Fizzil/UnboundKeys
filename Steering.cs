@@ -60,13 +60,13 @@ public static class Steering
     private static bool _padThrottle;
     private static bool _padBrake;
 
-    // The window in front when steering came on (the game), or zero while
+    // The window in front when steering came on (the game), or none while
     // that was the dashboard and the game has not been clicked yet. The
     // band holds only while that window is in front: the window changing
     // switches steering off, the same rule the safety nets apply to held
     // keys, so losing the game never leaves the pointer trapped (Fizzil
     // could not click anything until the browser was closed).
-    private static IntPtr _gameWindow;
+    private static WindowId _gameWindow;
 
     public static bool IsOn { get; private set; }
 
@@ -194,7 +194,7 @@ public static class Steering
                 }
                 else
                     newPad?.Dispose();
-                _gameWindow = Suspended?.Invoke() == true ? IntPtr.Zero : NativeInput.GetFocusedWindow();
+                _gameWindow = Suspended?.Invoke() == true ? WindowId.None : ActiveWindow.Current;
             }
             else
             {
@@ -301,8 +301,8 @@ public static class Steering
         // The game no longer in front: steering is over (see
         // _gameWindow). Its first time in front, after a start from the
         // dashboard, is remembered instead.
-        var front = NativeInput.GetFocusedWindow();
-        if (_gameWindow == IntPtr.Zero)
+        var front = ActiveWindow.Current;
+        if (_gameWindow == WindowId.None)
             _gameWindow = front;
         else if (front != _gameWindow)
         {

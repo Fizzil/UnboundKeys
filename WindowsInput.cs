@@ -1,7 +1,8 @@
 namespace UnboundKeys;
 
-// Windows' side of the two plug-in points (see KeyOutput.cs, Pointer.cs):
-// both pass straight to NativeInput, where the SendInput calls are.
+// Windows' side of the plug-in points (see KeyOutput.cs, Pointer.cs and
+// ActiveWindow.cs): each passes straight to NativeInput, where the calls
+// into Windows are.
 
 internal sealed class WindowsKeySender : IKeySender
 {
@@ -15,4 +16,11 @@ internal sealed class WindowsPointer : IPointer
     public void MoveTo(int x, int y) => NativeInput.MovePointerTo(x, y);
     public (int Left, int Top, int Width, int Height) ScreenAt(int x, int y) => NativeInput.MonitorBoundsAt(x, y);
     public bool LeftButtonDown => NativeInput.IsLeftButtonDown();
+}
+
+// A WindowId on Windows is the window's handle.
+internal sealed class WindowsActiveWindow : IActiveWindow
+{
+    public WindowId Current => new((long)NativeInput.GetFocusedWindow());
+    public string TitleOf(WindowId window) => NativeInput.GetWindowTitle((IntPtr)window.Value);
 }

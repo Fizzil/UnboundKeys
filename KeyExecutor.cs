@@ -82,11 +82,11 @@ internal static class KeyExecutor
     {
         public string? HoldWord;
         public IReadOnlyList<(ushort Vk, bool Extended)>? HoldKeys;
-        public IntPtr? HoldWindow;
+        public WindowId? HoldWindow;
         public string? HoldWindowTitle;
 
         public string? RepeatWord;
-        public IntPtr? RepeatWindow;
+        public WindowId? RepeatWindow;
         public string? RepeatWindowTitle;
     }
 
@@ -588,8 +588,8 @@ internal static class KeyExecutor
                 // Claim this mode's slot, bumping whoever held it before —
                 // their own KeyUp (hold) or loop exit (repeat) happens below,
                 // outside the lock.
-                var focusedWindow = NativeInput.GetFocusedWindow();
-                var focusedTitle = NativeInput.GetWindowTitle(focusedWindow);
+                var focusedWindow = ActiveWindow.Current;
+                var focusedTitle = ActiveWindow.TitleOf(focusedWindow);
 
                 if (repeatMode)
                 {
@@ -753,7 +753,7 @@ internal static class KeyExecutor
 
     private static void CheckFocus(object? state)
     {
-        var current = NativeInput.GetFocusedWindow();
+        var current = ActiveWindow.Current;
         string? currentTitle = null; // fetched lazily, only if actually needed below
         var holdReleases = new List<IReadOnlyList<(ushort Vk, bool Extended)>>();
 
@@ -763,7 +763,7 @@ internal static class KeyExecutor
             {
                 if (s.HoldWord != null && s.HoldWindow.HasValue)
                 {
-                    currentTitle ??= NativeInput.GetWindowTitle(current);
+                    currentTitle ??= ActiveWindow.TitleOf(current);
                     bool windowChanged = s.HoldWindow.Value != current;
                     bool titleChanged = !windowChanged && s.HoldWindowTitle != currentTitle;
                     bool ownSideEffect = titleChanged && LooksLikeOwnSideEffect(s.HoldWindowTitle, currentTitle);
@@ -790,7 +790,7 @@ internal static class KeyExecutor
 
                 if (s.RepeatWord != null && s.RepeatWindow.HasValue)
                 {
-                    currentTitle ??= NativeInput.GetWindowTitle(current);
+                    currentTitle ??= ActiveWindow.TitleOf(current);
                     bool windowChanged = s.RepeatWindow.Value != current;
                     bool titleChanged = !windowChanged && s.RepeatWindowTitle != currentTitle;
                     bool ownSideEffect = titleChanged && LooksLikeOwnSideEffect(s.RepeatWindowTitle, currentTitle);

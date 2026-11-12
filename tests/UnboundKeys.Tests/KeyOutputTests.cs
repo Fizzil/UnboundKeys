@@ -15,7 +15,7 @@ internal static class KeyOutputTests
     private const ushort MiddleClick = 0x04;
 
     // Notes every down and up, and which keys are down by its own count.
-    private sealed class RecordingSender : IKeySender
+    internal sealed class RecordingSender : IKeySender
     {
         private readonly object _gate = new();
         private readonly HashSet<ushort> _down = new();

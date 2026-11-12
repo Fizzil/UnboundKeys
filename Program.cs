@@ -77,8 +77,8 @@ static class Program
         // Steering (see Steering.cs) keeps quiet while the dashboard is the
         // window in front, so its own switch can be reached without
         // steering into it. The window has its handle from its constructor.
-        var dashboardHandle = new System.Windows.Interop.WindowInteropHelper(dashboard).Handle;
-        Steering.Suspended = () => NativeInput.GetFocusedWindow() == dashboardHandle;
+        var dashboardWindow = new WindowId((long)new System.Windows.Interop.WindowInteropHelper(dashboard).Handle);
+        Steering.Suspended = () => ActiveWindow.Current == dashboardWindow;
 
         voice.CommandRecognized += word =>
         {
