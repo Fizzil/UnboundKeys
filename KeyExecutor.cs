@@ -124,20 +124,20 @@ internal static class KeyExecutor
     private static void PressAllDown(IReadOnlyList<(ushort Vk, bool Extended)> keys)
     {
         foreach (var key in keys)
-            NativeInput.KeyDown(key.Vk, key.Extended);
+            KeyOutput.KeyDown(key.Vk, key.Extended);
     }
 
     private static void ReleaseAllUp(IReadOnlyList<(ushort Vk, bool Extended)> keys)
     {
         foreach (var key in keys)
-            NativeInput.KeyUp(key.Vk, key.Extended);
+            KeyOutput.KeyUp(key.Vk, key.Extended);
     }
 
     // The key a Hold repeats while it lasts: the last one pressed, as on a
     // real keyboard, where Ctrl stays down and X is what repeats. A mouse
     // button never repeats (a real one doesn't either), so null for that.
     private static (ushort Vk, bool Extended)? RepeatingKey(IReadOnlyList<(ushort Vk, bool Extended)> keys) =>
-        keys.Count > 0 && !NativeInput.IsMouseButtonVk(keys[^1].Vk) ? keys[^1] : null;
+        keys.Count > 0 && !KeyCatalog.IsMouseButton(keys[^1].Vk) ? keys[^1] : null;
 
     // Repeat cycles through a word's keys one at a time instead of firing
     // them together — Key 1, then Key 2, then Key 3, then back to Key 1, for
@@ -147,8 +147,8 @@ internal static class KeyExecutor
     private static void TapKeySequentially(IReadOnlyList<(ushort Vk, bool Extended)> keys, int index)
     {
         var key = keys[index % keys.Count];
-        NativeInput.KeyDown(key.Vk, key.Extended);
-        NativeInput.KeyUp(key.Vk, key.Extended);
+        KeyOutput.KeyDown(key.Vk, key.Extended);
+        KeyOutput.KeyUp(key.Vk, key.Extended);
     }
 
     // Rotation (see KeyBehavior.Rotation): every key, in order, a few
@@ -370,22 +370,30 @@ internal static class KeyExecutor
             {
                 var end = DateTime.UtcNow.AddSeconds(behavior.DurationSeconds);
                 var repeating = RepeatingKey(keys);
-                PressAllDown(keys);
-                // Sleeps never run past the end, so the hold still lets go
-                // on time; the repeats (see HoldRepeatDelayMs) fill it.
-                int nextRepeatMs = HoldRepeatDelayMs;
-                while (!token.IsCancellationRequested)
+                // The keys go up again whatever ends the run, an error
+                // included, so a timed hold can never leave them down.
+                try
                 {
-                    int leftMs = (int)(end - DateTime.UtcNow).TotalMilliseconds;
-                    if (leftMs <= 0)
-                        break;
-                    InterruptibleSleep(repeating == null ? leftMs : Math.Min(nextRepeatMs, leftMs), token);
-                    if (repeating == null || token.IsCancellationRequested || DateTime.UtcNow >= end)
-                        break;
-                    NativeInput.KeyDown(repeating.Value.Vk, repeating.Value.Extended);
-                    nextRepeatMs = RepeatIntervalMs;
+                    PressAllDown(keys);
+                    // Sleeps never run past the end, so the hold still lets go
+                    // on time; the repeats (see HoldRepeatDelayMs) fill it.
+                    int nextRepeatMs = HoldRepeatDelayMs;
+                    while (!token.IsCancellationRequested)
+                    {
+                        int leftMs = (int)(end - DateTime.UtcNow).TotalMilliseconds;
+                        if (leftMs <= 0)
+                            break;
+                        InterruptibleSleep(repeating == null ? leftMs : Math.Min(nextRepeatMs, leftMs), token);
+                        if (repeating == null || token.IsCancellationRequested || DateTime.UtcNow >= end)
+                            break;
+                        KeyOutput.KeyDown(repeating.Value.Vk, repeating.Value.Extended);
+                        nextRepeatMs = RepeatIntervalMs;
+                    }
                 }
-                ReleaseAllUp(keys);
+                finally
+                {
+                    ReleaseAllUp(keys);
+                }
             }
             else
             {
@@ -466,9 +474,12 @@ internal static class KeyExecutor
     // immediately instead of running out its full duration first.
     public static void ReleaseAll()
     {
+        // Cancelled, never disposed: runs still under way hold this source
+        // and read its token after the swap, and a disposed one throws at
+        // them (an ObjectDisposedException in the hold loop, seen in the
+        // crash log on 2026-11-11). It owns nothing that needs disposing.
         var oldSignal = Interlocked.Exchange(ref _stopSignal, new CancellationTokenSource());
         oldSignal.Cancel();
-        oldSignal.Dispose();
 
         // Let go of what is actually held: each slot's HoldKeys, the keys
         // its hold pressed, not the word's current mapping. A profile switch
@@ -500,6 +511,13 @@ internal static class KeyExecutor
         // let go, and switch it off, so the next pointer move presses
         // nothing. Stop means the mouse is a mouse again.
         Steering.LetGo();
+
+        // Last, whatever the bookkeeping above missed: any key the app
+        // still has down by KeyOutput's own ledger goes up too. Normally
+        // none; a count in the log says the net caught something.
+        int stillDown = KeyOutput.ReleaseEverything();
+        if (stillDown > 0)
+            Log.Info($"stop: {stillDown} key(s) were still down and were let go");
     }
 
     private static void ClearState(InfiniteState s)
@@ -661,6 +679,21 @@ internal static class KeyExecutor
         {
             PressAllDown(keys);
 
+            // The slot was claimed under _lock above and the keys pressed
+            // here, outside it. Anything that ended the hold in between
+            // (Stop, another word taking the slot, a focus switch) sent its
+            // key-ups BEFORE these key-downs, which would leave the keys
+            // stuck down with nothing holding them. So: if the hold is no
+            // longer this one, let go again.
+            bool stillMine;
+            lock (_lock)
+                stillMine = _engaged.TryGetValue(word, out var on) && on && s.HoldWord == word && ReferenceEquals(s.HoldKeys, keys);
+            if (!stillMine)
+            {
+                ReleaseAllUp(keys);
+                return;
+            }
+
             // Repeat the held key (see HoldRepeatDelayMs) until something
             // ends the hold: the word again, another word taking the slot,
             // a focus switch, ForceRelease or ReleaseAll. Each of those
@@ -678,7 +711,7 @@ internal static class KeyExecutor
                 {
                     if (!(_engaged.TryGetValue(word, out var v) && v) || s.HoldWord != word)
                         break;
-                    NativeInput.KeyDown(repeating.Value.Vk, repeating.Value.Extended);
+                    KeyOutput.KeyDown(repeating.Value.Vk, repeating.Value.Extended);
                 }
                 InterruptibleSleep(RepeatIntervalMs, token);
             }

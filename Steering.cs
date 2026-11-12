@@ -180,12 +180,12 @@ public static class Steering
             {
                 // The band is centred on the monitor the pointer is on, and
                 // the pointer starts at its centre.
-                var (px, py) = NativeInput.GetPointer();
-                var m = NativeInput.MonitorBoundsAt(px, py);
+                var (px, py) = Pointer.Position;
+                var m = Pointer.ScreenAt(px, py);
                 int cx = m.Left + m.Width / 2;
                 int cy = m.Top + m.Height / 2;
                 _band = new RubberBand(cx, cy, (int)(m.Width / 2 * Stretch), (int)(m.Height / 2 * Stretch), Now);
-                NativeInput.MovePointerTo(cx, cy);
+                Pointer.MoveTo(cx, cy);
                 _timer = new System.Threading.Timer(_ => Tick(), null, TickMs, TickMs);
                 if (_pad == null)
                 {
@@ -235,7 +235,7 @@ public static class Steering
             // A band already up takes the new lines at once.
             if (_band != null)
             {
-                var m = NativeInput.MonitorBoundsAt(_band.CentreX, _band.CentreY);
+                var m = Pointer.ScreenAt(_band.CentreX, _band.CentreY);
                 _band.MaxPx = (int)(m.Width / 2 * Stretch);
                 _band.MaxPy = (int)(m.Height / 2 * Stretch);
             }
@@ -253,12 +253,12 @@ public static class Steering
         {
             // The left button held frees the pointer (see NativeInput.
             // IsLeftButtonDown): a drag goes wherever it likes.
-            if (_band == null || Suspended?.Invoke() == true || NativeInput.IsLeftButtonDown())
+            if (_band == null || Suspended?.Invoke() == true || Pointer.LeftButtonDown)
                 return false;
             var fix = _band.Moved(x, y, Now);
             if (fix == null)
                 return false;
-            NativeInput.MovePointerTo(fix.Value.X, fix.Value.Y);
+            Pointer.MoveTo(fix.Value.X, fix.Value.Y);
             return true;
         }
     }
@@ -309,16 +309,16 @@ public static class Steering
             switchOff = true;
             return PushEvent.None;
         }
-        if (NativeInput.IsLeftButtonDown())
+        if (Pointer.LeftButtonDown)
         {
             _pad?.Set(0, 0, 0);
             return _push.Release();
         }
-        var (x, y) = NativeInput.GetPointer();
+        var (x, y) = Pointer.Position;
         var next = _band.Tick(x, y, Now);
         if (next != null)
         {
-            NativeInput.MovePointerTo(next.Value.X, next.Value.Y);
+            Pointer.MoveTo(next.Value.X, next.Value.Y);
             (x, y) = next.Value;
         }
         // The pointer's offset from the centre, after the spring's move,

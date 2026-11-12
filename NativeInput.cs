@@ -128,20 +128,10 @@ internal static class NativeInput
         return buffer.ToString();
     }
 
-    public static void TapKey(ushort virtualKeyCode, bool extended)
-    {
-        KeyDown(virtualKeyCode, extended);
-        KeyUp(virtualKeyCode, extended);
-    }
-
+    // Called through KeyOutput (see WindowsKeySender), never directly: the
+    // ledger of held keys and the pad's pedals are KeyOutput's.
     public static void KeyDown(ushort virtualKeyCode, bool extended)
     {
-        if (PadKeys.IsPadKey(virtualKeyCode))
-        {
-            Steering.SetPadPedal(virtualKeyCode, down: true);
-            return;
-        }
-
         if (IsMouseButtonVk(virtualKeyCode))
         {
             SendMouseButtonEvent(virtualKeyCode, down: true);
@@ -162,12 +152,6 @@ internal static class NativeInput
 
     public static void KeyUp(ushort virtualKeyCode, bool extended)
     {
-        if (PadKeys.IsPadKey(virtualKeyCode))
-        {
-            Steering.SetPadPedal(virtualKeyCode, down: false);
-            return;
-        }
-
         if (IsMouseButtonVk(virtualKeyCode))
         {
             SendMouseButtonEvent(virtualKeyCode, down: false);
@@ -186,8 +170,7 @@ internal static class NativeInput
         SendInput(1, new[] { up }, Marshal.SizeOf<INPUT>());
     }
 
-    internal static bool IsMouseButtonVk(ushort vk) =>
-        vk is VK_LBUTTON or VK_RBUTTON or VK_MBUTTON or VK_XBUTTON1 or VK_XBUTTON2;
+    private static bool IsMouseButtonVk(ushort vk) => KeyCatalog.IsMouseButton(vk);
 
     // A click always lands wherever the real OS cursor currently is — same
     // as a real click, since this is the same SendInput a hardware mouse's

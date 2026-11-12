@@ -4,7 +4,7 @@ namespace UnboundKeys;
 // rather than the tap-or-hold behavior every other remappable key uses: a
 // mouse can't hold one button down while clicking a second one, so there's
 // no way to "hold Shift while clicking A" otherwise. One click holds the
-// real key down (via a raw NativeInput.KeyDown — this deliberately
+// real key down (via a raw KeyOutput.KeyDown — this deliberately
 // bypasses KeyExecutor's tap/repeat/hold/infinite machinery entirely,
 // since none of that means anything for "stay down until the next key");
 // the next virtual key click — sticky or not — releases every currently-
@@ -35,12 +35,12 @@ public static class StickyModifiers
             if (_active.Remove(id, out var existingKeys))
             {
                 foreach (var key in existingKeys)
-                    NativeInput.KeyUp(key.Vk, key.Extended);
+                    KeyOutput.KeyUp(key.Vk, key.Extended);
             }
             else
             {
                 foreach (var key in keys)
-                    NativeInput.KeyDown(key.Vk, key.Extended);
+                    KeyOutput.KeyDown(key.Vk, key.Extended);
                 _active[id] = keys;
             }
         }
@@ -64,7 +64,7 @@ public static class StickyModifiers
 
         foreach (var keys in toRelease)
             foreach (var key in keys)
-                NativeInput.KeyUp(key.Vk, key.Extended);
+                KeyOutput.KeyUp(key.Vk, key.Extended);
         Changed?.Invoke();
     }
 

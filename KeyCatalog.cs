@@ -49,6 +49,10 @@ public static class KeyCatalog
         new("Mouse Button 5", 0x06),
     };
 
+    // Whether a "key" is one of those mouse buttons (the click codes 0x01,
+    // 0x02 and 0x04 to 0x06; 0x03 is not a button).
+    public static bool IsMouseButton(ushort key) => key is 0x01 or 0x02 or 0x04 or 0x05 or 0x06;
+
     // Named but not listed: see DisplayNameFor.
     private static readonly Entry[] Punctuation =
     {
