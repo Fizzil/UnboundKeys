@@ -1,21 +1,17 @@
-using System.Runtime.InteropServices;
-
 namespace UnboundKeys;
 
-// Watches every physical mouse button/wheel event system-wide via a
-// low-level mouse hook (see LowLevelHook — the P/Invoke/lifecycle
-// machinery lives there; this class owns only the actual mouse-specific
-// logic), and — for whichever of the six remappable buttons (see
-// MouseCatalog) currently has a key assigned in MouseMap, for either way
-// of pressing it — swallows the real click and hands the press to
-// PressGestures, which decides whether it was a single or a double press
-// and fires ButtonPressed with that mapping's id, so Program.cs can run
-// it through KeyExecutor exactly like a recognized voice word. Pointer
-// moves go to Steering while that is on (see Steering.cs), which may
-// swallow one that crosses its line.
+// Decides what each real mouse event means (the events come from the
+// system through IInputHooks, see InputHooks.cs): for whichever of the six
+// remappable buttons (see MouseCatalog) currently has a key assigned in
+// MouseMap, for either way of pressing it, the real click is swallowed and
+// the press handed to PressGestures, which decides whether it was a single
+// or a double press and fires ButtonPressed with that mapping's id, so
+// Program.cs can run it through KeyExecutor exactly like a recognized
+// voice word. Pointer moves go to Steering while that is on (see
+// Steering.cs), which may swallow one that crosses its line.
 //
-// Left Button is never touched anywhere in this file, deliberately: it isn't
-// one of MouseCatalog's six buttons, so it can never be looked up as
+// The left button never reaches this class at all (see MouseEvent): it
+// isn't one of MouseCatalog's six buttons, so it can never be looked up as
 // "enabled" and never gets suppressed. That's what keeps a normal click
 // always available as an escape hatch, no matter what this class does.
 public sealed class MouseInputWatcher : IDisposable
@@ -27,143 +23,65 @@ public sealed class MouseInputWatcher : IDisposable
 
     private readonly PressGestures _gestures;
     private readonly OwnWindowClicks _ownClicks = new();
+    private readonly Func<int, int, bool> _isOwnWindowAt;
 
-    public MouseInputWatcher()
+    // isOwnWindowAt: whether the window under a screen pixel is one of
+    // UnboundKeys' own (the system's to answer).
+    public MouseInputWatcher(Func<int, int, bool> isOwnWindowAt)
     {
+        _isOwnWindowAt = isOwnWindowAt;
         _gestures = new PressGestures(
             id => MouseMap.Enabled.TryGetValue(id, out bool on) && on,
             id => ButtonPressed?.Invoke(id));
     }
 
-    private const int WH_MOUSE_LL = 14;
-    private const int WM_MOUSEMOVE = 0x0200;
-    private const int WM_RBUTTONDOWN = 0x0204;
-    private const int WM_RBUTTONUP = 0x0205;
-    private const int WM_MBUTTONDOWN = 0x0207;
-    private const int WM_MBUTTONUP = 0x0208;
-    private const int WM_MOUSEWHEEL = 0x020A;
-    private const int WM_XBUTTONDOWN = 0x020B;
-    private const int WM_XBUTTONUP = 0x020C;
-    private const int XBUTTON1 = 0x0001;
-    private const int XBUTTON2 = 0x0002;
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct POINT
+    // One real mouse event; true to swallow it. Never called for the app's
+    // own clicks and pointer moves (IInputHooks leaves those out), so a
+    // word or button mapped to click another mapped button cannot set
+    // itself off.
+    internal bool Handle(MouseEvent e)
     {
-        public int x;
-        public int y;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct MSLLHOOKSTRUCT
-    {
-        public POINT pt;
-        public uint mouseData;
-        public uint flags;
-        public uint time;
-        public IntPtr dwExtraInfo;
-    }
-
-    private readonly LowLevelHook _hook = new();
-
-    public void Start() => _hook.Start(WH_MOUSE_LL, HookCallback);
-    public void Pause() => _hook.Pause();
-    public void Resume() => _hook.Resume();
-
-    // Only ever invoked once LowLevelHook has already confirmed nCode >= 0
-    // and the watcher isn't paused — no need to check either here.
-    private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
-    {
-        var data = Marshal.PtrToStructure<MSLLHOOKSTRUCT>(lParam);
-
-        // Ignore only UnboundKeys's own synthetic clicks (see
-        // NativeInput.InjectedByUnboundKeys), not every software-
-        // injected event in general — this hook is system-wide, so
-        // without this it would catch its own mouse-click output (a
-        // word/button mapped to click another *enabled* button could
-        // otherwise re-trigger itself, at worst in an infinite loop).
-        // Checking dwExtraInfo specifically, rather than the generic
-        // LLMHF_INJECTED flag, matters because many gaming mice relay
-        // real physical input through vendor driver software that
-        // itself injects via this same path — a blanket "ignore
-        // anything injected" check would swallow that real input too,
-        // not just UnboundKeys's own.
-        if (data.dwExtraInfo == NativeInput.InjectedByUnboundKeys)
-            return _hook.CallNext(nCode, wParam, lParam);
-
-        int msg = wParam.ToInt32();
-
         // Steering (see Steering.cs): every real pointer move, while it is
-        // on, in the hook's own screen pixels. A move past the band's line
-        // is swallowed and the pointer put on the line instead; any other
-        // move passes through. UnboundKeys's own pointer moves (the
-        // spring) never get here: the check above already skipped them.
-        if (msg == WM_MOUSEMOVE)
-        {
-            if (Steering.IsOn && Steering.PointerMoved(data.pt.x, data.pt.y))
-                return (IntPtr)1;
-            return _hook.CallNext(nCode, wParam, lParam);
-        }
+        // on, in screen pixels. A move past the band's line is swallowed
+        // and the pointer put on the line instead; any other move passes.
+        if (e.Kind == MouseEventKind.Move)
+            return Steering.IsOn && Steering.PointerMoved(e.X, e.Y);
+
+        string? button = e.Button;
+        if (button == null)
+            return false;
 
         // A right-click over one of UnboundKeys' own windows is the
         // window's (Fizzil, 2026-11-11: right-click is Back in the
         // dashboard), even with the right button mapped, and its up goes
         // wherever its down went (see OwnWindowClicks).
-        if (msg == WM_RBUTTONDOWN && _ownClicks.Down(NativeInput.IsOwnWindowAt(data.pt.x, data.pt.y)))
-            return _hook.CallNext(nCode, wParam, lParam);
-        if (msg == WM_RBUTTONUP && _ownClicks.Up())
-            return _hook.CallNext(nCode, wParam, lParam);
-
-        short highWord = (short)(data.mouseData >> 16);
-
-        string? downId = msg switch
+        if (button == "right")
         {
-            WM_RBUTTONDOWN => "right",
-            WM_MBUTTONDOWN => "middle",
-            WM_XBUTTONDOWN when highWord == XBUTTON1 => "x1",
-            WM_XBUTTONDOWN when highWord == XBUTTON2 => "x2",
-            WM_MOUSEWHEEL when highWord > 0 => "wheelup",
-            WM_MOUSEWHEEL when highWord < 0 => "wheeldown",
-            _ => null,
-        };
+            if (e.Kind == MouseEventKind.Down && _ownClicks.Down(_isOwnWindowAt(e.X, e.Y)))
+                return false;
+            if (e.Kind == MouseEventKind.Up && _ownClicks.Up())
+                return false;
+        }
 
         // A button with a key on either way of pressing it is taken over
         // whole: its ordinary click can no longer pass through, because
         // whether a double press is coming cannot be known yet.
-        if (downId != null && MouseMap.AnyGestureEnabled(downId))
-        {
-            _gestures.Press(downId);
-            return (IntPtr)1;
-        }
+        if (!MouseMap.AnyGestureEnabled(button))
+            return false;
 
-        // A suppressed button-down also means its matching button-up
-        // needs suppressing — otherwise Windows (and whatever app has
-        // focus) sees a button-up with no down before it, which some
-        // apps read as a spurious click of their own. Wheel events have
-        // no separate up message, so there's nothing to match here for
-        // wheelup/wheeldown.
-        string? upId = msg switch
-        {
-            WM_RBUTTONUP => "right",
-            WM_MBUTTONUP => "middle",
-            WM_XBUTTONUP when highWord == XBUTTON1 => "x1",
-            WM_XBUTTONUP when highWord == XBUTTON2 => "x2",
-            _ => null,
-        };
-        if (upId != null && MouseMap.AnyGestureEnabled(upId))
-            return (IntPtr)1;
-
-        return _hook.CallNext(nCode, wParam, lParam);
+        // The press runs the mapping. The release is only swallowed: a
+        // swallowed button-down with its button-up let through would look
+        // to the program in front like a spurious click of its own. (A
+        // wheel notch has no release.)
+        if (e.Kind == MouseEventKind.Down)
+            _gestures.Press(button);
+        return true;
     }
 
-    public void Dispose()
-    {
-        _gestures.Dispose();
-        _hook.Dispose();
-    }
+    public void Dispose() => _gestures.Dispose();
 }
 
-// Keeps a right-click's two halves together (see the hook above): told
+// Keeps a right-click's two halves together (see Handle above): told
 // whether a button-down is over one of UnboundKeys' own windows, it says
 // whether the down goes to that window, and then whether the matching up
 // does: wherever the down went, even if the pointer has moved off the

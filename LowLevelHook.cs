@@ -72,6 +72,9 @@ internal sealed class LowLevelHook : IDisposable
         _hookHandle = SetWindowsHookEx(hookId, _trampoline, GetModuleHandle(null), 0);
     }
 
+    // False when Windows refused the hook, or after Dispose.
+    public bool IsInstalled => _hookHandle != IntPtr.Zero;
+
     public void Pause() => _paused = true;
     public void Resume() => _paused = false;
 

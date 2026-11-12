@@ -69,8 +69,12 @@ static class Program
             return;
         }
 
-        using var mouse = new MouseInputWatcher();
+        using var mouse = new MouseInputWatcher(NativeInput.IsOwnWindowAt);
         using var physical = new PhysicalKeyWatcher();
+        // The real mouse and keyboard, heard on a thread of their own (see
+        // WindowsInputHooks): the two watchers above decide what each
+        // event means. Declared after them, so it stops before they go.
+        using var hooks = new WindowsInputHooks();
         using var tray = new TrayIcon();
         var dashboard = new Wpf.DashboardWindow();
 
@@ -194,13 +198,17 @@ static class Program
         // washed out to find the Fade switch. It also shows the dashboard,
         // or hides it if it is showing, the same as the on-screen keyboard
         // Menu key, so a real keyboard has an in-game route to the
-        // dashboard as well (Fizzil asked for this). The hook fires this on
-        // its own thread; the window lives on the dispatcher.
+        // dashboard as well (Fizzil asked for this). The hooks fire this on
+        // their own thread; Fade's switches and the window live on the
+        // dispatcher's.
         physical.StopRequested += () =>
         {
             Task.Run(KeyExecutor.ReleaseAll);
-            FadeMode.TurnOff();
-            app.Dispatcher.InvokeAsync(dashboard.ToggleVisible);
+            app.Dispatcher.InvokeAsync(() =>
+            {
+                FadeMode.TurnOff();
+                dashboard.ToggleVisible();
+            });
         };
         // A Keyboard-page key, from the real keyboard here and from the
         // on-screen one in VirtualKeyboardWindow, goes through KeyPresses,
@@ -245,8 +253,7 @@ static class Program
         dashboard.HiddenByClose += tray.SayStillRunningOnce;
 
         voice.Start();
-        mouse.Start();
-        physical.Start();
+        hooks.Start(mouse.Handle, physical.Handle);
         // Shortcuts made to an older release open this one from now on (see Shortcuts.cs).
         Task.Run(Shortcuts.PointAtThisVersion);
 
