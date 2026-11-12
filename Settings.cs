@@ -199,6 +199,11 @@ internal static class Settings
         public Dictionary<string, List<ushort>> SteeringExtraKeys { get; set; } = new();
         public Dictionary<string, KeyBehavior> SteeringBehaviors { get; set; } = new();
 
+        // Settings > Features (see Features.cs): whether Steering is part of
+        // the app. A fresh install has it off (Fresh below); a file from
+        // before the switch existed has no value and reads on, as it was.
+        public bool? SteeringFeature { get; set; }
+
         // Whether the app keeps a log (see Log). Off unless switched on in
         // Settings > Log what I do.
         public bool WriteLog { get; set; }
@@ -248,8 +253,11 @@ internal static class Settings
             if (saved != null)
                 return saved;
         }
-        return new SavedData();
+        return Fresh();
     }
+
+    // A new install's settings: the optional features start switched off.
+    private static SavedData Fresh() => new() { SteeringFeature = false };
 
     private static readonly object WriteGate = new();
 
@@ -583,7 +591,16 @@ internal static class Settings
                 Log.Error("resetting the app", ex);
             }
         }
-        Write(new SavedData());
+        Write(Fresh());
+    }
+
+    public static bool LoadSteeringFeature() => Read().SteeringFeature ?? true;
+
+    public static void SaveSteeringFeature(bool on)
+    {
+        var saved = Read();
+        saved.SteeringFeature = on;
+        Write(saved);
     }
 
     public static bool LoadStartWithWindows() => Read().StartWithWindows;

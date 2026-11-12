@@ -22,6 +22,20 @@
             </StackPanel>
         </local:FoldSection>
 
+        <!-- Features (Fizzil, 2026-11-12): what not everyone wants, one
+             switch each (see Features.cs). Off, a feature leaves the app:
+             its page, its switches and its keys. A later feature is one
+             more switch here. -->
+        <local:FoldSection x:Name="FeaturesFold" Title="FEATURES">
+            <StackPanel>
+                <TextBlock Text="Extras that not everyone needs. Switched off, a feature is out of the way; what you set up for it is kept."
+                           FontSize="12" TextWrapping="Wrap" Margin="12,0,12,6" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                <Button x:Name="SteeringFeatureToggle" Content="Steering" Style="{StaticResource RailToggleStyle}" Margin="4,0,4,0"/>
+                <TextBlock Text="The mouse as a steering wheel for racing games. On adds the Steering page to the rail, the Starts and stops steering switch to every mapping, and Throttle and Brake to the key list."
+                           FontSize="11" TextWrapping="Wrap" Margin="16,0,12,4" Foreground="{DynamicResource TextSecondaryBrush}"/>
+            </StackPanel>
+        </local:FoldSection>
+
         <local:FoldSection x:Name="StartupFold" Title="STARTUP">
             <StackPanel>
                 <Button x:Name="StartWithWindowsToggle" Content="Start with Windows" Style="{StaticResource RailToggleStyle}" Margin="4,0,4,0"/>

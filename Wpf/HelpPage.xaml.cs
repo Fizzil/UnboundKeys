@@ -33,7 +33,8 @@ public partial class HelpPage : IDashboardPage
         AddLine("Two things per button or key", "switch on Double press at the bottom of a mouse button's or a keyboard key's editor, and Single press and Double press appear at its top, each a mapping of its own. Each way of pressing starts its mapping and stops it again, and starting one stops the other. Switching it off clears the double press.");
         AddLine("Timing", "with a double press set, a single press lands a moment later, once no second press is coming. A button or key with no double press set is as quick as ever.");
 
-        AddHeader("STEERING", topMargin: 6);
+        _steering = AddHeader("STEERING", topMargin: 6);
+        AddLine("Switched on in Settings", "under Features. Until then there is no Steering page, switch or pedal anywhere in the app.");
         AddLine("A rubber band on the pointer", "while steering is on: the pointer is held near the middle of the screen, moves out as far as the stretch line, and springs back when you stop. Sideways is the steering: the further out, the harder the turn.");
         AddLine("Starts and stops steering", "is a switch in every mapping's editor, off to begin with: switch it on and that word, button or key turns steering on and off. While it is on, the mapping sends only Throttle or Brake and no other key, so \"press nine\" with it on no longer types a 9.");
         AddLine("Default, on the Steering page", "sets up racing in one click: Middle Button sends Throttle with Hold, Infinite and Starts and stops steering, so one click starts the race and the next ends it, and moving the mouse down applies the brake for as long as you hold it there. Keep the two together: the click that lifts the throttle also ends steering, so slowing down is the brake's job. Then the Mouse page opens; change any of it at any time.");
@@ -73,6 +74,7 @@ public partial class HelpPage : IDashboardPage
         AddLine("Closing this window", "hides it. UnboundKeys keeps running in the tray by the clock; click the icon there, press Menu on the on-screen keyboard, double-tap Caps Lock on a real keyboard, or say \"press menu\". Quit is at the bottom of the rail, two clicks to confirm (and in Settings).");
         AddLine("The permission prompt", "appears because UnboundKeys runs as administrator, so its key presses reach games that run elevated. Start with Windows, in Settings, starts it that way at sign-in with no prompt, and Start with voice keys paused brings it up with Listening off.");
         AddLine("Profiles", "are games, each with a theme and up to ten sub-profiles for classes or loadouts. Switch from the chip at the bottom left: click a profile to show its sub-profiles, then a sub-profile; Manage profiles… opens them in Settings, where the on-screen name keyboard renames them (hold a key to repeat it, click Shift for a capital).");
+        AddLine("Features, in Settings", "are extras that not everyone needs, one switch each, off on a new install. Steering is the first: switched off, its page, its switch in the editors and its Throttle and Brake keys are out of the way, and what you set up for it is kept for when you switch it on again.");
         AddLine("Reset, in Settings", "has two buttons, each asking \"Are you sure?\" first. Reset profile puts the active profile's mappings back to default; Reset app deletes everything the app keeps and starts it again as new, and cannot be undone.");
         AddLine("Reset both, in the editor", "asks \"Are you sure?\" too, since it resets two mappings: click again to confirm. Reset this mapping is one click.");
         AddLine("Right-click to go back", "out of an editor, or out of this page: a right-click anywhere in this window does what ‹ Back does. Help also goes back when you click the ? again, to wherever you opened it from. It works even in a profile that maps the right button, because over UnboundKeys' own windows a right-click is always theirs.");
@@ -80,18 +82,26 @@ public partial class HelpPage : IDashboardPage
         AddLine("Updates", "are checked only when you click Check for updates in Settings, and can be installed from there. A shortcut you made to the app is pointed at the newest version each time it starts.");
         // In bold (Fizzil): what the app keeps on the PC should be plain to see.
         AddLine("Everything is saved in", @"%AppData%\UnboundKeys: your profiles and mappings in settings.json (with a backup beside it), the words kept by ""Smart predictive text"" in learned-words.txt if you switch that on, and log.txt: errors always, what you do if you switch Log what I do on. The full manual is in the GitHub repository.", bold: true);
+        Refresh();
     }
 
-    // Nothing on this page changes underneath it.
-    public void Refresh() { }
+    // The STEERING section, shown only while the feature is switched on
+    // (Settings > Features).
+    private readonly FoldSection _steering;
+
+    // Only the Steering section comes and goes, with its feature switch.
+    public void Refresh() =>
+        _steering.Visibility = Features.SteeringEnabled ? Visibility.Visible : Visibility.Collapsed;
 
     // Each section folds under its heading, chevron at the far right, the
     // same row as Settings uses (Fizzil); closed until clicked.
-    private void AddHeader(string text, double topMargin)
+    private FoldSection AddHeader(string text, double topMargin)
     {
         var body = new StackPanel();
-        Sections.Children.Add(new FoldSection { Title = text, Content = body, Margin = new Thickness(0, topMargin, 0, 0) });
+        var fold = new FoldSection { Title = text, Content = body, Margin = new Thickness(0, topMargin, 0, 0) };
+        Sections.Children.Add(fold);
         _body = body;
+        return fold;
     }
 
     private void AddLine(string lead, string explanation, bool bold = false)

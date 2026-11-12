@@ -171,10 +171,19 @@ internal static class SteeringTests
         // A pedal key held before steering comes on is remembered, so the
         // mapping that holds it applies the moment steering is on (Fizzil
         // pressed Mouse 5, then started steering, and had no throttle).
+        Features.SetSteering(true);
         Steering.SetPadPedal(PadKeys.Throttle, true);
         Check(Steering.PadThrottleHeld, "a pad key held while steering is off is remembered");
         Steering.SetPadPedal(PadKeys.Throttle, false);
         Check(!Steering.PadThrottleHeld, "and letting go clears it");
+
+        // Settings > Features: with the Steering feature switched off, a
+        // pedal is not pressed and steering does not come on.
+        Features.SetSteering(false);
+        Steering.SetPadPedal(PadKeys.Throttle, true);
+        Check(!Steering.PadThrottleHeld, "with the feature switched off a pad key is not pressed");
+        Steering.SetOn(true);
+        Check(!Steering.IsOn, "and steering does not come on");
     }
 
     private static void Behavior()

@@ -6,7 +6,7 @@ Everything here works with the left mouse button alone: no right-clicks, no scro
 
 ## The dashboard
 
-The dashboard is a fixed-size window with five pages down its left side — **Mouse**, **Keyboard**, **Voice**, **Steering** and **Settings** — and, in the bottom-left corner, the current **profile**, a **Listening** switch, a **Fade** switch, **Stop** and **Quit**. The Mouse page starts with a short "start here" card until you click Got it.
+The dashboard is a fixed-size window with its pages down its left side — **Mouse**, **Keyboard**, **Voice** and **Settings**, plus **Steering** once it is switched on in Settings → Features — and, in the bottom-left corner, the current **profile**, a **Listening** switch, a **Fade** switch, **Stop** and **Quit**. The Mouse page starts with a short "start here" card until you click Got it.
 
 - Drag it by its top strip (the app's name, or the page title). It remembers where you leave it.
 - At the top right of every page: the **?**, glowing in the accent colour, opens **Help**, and clicked again takes you back to where you were; the **—** and **✕** beside it minimize and close the dashboard. Closing only hides it: UnboundKeys keeps running in the system tray (the skull icon by the clock). Click that icon, press **Menu** on the on-screen keyboard, double-tap Caps Lock on a real keyboard, or say **"press menu"**, to bring it back. If Windows has tucked the icon behind the little **^** arrow, drag it out onto the taskbar once. The first time you close it, the tray icon says so.
@@ -40,6 +40,8 @@ Left Click is never remappable: it's the one button that always works as a click
 ## Steering
 
 For racing games, with a mouse that is really a joystick (a lip- or chin-operated one, say): the mouse becomes a steering wheel with a rubber band.
+
+Steering is an optional feature, off on a new install: switch it on in **Settings → Features**. While it is off there is no Steering page, no Starts and stops steering switch and no Throttle or Brake key anywhere in the app, and a mapping that had the switch on behaves as an ordinary one.
 
 - **The band.** While steering is on, the pointer is held near the middle of the screen. Moving the mouse moves it as usual, but never past a line on any side (the **Stretch**), and the moment you stop it springs back to the centre.
 - **The controller.** UnboundKeys makes a **Virtual Xbox controller** of its own and tells it where the pointer sits. Sideways is the steering: the further out, the harder the turn, with full lock at the stretch line. Up and down drive nothing on the controller; they only press **Move up** and **Move down** (below).
@@ -113,10 +115,11 @@ A profile is a game. Each one has its own colour theme and up to ten **sub-profi
 
 ## Settings
 
-Settings has nine sections: **Theme**, **Profiles**, **Startup**, **Updates**, **Log**, **Reset**, **Quit**, **Help** and **About**. Each but Help folds under its heading and, while closed, shows a one-line summary of its state; click the heading to open it. Help is one button that opens the Help page.
+Settings has ten sections: **Theme**, **Profiles**, **Features**, **Startup**, **Updates**, **Log**, **Reset**, **Quit**, **Help** and **About**. Each but Help folds under its heading and, while closed, shows a one-line summary of its state; click the heading to open it. Help is one button that opens the Help page.
 
 - **Theme** — Red, Green or Blue; the choice is saved with the current profile.
 - **Profiles** — as above; the heading folds the list away to save room, click it to open.
+- **Features** — extras that not everyone needs, one switch each, the same in every profile. **Steering** is the first, off on a new install (an install updated from a version before this switch keeps it on). Switched off, a feature is out of the way: its page leaves the rail, its switches and keys leave the editors, and anything it was holding is let go. What you set up for it is kept and comes back with the switch.
 - **Startup** — **Start with Windows** starts UnboundKeys when you sign in, through a scheduled task that runs it as administrator without the permission prompt. **Start with voice keys paused** applies to that automatic start only: the app comes up with Listening off until you flip it on. The task is refreshed each time the app starts, so it keeps pointing at the copy you last ran, updates included.
 - **Updates** — **Check for updates** asks Fizzil's GitHub for the newest release, only when you click it and confirm. If a newer version exists, the same card can download and install it: the new version unpacks into a folder beside the current one, starts, and this one quits. The download is checked against the SHA-256 fingerprint GitHub lists for it, and one that does not match is thrown away rather than installed. Profiles and mappings carry over; the old folder stays until you delete it. A shortcut you made to UnboundKeys (on the desktop, in the Start menu or pinned to the taskbar) is pointed at the newest version each time the app starts, so it keeps opening the version you last ran.
 - **Log** — **Log what I do**, off by default; see Saved data below. **Open log folder** shows the log file.

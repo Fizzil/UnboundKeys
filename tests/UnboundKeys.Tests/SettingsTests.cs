@@ -29,6 +29,7 @@ internal static class SettingsTests
         Section("mouse: a button reset to Not Mapped stays that way after a restart", MouseReset);
         Section("steering: the stretch is the app's, not the profile's", SteeringStretch);
         Section("steering: the pushes are the app's, not the profile's", SteeringPushes);
+        Section("features: Steering is off on a new install, on for an older file", SteeringFeature);
         Section("settings: games (profiles)", Games);
         Section("settings: sub-profiles", SubProfiles);
         Section("settings: files from older versions", OlderFiles);
@@ -262,6 +263,30 @@ internal static class SettingsTests
         Settings.CreateProfileIfMissing("Racing", new(), new(), new(), new(), new(), new(), new());
         Settings.SetActiveProfile("Racing");
         Check(Settings.LoadSteeringStretch() == 0.25, "it is the same whatever profile is active");
+    }
+
+    // Settings > Features: a new install starts with Steering off; a
+    // settings file from before the switch existed keeps it on, since its
+    // owner had the feature all along; the choice is saved either way.
+    private static void SteeringFeature()
+    {
+        Check(!Settings.LoadSteeringFeature(), "no settings file: Steering is off");
+        Settings.SaveKeyboardScale(0.8);
+        Check(!Settings.LoadSteeringFeature(), "and still off once the first save has written the file");
+
+        Settings.SaveSteeringFeature(true);
+        Check(Settings.LoadSteeringFeature(), "switched on, it is saved on");
+        Settings.SaveSteeringFeature(false);
+        Check(!Settings.LoadSteeringFeature(), "and off again");
+
+        Fresh();
+        File.WriteAllText(_file, """{"Profiles":{"Default":{"SubProfiles":{"Default":{"KeyMap":{"one":68}}}}}}""");
+        Check(Settings.LoadSteeringFeature(), "a file from before the switch reads on");
+        Settings.SaveKeyboardScale(0.8);
+        Check(Settings.LoadSteeringFeature(), "and stays on through a save");
+
+        Settings.DeleteEverything();
+        Check(!Settings.LoadSteeringFeature(), "Reset app puts it back to off, as on a new install");
     }
 
     // Push up and Push down (the Steering page) are app-wide as well: a

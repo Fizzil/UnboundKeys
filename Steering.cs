@@ -94,6 +94,10 @@ public static class Steering
     // lock, as in SetOn.
     public static void SetPadPedal(ushort padKey, bool down)
     {
+        // The feature switched off (Settings > Features): a pedal is not
+        // pressed. A release still goes through, to clear one already held.
+        if (down && !Features.SteeringEnabled)
+            return;
         IVirtualPad? toDispose = null;
         bool needPad = false;
         lock (_lock)
@@ -148,6 +152,9 @@ public static class Steering
 
     public static void SetOn(bool on)
     {
+        // The feature switched off (Settings > Features): never comes on.
+        if (on && !Features.SteeringEnabled)
+            return;
         // The pad takes a few hundred milliseconds to plug in, and the mouse
         // hook waits on the lock for every pointer move meanwhile, which
         // Windows punishes by dropping the hook. So the pad is made and

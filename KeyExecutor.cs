@@ -238,7 +238,9 @@ internal static class KeyExecutor
         // for steering plus throttle, Throttle in Hold with Infinite, so a
         // press is race on and the next is race off), any other key is not
         // sent ("press nine" must not type a 9).
-        if (behavior.Steering)
+        // With the Steering feature switched off (Settings > Features) the
+        // switch is ignored and the mapping is an ordinary one.
+        if (behavior.Steering && Features.SteeringEnabled)
         {
             Steering.Toggle();
             var pedals = keys.Where(k => PadKeys.IsPadKey(k.Vk)).ToList();

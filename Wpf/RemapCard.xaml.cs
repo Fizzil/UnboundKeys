@@ -87,6 +87,9 @@ public partial class RemapCard
         UpdateModeVisuals();
         InfiniteButton.Tag = _infiniteOn;
         SteeringButton.Tag = _steeringOn;
+        // Settings > Features: with Steering off its switch is not shown
+        // (the saved choice is kept and comes back with the feature).
+        SteeringButton.Visibility = Features.SteeringEnabled ? Visibility.Visible : Visibility.Collapsed;
         UpdateDurationText();
         SetElementVisible(TimingPanel, _repeatOn || _holdOn, animate: false);
         RefreshPauseRows(animate: false);
@@ -302,6 +305,9 @@ public partial class RemapCard
         KeyCatalog.Entry[]? firstKeys = null;
         foreach (var (category, keys) in KeyCatalog.Groups)
         {
+            // Throttle and Brake belong to Steering (Settings > Features).
+            if (category == KeyCatalog.ControllerCategory && !Features.SteeringEnabled)
+                continue;
             var sample = new TextBlock
             {
                 Text = SampleFor(category),

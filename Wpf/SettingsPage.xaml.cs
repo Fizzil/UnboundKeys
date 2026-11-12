@@ -98,6 +98,18 @@ public partial class SettingsPage : IDashboardPage
             if (on)
                 Log.Info($"log what I do switched on, {typeof(SettingsPage).Assembly.GetName().Version}");
         };
+        // Features: one switch each, taking effect at once (see Features.cs).
+        void ShowFeatures()
+        {
+            SteeringFeatureToggle.Tag = Features.SteeringEnabled;
+            FeaturesFold.Summary = Features.SteeringEnabled ? "Steering" : "None switched on";
+        }
+        SteeringFeatureToggle.Click += (_, _) =>
+        {
+            Features.SetSteering(!Features.SteeringEnabled);
+            ShowFeatures();
+        };
+        ShowFeatures();
         // The log selected in Explorer, or just its folder while there is
         // no log file yet (the log off since the start).
         OpenLogButton.Click += (_, _) =>
