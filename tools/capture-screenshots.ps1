@@ -30,7 +30,9 @@ param(
   [string]$Method = "sendinput",  # "manual": Mini/Maxi were clicked by hand; capture what shows
   [string]$Only = "",             # comma-separated picture names; empty takes them all
   [string]$EditorChip = "W",      # the Mouse-page chip whose editor is pictured (its text is what the button sends)
-  [string]$EditorFile = "UBK-Editor.png"
+  [string]$EditorFile = "UBK-Editor.png",
+  [string]$SettingsFold = "",    # a Settings section to open for its picture, by its heading: "PROFILES"
+  [string]$SettingsFile = "UBK-Settings.png"
 )
 $wanted = @($Only.Split(',') | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 function Want($name) { return ($wanted.Count -eq 0) -or ($wanted -contains $name) }
@@ -258,7 +260,14 @@ if (Want "Editor") {
   Save-Window $dash $EditorFile
   if ($wasTap) { Invoke-Button $dash "Tap" 600 }
 }
-if (Want "Settings")      { Invoke-Button $dash "Settings"; Save-Window $dash "UBK-Settings.png" }
+if (Want "Settings") {
+  # Every section closed, unless -SettingsFold names one to show open
+  # (PROFILES for the Share buttons, 4.14.0); it is closed again after.
+  Invoke-Button $dash "Settings"
+  if ($SettingsFold) { Invoke-Button $dash $SettingsFold 800 }
+  Save-Window $dash $SettingsFile
+  if ($SettingsFold) { Invoke-Button $dash $SettingsFold 500 }
+}
 if (Want "Help") {
   # Help left the rail (4.12.0): it is the ? in the page header, which has
   # no automation name yet, so go through Settings, where HELP is one
