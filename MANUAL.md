@@ -113,6 +113,17 @@ A profile is a game. Each one has its own colour theme and up to ten **sub-profi
 - The **✕** deletes a profile or a sub-profile: click it once to arm, then again. Deleting the active profile switches you to Default; deleting the active sub-profile moves you to the first remaining one. A profile always keeps at least one sub-profile.
 - **Default** always exists and cannot be renamed or deleted.
 
+### Sharing a profile
+
+A profile can be given to a friend as one small file, with no typing and no file picker on either side.
+
+- **Share**, on a profile's row in Settings, saves the whole profile (its colour and every sub-profile's mappings) as a file named after it, such as `the isle.unboundkeys`, in `Documents\UnboundKeys`. Explorer opens with the file selected, ready to drag into a chat or an email. Sharing the same profile again replaces the earlier file. Default can be shared too.
+- **Import profile**, beside Add Profile, lists the profile files it finds in your **Downloads** folder and in `Documents\UnboundKeys`, newest first, up to eight. So save the file you were sent into Downloads, click **Import profile**, and click the file. The same button closes the list.
+- An imported profile is always added as a new one and never replaces anything: if you already have "the isle", it arrives as "the isle 2". You are not switched to it; click one of its sub-profiles when you want it, **Rename** it if you like, and the **✕** removes it again.
+- With ten profiles already there is no room, and the page says so; delete one first.
+- What does not travel: Steering's settings (the stretch, Move up and Move down), the on-screen keyboard's size and position, startup and log settings. Those belong to the app, not to a profile, and an import never changes them.
+- A file that is not an UnboundKeys profile, or one that is damaged, is not listed and cannot be imported. The file is plain text (JSON), so anyone can open it in Notepad to see exactly what is in it.
+
 ## Settings
 
 Settings has ten sections: **Theme**, **Profiles**, **Features**, **Startup**, **Updates**, **Log**, **Reset**, **Quit**, **Help** and **About**. Each but Help folds under its heading and, while closed, shows a one-line summary of its state; click the heading to open it. Help is one button that opens the Help page.

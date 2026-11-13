@@ -32,6 +32,10 @@ internal static class SettingsTests
         Section("features: Steering is off on a new install, on for an older file", SteeringFeature);
         Section("settings: games (profiles)", Games);
         Section("settings: sub-profiles", SubProfiles);
+        Section("sharing: a profile goes out as a file and comes back whole", ShareRoundTrip);
+        Section("sharing: files that are not profiles are refused", ShareRefusals);
+        Section("sharing: files with holes in them still come in", ShareHoles);
+        Section("sharing: the files found for the import list", ShareFind);
         Section("settings: files from older versions", OlderFiles);
         Section("settings: damaged files", DamagedFiles);
         Section("reset app: everything the app keeps is deleted", ResetApp);
@@ -457,6 +461,165 @@ internal static class SettingsTests
 
     // The defaults a caller hands to Load*: fresh each time, since Load*
     // fills in the dictionary it is given.
+    // Sharing (Settings > Profiles > Share / Import profile): one game with
+    // all its sub-profiles as a .unboundkeys file. The files go to a folder
+    // beside the scratch settings file, never to Documents or Downloads.
+    private static string ShareFolder()
+    {
+        string folder = Path.Combine(Path.GetDirectoryName(_file)!, "shared");
+        if (Directory.Exists(folder))
+            Directory.Delete(folder, recursive: true);
+        Directory.CreateDirectory(folder);
+        return folder;
+    }
+
+    private const string ShareHead = "{\"UnboundKeysProfile\":1,";
+
+    private static void ShareRoundTrip()
+    {
+        string folder = ShareFolder();
+        const string game = "xcom2: WotC";
+        Settings.CreateProfileIfMissing(game, new() { ["one"] = 0x41 }, new(), new(), new(), new(), new(), new());
+        Settings.SaveThemeColor(game, "Green");
+        Settings.CreateSubProfile(game, "Sniper");
+        Settings.SetActiveSubProfile(game, "Sniper");
+        Settings.SaveProfile(game, new() { ["one"] = 0x48 }, new(), new() { ["one"] = new KeyBehavior { Hold = true, DurationSeconds = 2 } });
+        Settings.SaveSteeringStretch(0.25);
+
+        Check(Settings.ExportProfile("Nope", folder) == null, "a game that does not exist cannot be shared");
+
+        string? path = Settings.ExportProfile(game, folder);
+        Check(path != null && File.Exists(path), "sharing writes a file");
+        if (path == null)
+            return;
+        Check(Path.GetFileName(path) == "xcom2_ WotC.unboundkeys", "named after the game, without the characters Windows forbids");
+        Check(Settings.SharedProfileName(path) == game, "the real name is kept inside the file");
+        string text = File.ReadAllText(path);
+        Check(!text.Contains("SteeringStretch") && !text.Contains("SteeringKeyMap"), "steering's settings stay behind");
+        Check(!text.Contains("KeyboardScale") && !text.Contains("StartWithWindows"), "and so does everything else that is the app's");
+        Check(Same(Settings.LoadProfileNames(), "Default", game), "sharing changes nothing here");
+
+        string? name = Settings.ImportProfile(path, out _);
+        Check(name == game + " 2", "a name already here gets a 2 and nothing is overwritten");
+        Check(Same(Settings.LoadProfileNames(), "Default", game, game + " 2"), "the imported game is listed last");
+        Check(Settings.LoadActiveProfileName() == "Default", "importing does not switch to it");
+        if (name == null)
+            return;
+        Check(Same(Settings.LoadSubProfileNames(name), "Default", "Sniper"), "its sub-profiles come with it");
+        Check(Settings.LoadActiveSubProfile(name) == "Sniper", "on the one it was last on");
+        Check(Settings.LoadKeyMap(name, Words())["one"] == 0x48, "with that one's mappings");
+        var behavior = Settings.LoadBehaviors(name, new() { ["one"] = new KeyBehavior() })["one"];
+        Check(behavior.Hold && behavior.DurationSeconds == 2, "and how each key is pressed");
+        Settings.SetActiveSubProfile(name, "Default");
+        Check(Settings.LoadKeyMap(name, Words())["one"] == 0x41, "the other sub-profile kept its own mappings");
+        Check(Settings.LoadThemeColor(name, "Red") == "Green", "and the colour came too");
+        Check(Settings.LoadKeyMap(game, Words())["one"] == 0x48, "the game it was shared from is untouched");
+
+        Check(Settings.ImportProfile(path, out _) == game + " 3", "importing again gives a 3");
+        Settings.DeleteProfile(game);
+        Check(Settings.ImportProfile(path, out _) == game, "and with the name free, it keeps its own name");
+
+        Fresh();
+        string? fresh = Settings.ExportProfile("Default", folder);
+        Check(fresh != null && Settings.ImportProfile(fresh, out _) == "Default 2", "Default can be shared, even before anything was saved");
+        Check(Settings.LoadKeyMap("Default 2", Words())["one"] == 0x31, "and reads the app's defaults");
+    }
+
+    private static void ShareRefusals()
+    {
+        string folder = ShareFolder();
+        string Make(string name, string contents)
+        {
+            string path = Path.Combine(folder, name);
+            File.WriteAllText(path, contents);
+            return path;
+        }
+        bool Refused(string path)
+        {
+            string? name = Settings.ImportProfile(path, out string problem);
+            return name == null && problem.Length > 0 && Same(Settings.LoadProfileNames(), "Default");
+        }
+
+        Check(Refused(Path.Combine(folder, "missing.unboundkeys")), "a file that is not there");
+        Check(Refused(Make("junk.unboundkeys", "this is not a profile")), "a file of junk");
+        Check(Refused(Make("empty.unboundkeys", "{}")), "an empty object");
+        Check(Refused(Make("list.unboundkeys", "[1,2,3]")), "a list");
+        Check(Refused(Make("noname.unboundkeys", ShareHead + "\"Name\":\"  \",\"Profile\":{}}")), "a profile with no name");
+        Check(Refused(Make("nobody.unboundkeys", ShareHead + "\"Name\":\"Ghost\"}")), "a name with no profile");
+        Check(Refused(Make("huge.unboundkeys", ShareHead + "\"Name\":\"Big\",\"Profile\":{},\"Pad\":\"" + new string('x', 2_000_000) + "\"}")), "a file far too large to be a profile");
+
+        string subs = string.Join(",", Enumerable.Range(1, 11).Select(n => "\"S" + n + "\":{}"));
+        Check(Refused(Make("many.unboundkeys", ShareHead + "\"Name\":\"Many\",\"Profile\":{\"SubProfiles\":{" + subs + "}}}")), "more sub-profiles than a game can hold");
+
+        Settings.SaveWriteLog(true);
+        Check(Refused(Make("settings.unboundkeys", File.ReadAllText(_file))), "the app's own settings file");
+        Check(Settings.SharedProfileName(Make("junk2.unboundkeys", "nope")) == null, "and junk has no profile name to show");
+
+        string good = Make("good.unboundkeys", ShareHead + "\"Name\":\"Good\",\"Profile\":{}}");
+        for (int n = 1; n < Settings.MaxProfiles; n++)
+            Settings.CreateProfileIfMissing($"Game {n}", new(), new(), new(), new(), new(), new(), new());
+        string? full = Settings.ImportProfile(good, out string why);
+        Check(full == null && why.Contains("ten"), "with ten profiles already, there is no room, and it says so");
+        Settings.DeleteProfile("Game 1");
+        Check(Settings.ImportProfile(good, out _) == "Good", "with one deleted, it comes in");
+    }
+
+    // A file somebody edited by hand, or from a version that saved less:
+    // whatever is missing reads as the app's defaults.
+    private static void ShareHoles()
+    {
+        string folder = ShareFolder();
+        string path = Path.Combine(folder, "holes.unboundkeys");
+
+        File.WriteAllText(path, ShareHead + "\"Name\":\"Bare\",\"Profile\":{}}");
+        Check(Settings.ImportProfile(path, out _) == "Bare", "a profile with nothing in it comes in");
+        Check(Same(Settings.LoadSubProfileNames("Bare"), "Default"), "with one sub-profile, Default");
+        Check(Settings.LoadKeyMap("Bare", Words())["one"] == 0x31, "at the app's defaults");
+
+        File.WriteAllText(path, ShareHead + "\"Name\":\"Nulls\",\"Profile\":{\"ThemeColor\":null,\"ActiveSubProfile\":\"Gone\",\"SubProfiles\":{"
+            + "\"A\":{\"KeyMap\":null,\"Behaviors\":{\"one\":null},\"ExtraKeys\":{\"one\":[1,2,3,4,5,6,7,8,9]}},\"B\":null}}}");
+        Check(Settings.ImportProfile(path, out _) == "Nulls", "nulls where mappings should be are tolerated");
+        Check(Same(Settings.LoadSubProfileNames("Nulls"), "A", "B"), "both sub-profiles are there");
+        Check(Settings.LoadActiveSubProfile("Nulls") == "A", "an active sub-profile that does not exist falls back to the first");
+        Check(Settings.LoadKeyMap("Nulls", Words())["one"] == 0x31, "a missing key map reads the defaults");
+        Check(Settings.LoadBehaviors("Nulls", new() { ["one"] = new KeyBehavior() })["one"] != null, "a null behaviour is dropped, not loaded");
+        Check(Settings.LoadExtraKeys("Nulls", new() { ["one"] = new() })["one"].Count == RemapStore.MaxExtraKeys, "extra keys are cut to what a mapping can hold");
+        Check(Settings.LoadThemeColor("Nulls", "Red") == "Red", "and no colour means the default colour");
+
+        File.WriteAllText(path, ShareHead + "\"Name\":\"A name that is much too long to fit\",\"Profile\":{\"ThemeColor\":\"Purple\"}}");
+        Check(Settings.ImportProfile(path, out _) == "A name that is much", "a name longer than the rename keyboard allows is cut to fit");
+        Check(Settings.LoadThemeColor("A name that is much", "Red") == "Red", "and a colour the app does not have means the default colour");
+    }
+
+    private static void ShareFind()
+    {
+        string folder = ShareFolder();
+        string other = Path.Combine(folder, "downloads");
+        Directory.CreateDirectory(other);
+        Settings.CreateProfileIfMissing("WoW", new(), new(), new(), new(), new(), new(), new());
+        Settings.CreateProfileIfMissing("Halo", new(), new(), new(), new(), new(), new(), new());
+
+        string wow = Settings.ExportProfile("WoW", folder)!;
+        string halo = Settings.ExportProfile("Halo", other)!;
+        File.SetLastWriteTimeUtc(wow, DateTime.UtcNow.AddMinutes(-5));
+        // A browser's second download of the same file, a junk file with
+        // the right ending, and a real profile with the wrong ending.
+        string second = Path.Combine(other, "Halo (1).unboundkeys");
+        File.Copy(halo, second);
+        File.SetLastWriteTimeUtc(second, DateTime.UtcNow.AddMinutes(-1));
+        File.WriteAllText(Path.Combine(other, "junk.unboundkeys"), "nope");
+        File.Copy(halo, Path.Combine(other, "Halo.txt"));
+
+        var found = ProfileShare.Find(other, folder, Path.Combine(folder, "not-there"));
+        Check(found.Count == 3, "only real profile files with the right ending are found, and a missing folder is no trouble");
+        Check(found.Count == 3 && found[0].Path == halo && found[2].Path == wow, "newest first");
+        Check(found.Count == 3 && found[0].Name == "Halo" && found[2].Name == "WoW", "each with the name inside it");
+
+        for (int n = 0; n < 12; n++)
+            File.Copy(halo, Path.Combine(other, $"More {n}.unboundkeys"));
+        Check(ProfileShare.Find(other, folder).Count == ProfileShare.MaxListed, "a long list is cut to the newest few");
+    }
+
     private static Dictionary<string, ushort> Words() => new() { ["one"] = 0x31, ["two"] = 0x32 };
 
     private static bool Same(List<string> actual, params string[] expected) => actual.SequenceEqual(expected);

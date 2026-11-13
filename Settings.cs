@@ -816,4 +816,202 @@ internal static class Settings
         Write(saved);
         return true;
     }
+
+    // ---- Sharing a profile --------------------------------------------
+    //
+    // One game with all its sub-profiles as a small file a friend can
+    // import (Fizzil, 2026-11-13). Only the game travels: steering, window
+    // positions and the other app-wide settings above are not in it. A
+    // file from somebody else is not trusted: ReadShared checks and tidies
+    // everything before any of it reaches the settings file.
+
+    public const int MaxProfiles = 10;
+    public const int MaxSubProfiles = 10;
+    // The most the rename keyboard lets a name grow to (NameKeyboard).
+    public const int MaxNameLength = 20;
+    public const string SharedFileExtension = ".unboundkeys";
+
+    // The biggest real profile so far is about 55 KB; anything near this is
+    // not a profile, and is refused before it is read into memory.
+    private const long MaxSharedFileBytes = 1_000_000;
+    private const int SharedFormat = 1;
+    private static readonly string[] KnownThemeColors = { "Red", "Green", "Blue" };
+
+    // What the file holds. UnboundKeysProfile is both the marker that says
+    // what the file is and the format's number, should it ever change.
+    private sealed class SharedProfile
+    {
+        public int UnboundKeysProfile { get; set; }
+        public string? Name { get; set; }
+        public ProfileData? Profile { get; set; }
+    }
+
+    // Writes the game to a file in that folder and returns the file's
+    // path, or null if the game does not exist or the file could not be
+    // written. Changes nothing in the settings.
+    public static string? ExportProfile(string profile, string folder)
+    {
+        var saved = Read();
+        if (!saved.Profiles.TryGetValue(profile, out var game))
+        {
+            // Default always exists, even before anything was saved to it.
+            if (profile != DefaultProfileName)
+                return null;
+            game = new ProfileData();
+        }
+
+        try
+        {
+            Directory.CreateDirectory(folder);
+            string path = Path.Combine(folder, SafeFileName(profile) + SharedFileExtension);
+            var shared = new SharedProfile { UnboundKeysProfile = SharedFormat, Name = profile, Profile = game };
+            File.WriteAllText(path, JsonSerializer.Serialize(shared, new JsonSerializerOptions { WriteIndented = true }));
+            return path;
+        }
+        catch (Exception ex)
+        {
+            Log.Error("sharing a profile", ex);
+            return null;
+        }
+    }
+
+    // The game's name with the characters Windows forbids in a file name
+    // swapped for underscores; the real name is kept inside the file.
+    private static string SafeFileName(string profile)
+    {
+        var invalid = Path.GetInvalidFileNameChars();
+        var chars = profile.Select(c => Array.IndexOf(invalid, c) >= 0 ? '_' : c).ToArray();
+        string name = new string(chars).Trim().TrimEnd('.');
+        return name.Length == 0 ? "profile" : name;
+    }
+
+    // Adds the game in that file under a name nobody has yet ("the isle 2"
+    // if "the isle" is taken) and returns that name. Never overwrites and
+    // never switches to it. Null, with the reason in plain words, if the
+    // file is not a profile or there is no room.
+    public static string? ImportProfile(string path, out string problem)
+    {
+        var shared = ReadShared(path, out problem);
+        if (shared == null)
+            return null;
+
+        var saved = Read();
+        // Default counts as a profile even before anything was saved to it
+        // (see LoadProfileNames).
+        var taken = new HashSet<string>(saved.Profiles.Keys, StringComparer.OrdinalIgnoreCase) { DefaultProfileName };
+        if (taken.Count >= MaxProfiles)
+        {
+            problem = "There are already ten profiles. Delete one to make room.";
+            return null;
+        }
+
+        string name = shared.Name!;
+        for (int n = 2; taken.Contains(name); n++)
+            name = $"{shared.Name} {n}";
+        saved.Profiles[name] = shared.Profile!;
+        Write(saved);
+
+        // Write keeps the app going when a save fails; here the user has to
+        // know, as the profile would be gone at the next start.
+        if (!Read().Profiles.ContainsKey(name))
+        {
+            problem = "The profile could not be saved.";
+            return null;
+        }
+        problem = "";
+        return name;
+    }
+
+    // The name of the game in that file, or null if it is not a profile:
+    // what the import list shows.
+    public static string? SharedProfileName(string path) => ReadShared(path, out _)?.Name;
+
+    // Reads a shared file and makes it safe to keep: a real name, no more
+    // sub-profiles than a game holds, no nulls where the Load* methods
+    // expect mappings. Anything missing is left empty, which every Load*
+    // reads as the app's defaults.
+    private static SharedProfile? ReadShared(string path, out string problem)
+    {
+        problem = "That file is not an UnboundKeys profile.";
+        try
+        {
+            var info = new FileInfo(path);
+            if (!info.Exists)
+            {
+                problem = "That file is no longer there.";
+                return null;
+            }
+            if (info.Length > MaxSharedFileBytes)
+                return null;
+
+            var shared = JsonSerializer.Deserialize<SharedProfile>(File.ReadAllText(path));
+            if (shared?.Profile is not { } game || shared.UnboundKeysProfile < 1)
+                return null;
+
+            string name = new string((shared.Name ?? "").Where(c => !char.IsControl(c)).ToArray()).Trim();
+            if (name.Length > MaxNameLength)
+                name = name[..MaxNameLength].Trim();
+            if (name.Length == 0)
+                return null;
+            shared.Name = name;
+
+            game.ThemeColor = KnownThemeColors.Contains(game.ThemeColor) ? game.ThemeColor : "";
+            game.ActiveSubProfile ??= "";
+            game.SubProfiles ??= new();
+            game.MigrateLegacyMappings();
+            if (game.SubProfiles.Count > MaxSubProfiles)
+            {
+                problem = "That profile has more sub-profiles than UnboundKeys can hold.";
+                return null;
+            }
+            foreach (var sub in game.SubProfiles.Keys.ToList())
+                game.SubProfiles[sub] = Tidy(game.SubProfiles[sub]);
+            if (game.SubProfiles.Count == 0)
+                game.SubProfiles[DefaultSubProfileName] = new MappingSet();
+            game.ActiveSubProfile = ActiveSubOf(game);
+            return shared;
+        }
+        catch (Exception ex)
+        {
+            // Not JSON, or not this shape: an ordinary refusal, though the
+            // log says why for whoever is working out what went wrong.
+            Log.Error($"reading the shared profile {Path.GetFileName(path)}", ex);
+            return null;
+        }
+    }
+
+    private static MappingSet Tidy(MappingSet? set)
+    {
+        set ??= new MappingSet();
+        set.KeyMap = NoNulls(set.KeyMap);
+        set.ExtraKeys = Capped(NoNulls(set.ExtraKeys));
+        set.Behaviors = NoNulls(set.Behaviors);
+        set.MouseEnabled = NoNulls(set.MouseEnabled);
+        set.MouseKeyMap = NoNulls(set.MouseKeyMap);
+        set.MouseExtraKeys = Capped(NoNulls(set.MouseExtraKeys));
+        set.MouseBehaviors = NoNulls(set.MouseBehaviors);
+        set.VirtualKeyMap = NoNulls(set.VirtualKeyMap);
+        set.VirtualExtraKeys = Capped(NoNulls(set.VirtualExtraKeys));
+        set.VirtualBehaviors = NoNulls(set.VirtualBehaviors);
+        return set;
+    }
+
+    private static Dictionary<string, T> NoNulls<T>(Dictionary<string, T>? map)
+    {
+        var clean = new Dictionary<string, T>();
+        if (map != null)
+            foreach (var (id, value) in map)
+                if (value is not null)
+                    clean[id] = value;
+        return clean;
+    }
+
+    // A mapping holds at most RemapStore.MaxExtraKeys extra keys.
+    private static Dictionary<string, List<ushort>> Capped(Dictionary<string, List<ushort>> extraKeys)
+    {
+        foreach (var keys in extraKeys.Values)
+            if (keys.Count > RemapStore.MaxExtraKeys)
+                keys.RemoveRange(RemapStore.MaxExtraKeys, keys.Count - RemapStore.MaxExtraKeys);
+        return extraKeys;
+    }
 }
