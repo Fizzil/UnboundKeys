@@ -74,6 +74,9 @@ allPassed &= HoldScenario();
 allPassed &= GesturesScenario();
 allPassed &= OneButtonScenario();
 allPassed &= UnboundKeys.Tests.SettingsTests.Run(scratch);
+// "--pictures <folder>" also saves the Settings page as PNGs (see SharePageTests).
+int picturesAt = Array.IndexOf(args, "--pictures");
+allPassed &= UnboundKeys.Tests.SharePageTests.Run(scratch, picturesAt >= 0 && picturesAt + 1 < args.Length ? args[picturesAt + 1] : null);
 allPassed &= UnboundKeys.Tests.SteeringTests.Run();
 allPassed &= UnboundKeys.Tests.OwnWindowClickTests.Run();
 allPassed &= UnboundKeys.Tests.DashboardBackTests.Run();

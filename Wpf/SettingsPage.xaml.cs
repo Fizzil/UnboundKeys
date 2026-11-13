@@ -19,13 +19,20 @@ namespace UnboundKeys.Wpf;
 // place must own the KeyMap → MouseMap → VirtualKeyMap → ThemeMode order.
 public partial class SettingsPage : IDashboardPage
 {
-    private const int MaxProfiles = 10;
-    private const int MaxSubProfiles = 10;
+    private const int MaxProfiles = Settings.MaxProfiles;
+    private const int MaxSubProfiles = Settings.MaxSubProfiles;
 
     // Which profiles show their sub-profiles. The active one opens by
     // itself whenever it changes; the rest are whatever was clicked.
     private readonly HashSet<string> _expanded = new(StringComparer.OrdinalIgnoreCase);
     private string? _lastActiveGame;
+
+    // Sharing (see ProfileShare): whether the list of profile files to
+    // import is showing, and the one line that says what Share or Import
+    // just did. The line is shown by the next redraw of the list and gone
+    // at the one after.
+    private bool _importing;
+    private string _shareStatus = "";
 
     // The three presets' accent colors, same values as Theme.cs — kept
     // here as plain colors because only the ACTIVE theme's AccentBrush
@@ -168,6 +175,8 @@ public partial class SettingsPage : IDashboardPage
     public void Refresh()
     {
         EndRename();
+        _importing = false;
+        _shareStatus = "";
         RebuildProfileList();
         RefreshSwatches();
     }
@@ -215,8 +224,101 @@ public partial class SettingsPage : IDashboardPage
                 ProfileList.Children.Add(AddButton("+  Add sub-profile", leftMargin: 28, () => CreateSubProfile(name)));
         }
 
+        // "+ Add Profile" and "Import profile" side by side. Import stays
+        // even with the list full: picking a file then says there is no
+        // room, which a missing button would not.
+        var actions = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal };
         if (names.Count < MaxProfiles)
-            ProfileList.Children.Add(AddButton("+  Add Profile", leftMargin: 8, CreateProfile));
+            actions.Children.Add(AddButton("+  Add Profile", leftMargin: 8, CreateProfile));
+        actions.Children.Add(AddButton(_importing ? "Close import list" : "Import profile", leftMargin: 8, () =>
+        {
+            _importing = !_importing;
+            RebuildProfileList();
+        }));
+        ProfileList.Children.Add(actions);
+
+        if (_importing)
+            AddImportList();
+
+        if (_shareStatus.Length > 0)
+        {
+            ProfileList.Children.Add(Note(_shareStatus));
+            _shareStatus = "";
+        }
+    }
+
+    // The profile files found in Downloads and Documents\UnboundKeys, one
+    // big button each: the profile's name, then the file it is in (two
+    // downloads of one profile are otherwise the same button twice).
+    private void AddImportList()
+    {
+        var found = ProfileShare.FindShared();
+        ProfileList.Children.Add(Note(found.Count == 0
+            ? "No profile files found. Save the file you were sent into Downloads, then click Import profile again."
+            : "Profile files in Downloads and Documents\\UnboundKeys, newest first. Click one to add it as a new profile."));
+
+        foreach (var (path, name) in found)
+        {
+            var file = new TextBlock
+            {
+                Text = System.IO.Path.GetFileName(path),
+                FontSize = 11,
+                Margin = new Thickness(10, 0, 0, 0),
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            file.SetResourceReference(TextBlock.ForegroundProperty, "TextSecondaryBrush");
+            var content = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal };
+            content.Children.Add(new TextBlock { Text = name, VerticalAlignment = VerticalAlignment.Center });
+            content.Children.Add(file);
+
+            var pick = AddButton("", leftMargin: 28, () => ImportProfile(path));
+            pick.Content = content;
+            ProfileList.Children.Add(pick);
+        }
+    }
+
+    // Never overwrites and never switches: the profile is added under a
+    // free name, opened in the list so it can be seen, and the cross on
+    // its row takes it away again.
+    private void ImportProfile(string path)
+    {
+        string? name = Settings.ImportProfile(path, out string problem);
+        if (name == null)
+        {
+            _shareStatus = problem;
+        }
+        else
+        {
+            _importing = false;
+            _expanded.Add(name);
+            _shareStatus = $"Imported as {name}.";
+        }
+        RebuildProfileList();
+    }
+
+    // The whole profile, every sub-profile included, as one file in
+    // Documents\UnboundKeys, shown selected in Explorer ready to drag to a
+    // friend.
+    private void ShareProfile(string name)
+    {
+        string? path = Settings.ExportProfile(name, ProfileShare.ShareFolder);
+        if (path == null)
+        {
+            _shareStatus = "That profile could not be saved to a file.";
+        }
+        else
+        {
+            _shareStatus = $"Saved {System.IO.Path.GetFileName(path)} in Documents\\UnboundKeys.";
+            ProfileShare.ShowInExplorer(path);
+        }
+        RebuildProfileList();
+    }
+
+    private static TextBlock Note(string text)
+    {
+        var note = new TextBlock { Text = text, FontSize = 12, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(12, 8, 12, 2) };
+        note.SetResourceReference(TextBlock.ForegroundProperty, "TextSecondaryBrush");
+        return note;
     }
 
     private static string Plural(int count) => count == 1 ? "" : "s";
@@ -238,8 +340,8 @@ public partial class SettingsPage : IDashboardPage
 
     // The name as a rail-style row (pill + bright text on the active one)
     // with a chevron: clicking it opens or closes the sub-profiles. Then
-    // Rename and a two-tap ✕ — neither for Default, which is always there
-    // to fall back to.
+    // Share, Rename and a two-tap ✕ — the last two not for Default, which
+    // is always there to fall back to.
     private Grid BuildProfileRow(string name, bool active, bool open)
     {
         var row = ThreeColumnRow(height: 48, leftMargin: 0);
@@ -262,10 +364,27 @@ public partial class SettingsPage : IDashboardPage
         var chevronButton = new Button { Width = 36, Height = 36, Content = Chevron(open) };
         chevronButton.SetResourceReference(StyleProperty, "SecondaryButtonStyle");
         chevronButton.Click += (_, _) => ToggleExpanded(name);
-        Grid.SetColumn(chevronButton, 3);
+        Grid.SetColumn(chevronButton, 4);
         row.Children.Add(chevronButton);
 
-        if (name != Settings.DefaultProfileName)
+        var share = new Button { Content = "Share", Width = 70, Height = 36, Margin = new Thickness(0, 0, 4, 0) };
+        share.SetResourceReference(StyleProperty, "SecondaryButtonStyle");
+        share.Click += (_, _) => ShareProfile(name);
+        Grid.SetColumn(share, 1);
+        row.Children.Add(share);
+
+        if (name == Settings.DefaultProfileName)
+        {
+            // Hidden, not left out: they keep their room, so Share sits in
+            // the same place on every row.
+            var noRename = RenameButton(() => { });
+            var noDelete = DeleteButton(() => { });
+            noRename.Visibility = Visibility.Hidden;
+            noDelete.Visibility = Visibility.Hidden;
+            row.Children.Add(noRename);
+            row.Children.Add(noDelete);
+        }
+        else
         {
             row.Children.Add(RenameButton(() => BeginRename(name, subOf: null)));
             row.Children.Add(DeleteButton(() =>
@@ -333,9 +452,11 @@ public partial class SettingsPage : IDashboardPage
     {
         var row = new Grid { Height = height, Margin = new Thickness(leftMargin, 0, 0, 0) };
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        // Column 1: Share, on a profile row only.
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        // Column 3: the chevron on a profile row, an empty spacer on a
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        // Column 4: the chevron on a profile row, an empty spacer on a
         // sub-profile row, so Rename and the cross line up on both levels.
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
         return row;
@@ -367,7 +488,7 @@ public partial class SettingsPage : IDashboardPage
         var rename = new Button { Content = "Rename", Width = 80, Height = 36, Margin = new Thickness(0, 0, 4, 0) };
         rename.SetResourceReference(StyleProperty, "SecondaryButtonStyle");
         rename.Click += (_, _) => onClick();
-        Grid.SetColumn(rename, 1);
+        Grid.SetColumn(rename, 2);
         return rename;
     }
 
@@ -376,7 +497,7 @@ public partial class SettingsPage : IDashboardPage
         var delete = new Button();
         delete.SetResourceReference(StyleProperty, "RemoveButtonStyle");
         ConfirmDeleteBehavior.AttachTo(delete, onConfirmed);
-        Grid.SetColumn(delete, 2);
+        Grid.SetColumn(delete, 3);
         return delete;
     }
 
