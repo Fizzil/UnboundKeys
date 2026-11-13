@@ -32,7 +32,9 @@ param(
   [string]$EditorChip = "W",      # the Mouse-page chip whose editor is pictured (its text is what the button sends)
   [string]$EditorFile = "UBK-Editor.png",
   [string]$SettingsFold = "",    # a Settings section to open for its picture, by its heading: "PROFILES"
-  [string]$SettingsFile = "UBK-Settings.png"
+  [string]$SettingsFile = "UBK-Settings.png",
+  [string]$FoldProfile = "",     # with -SettingsFold "PROFILES": the active profile, folded for the picture so every row shows
+  [switch]$SteeringSetup         # click the Steering page's Default (the racing setup) before its picture; it CHANGES mappings, so restore the settings file afterwards
 )
 $wanted = @($Only.Split(',') | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 function Want($name) { return ($wanted.Count -eq 0) -or ($wanted -contains $name) }
@@ -116,6 +118,46 @@ function Find-Button($root, $text) {
     }
   }
   return $null
+}
+
+# As Find-Button, but of several matches the one furthest right: a
+# profile's row on the Settings page rather than the rail's profile chip,
+# which shows the same name.
+function Find-RightmostButton($root, $text) {
+  $cond = New-Object System.Windows.Automation.PropertyCondition($AE::NameProperty, $text)
+  $best = $null
+  foreach ($m in $root.FindAll($TS::Descendants, $cond)) {
+    $cur = $m
+    for ($i = 0; $i -lt 8 -and $null -ne $cur; $i++) {
+      if ($cur.Current.ControlType.Id -eq $buttonId) {
+        if ($null -eq $best -or $cur.Current.BoundingRectangle.X -gt $best.Current.BoundingRectangle.X) { $best = $cur }
+        break
+      }
+      $cur = $raw.GetParent($cur)
+    }
+  }
+  return $best
+}
+function Invoke-ProfileRow($root, $name) {
+  $b = Find-RightmostButton $root $name
+  if ($null -eq $b) { throw "no profile row for '$name'" }
+  $b.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+  Log "invoked the profile row '$name'"
+  Start-Sleep -Milliseconds 700
+}
+
+# The keyboard's picture with the pointer out of the way: a key under the
+# pointer is drawn lit (the "h" in the 4.14.0 picture). The pointer goes
+# just below the keyboard for the picture and straight back.
+function Save-Keyboard($win, $file) {
+  $p = New-Object N+POINT
+  [void][N]::GetCursorPos([ref]$p)
+  $r = New-Object N+RECT
+  [void][N]::GetWindowRect([IntPtr]$win.Current.NativeWindowHandle, [ref]$r)
+  [void][N]::SetCursorPos($r.L + 40, $r.B + 120)
+  Start-Sleep -Milliseconds 500
+  Save-Window $win $file 10
+  [void][N]::SetCursorPos($p.X, $p.Y)
 }
 
 # Any element whose Name is exactly $text, button or not (a row label).
@@ -239,7 +281,14 @@ Raise-Window $dash
 if (Want "Mouse")         { Invoke-Button $dash "Mouse";    Save-Window $dash "UBK-Mouse.png" }
 if (Want "Keyboard-Page") { Invoke-Button $dash "Keyboard"; Save-Window $dash "UBK-Keyboard-Page.png" }
 if (Want "Voice")         { Invoke-Button $dash "Voice";    Save-Window $dash "UBK-Voice.png" }
-if (Want "Steering")      { Invoke-Button $dash "Steering"; Save-Window $dash "UBK-Steering.png" }
+if (Want "Steering") {
+  Invoke-Button $dash "Steering"
+  # The page's Default button, not the profile chip of the same name.
+  # Clicking it shows the Mouse page (the middle button it just set), so
+  # come back for the picture.
+  if ($SteeringSetup) { Invoke-ProfileRow $dash "Default"; Invoke-Button $dash "Steering" }
+  Save-Window $dash "UBK-Steering.png"
+}
 if (Want "Editor") {
   # A mouse button's editor, for its Single press / Double press segments
   # and Reset both (4.10.0): the Mouse-page chip named by -EditorChip, the
@@ -265,7 +314,9 @@ if (Want "Settings") {
   # (PROFILES for the Share buttons, 4.14.0); it is closed again after.
   Invoke-Button $dash "Settings"
   if ($SettingsFold) { Invoke-Button $dash $SettingsFold 800 }
+  if ($SettingsFold -and $FoldProfile) { Invoke-ProfileRow $dash $FoldProfile }
   Save-Window $dash $SettingsFile
+  if ($SettingsFold -and $FoldProfile) { Invoke-ProfileRow $dash $FoldProfile }
   if ($SettingsFold) { Invoke-Button $dash $SettingsFold 500 }
 }
 if (Want "Help") {
@@ -300,7 +351,7 @@ if (Want "Keyboard") {
   try {
     Raise-Window $kb
     $isMini = $null -ne (Find-Button $kb "Maxi")
-    if ($isMini) { Save-Window $kb "UBK-Keyboard-Mini.png" 10 } else { Save-Window $kb "UBK-Keyboard.png" 10 }
+    if ($isMini) { Save-Keyboard $kb "UBK-Keyboard-Mini.png" } else { Save-Keyboard $kb "UBK-Keyboard.png" }
     if ($Method -eq "sendinput") {
       # A click right after the size change has missed once (the keys are
       # rebuilt at the new size); a second try has always landed.
@@ -309,14 +360,14 @@ if (Want "Keyboard") {
         if (-not (Wait-Button $kb "Mini")) { Push-Key $kb "Maxi" }
         if (-not (Wait-Button $kb "Mini")) { throw "Maxi click did not switch the layout" }
         Raise-Window $kb
-        Save-Window $kb "UBK-Keyboard.png" 10
+        Save-Keyboard $kb "UBK-Keyboard.png"
         Push-Key $kb "Mini"
       } else {
         Push-Key $kb "Mini"
         if (-not (Wait-Button $kb "Maxi")) { Push-Key $kb "Mini" }
         if (-not (Wait-Button $kb "Maxi")) { throw "Mini click did not switch the layout" }
         Raise-Window $kb
-        Save-Window $kb "UBK-Keyboard-Mini.png" 10
+        Save-Keyboard $kb "UBK-Keyboard-Mini.png"
         Push-Key $kb "Maxi"
       }
     }

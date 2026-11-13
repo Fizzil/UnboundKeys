@@ -11,7 +11,7 @@ Remap mouse buttons, spoken words and an on-screen keyboard to keyboard keys, wi
 </p>
 <p float="left">
   <img src="Assets/screenshots/UBK-Editor.png" width="32%" alt="A mouse button's editor: its keys, Tap / Repeat / Rotation / Hold, duration, Infinite, the Infinite pause, and the Starts and stops steering and Double press switches at the bottom" />
-  <img src="Assets/screenshots/UBK-Settings.png" width="32%" alt="Settings: fold-away sections, each summarising its state while closed, with Features for the optional extras and a one-click Help" />
+  <img src="Assets/screenshots/UBK-Settings.png" width="32%" alt="Settings with the Profiles section open: every profile with its Share, Rename and delete buttons, then Add Profile and Import profile" />
   <img src="Assets/screenshots/UBK-Help.png" width="32%" alt="The Help page: the manual in one page, one fold per topic, with Back to where you opened it" />
 </p>
 <p float="left">
