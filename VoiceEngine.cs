@@ -1,6 +1,5 @@
 using System.IO;
 using System.Text.Json;
-using NAudio.Wave;
 using Vosk;
 
 namespace UnboundKeys;
@@ -11,8 +10,8 @@ namespace UnboundKeys;
 // loaded, SAPI would force almost any short utterance into whichever one
 // it was phonetically closest to, rather than truly rejecting it.
 //
-// Vosk has no microphone capture of its own — NAudio pulls raw audio off
-// the default input device and feeds it in. The recognizer's vocabulary is
+// Vosk has no microphone capture of its own — the microphone (IMicrophone:
+// WinMmMicrophone on Windows) hands raw audio in. The recognizer's vocabulary is
 // constrained to just "press" plus the key words (see the grammar built
 // below), so it's not merely unlikely but actually *impossible* for it to
 // transcribe anything else — a much stronger guarantee than SAPI's
@@ -37,29 +36,26 @@ public sealed class VoiceEngine : IDisposable
     public event Action<string>? CommandRecognized;
 
     // The microphone went away while it was wanted (unplugged, a device
-    // change, an error in the capture), with the reason NAudio gave, if
+    // change, an error in the capture), with the reason the system gave, if
     // any; and it came back. Until it is back, nothing said can be heard,
     // so Program.cs lets go of what spoken words hold and says so in the
-    // tray, while this engine tries the microphone again every few
-    // seconds. Before this, a dead microphone was silent: the app looked
-    // alive and listened to nothing, and a word that had switched steering
-    // on could not switch it off.
+    // tray, while the keeper (see MicrophoneKeeper) tries the microphone
+    // again every few seconds.
     public event Action<Exception?>? MicrophoneLost;
     public event Action? MicrophoneBack;
-
-    private const int RetryMs = 3000;
-    private readonly object _gate = new();
-    private bool _wantRecording; // between Start/Resume and Pause/Dispose
-    private bool _lost;          // stopped without being asked to
-    private System.Threading.Timer? _retry;
 
     private const int SampleRate = 16000;
 
     private readonly Model _model;
     private readonly VoskRecognizer _recognizer;
-    private readonly WaveInEvent _waveIn;
+    private readonly IMicrophone _microphone;
+    private readonly MicrophoneKeeper _keeper;
 
-    public VoiceEngine()
+    public VoiceEngine() : this(new WinMmMicrophone(SampleRate))
+    {
+    }
+
+    internal VoiceEngine(IMicrophone microphone)
     {
         Vosk.Vosk.SetLogLevel(-1); // Vosk logs verbosely to the console by default; not useful here.
 
@@ -89,12 +85,11 @@ public sealed class VoiceEngine : IDisposable
         string grammar = JsonSerializer.Serialize(words);
         _recognizer = new VoskRecognizer(_model, SampleRate, grammar);
 
-        _waveIn = new WaveInEvent
-        {
-            WaveFormat = new WaveFormat(SampleRate, 16, 1),
-        };
-        _waveIn.DataAvailable += OnDataAvailable;
-        _waveIn.RecordingStopped += OnRecordingStopped;
+        _microphone = microphone;
+        _microphone.Data += OnData;
+        _keeper = new MicrophoneKeeper(_microphone);
+        _keeper.Lost += reason => MicrophoneLost?.Invoke(reason);
+        _keeper.Back += () => MicrophoneBack?.Invoke();
     }
 
     // Acting on partial results (Fizzil: the delay). The recognizer decides
@@ -110,14 +105,14 @@ public sealed class VoiceEngine : IDisposable
     private int _partialRepeats;
     private string? _firedFromPartial;
 
-    private void OnDataAvailable(object? sender, WaveInEventArgs e)
+    private void OnData(byte[] buffer, int bytes)
     {
-        // An exception out of here would end the recording (NAudio stops
-        // and reports it through RecordingStopped): one bad chunk must
-        // stay one bad chunk.
+        // An exception out of here would end the recording (the capture
+        // stops and reports it as a loss): one bad chunk must stay one
+        // bad chunk.
         try
         {
-            if (_recognizer.AcceptWaveform(e.Buffer, e.BytesRecorded))
+            if (_recognizer.AcceptWaveform(buffer, bytes))
                 HandleFinal(TextOf(_recognizer.Result(), "text"));
             else
                 HandlePartial(TextOf(_recognizer.PartialResult(), "partial"));
@@ -126,71 +121,6 @@ public sealed class VoiceEngine : IDisposable
         {
             Log.Error("speech recognition", ex);
         }
-    }
-
-    // NAudio raises this after any stop: ours (Pause, Dispose) or the
-    // device's. Only the latter is a loss.
-    private void OnRecordingStopped(object? sender, StoppedEventArgs e)
-    {
-        bool lost;
-        lock (_gate)
-        {
-            lost = _wantRecording && !_lost;
-            if (lost)
-            {
-                _lost = true;
-                _retry ??= new System.Threading.Timer(_ => TryAgain(), null, RetryMs, RetryMs);
-            }
-        }
-        if (lost)
-            MicrophoneLost?.Invoke(e.Exception);
-    }
-
-    private void TryAgain()
-    {
-        lock (_gate)
-        {
-            if (!_wantRecording || !_lost)
-                return;
-            try
-            {
-                _waveIn.StartRecording();
-            }
-            catch (Exception)
-            {
-                return; // still no microphone; the timer tries again
-            }
-            _lost = false;
-            _retry?.Dispose();
-            _retry = null;
-        }
-        MicrophoneBack?.Invoke();
-    }
-
-    // Start and Resume: wanted from now on. A microphone missing at this
-    // moment (StartRecording throws) is a loss like any other, retried
-    // the same way, not a crash of the UI thread the switch was clicked on.
-    private void Begin()
-    {
-        bool lost = false;
-        lock (_gate)
-        {
-            _wantRecording = true;
-            if (_lost)
-                return; // the retry timer is on it
-            try
-            {
-                _waveIn.StartRecording();
-            }
-            catch (Exception)
-            {
-                _lost = true;
-                lost = true;
-                _retry ??= new System.Threading.Timer(_ => TryAgain(), null, RetryMs, RetryMs);
-            }
-        }
-        if (lost)
-            MicrophoneLost?.Invoke(null);
     }
 
     private void HandlePartial(string text)
@@ -252,27 +182,15 @@ public sealed class VoiceEngine : IDisposable
         return known ? spoken : null;
     }
 
-    public void Start() => Begin();
-    public void Resume() => Begin();
-
-    public void Pause()
-    {
-        lock (_gate)
-            _wantRecording = false;
-        _waveIn.StopRecording();
-    }
+    public void Start() => _keeper.Begin();
+    public void Resume() => _keeper.Begin();
+    public void Pause() => _keeper.Pause();
 
     public void Dispose()
     {
-        lock (_gate)
-        {
-            _wantRecording = false;
-            _retry?.Dispose();
-            _retry = null;
-        }
-        _waveIn.RecordingStopped -= OnRecordingStopped;
-        _waveIn.DataAvailable -= OnDataAvailable;
-        _waveIn.Dispose();
+        _keeper.Dispose();
+        _microphone.Data -= OnData;
+        _microphone.Dispose();
         _recognizer.Dispose();
         _model.Dispose();
     }

@@ -41,6 +41,9 @@ internal static class FocusNetTests
         Section("focus net: a title change is told from a tab switch", HoldAndTitle);
         Section("focus net: a hold of pedals only survives a tab's title change", PedalsAndTitle);
         Section("focus net: an infinite repeat stops when the window changes", RepeatAndWindow);
+        Section("focus net: a timed hold lets go when the window changes", TimedHoldAndWindow);
+        Section("focus net: a timed repeat stops when the window changes", TimedRepeatAndWindow);
+        Section("focus net: a timed hold of pedals only survives a tab's title change", TimedPedalsAndTitle);
         return _ok;
     }
 
@@ -135,6 +138,59 @@ internal static class FocusNetTests
             windows.Show(200, "Something else");
             Check(Within(1500, () => !KeyExecutor.IsRunning("one")) && run.Wait(1000), "another window in front: the repeat stops");
             Check(sender.DownCount == 0, "with its key up");
+        });
+    }
+
+    // Timed runs stay in Execute until they end: each on its own thread,
+    // with a time far longer than the test, so only the net can end them.
+    private static Task StartTimed(ushort key, KeyBehavior behavior) =>
+        Task.Run(() => KeyExecutor.Execute("one", new List<(ushort Vk, bool Extended)> { (key, false) }, behavior));
+
+    private static void TimedHoldAndWindow()
+    {
+        With((windows, sender) =>
+        {
+            windows.Show(100, "notes.txt");
+            var run = StartTimed(MiddleClick, new KeyBehavior { Hold = true, DurationSeconds = 30 });
+            Check(Within(1000, () => KeyExecutor.IsRunning("one") && sender.DownCount == 1), "a 30 s hold is running, its button down");
+            windows.Show(100, "notes.txt *");
+            Thread.Sleep(900);
+            Check(KeyExecutor.IsRunning("one") && sender.DownCount == 1, "the title gaining a mark does not end it");
+            windows.Show(200, "Something else");
+            Check(Within(1500, () => !KeyExecutor.IsRunning("one") && sender.DownCount == 0) && run.Wait(1000), "another window in front: the hold ends and the button goes up");
+
+            windows.Show(100, "A tab");
+            run = StartTimed(MiddleClick, new KeyBehavior { Hold = true, DurationSeconds = 30 });
+            Check(Within(1000, () => KeyExecutor.IsRunning("one") && sender.DownCount == 1), "started again, it runs again");
+            windows.Show(100, "A different one");
+            Check(Within(1500, () => !KeyExecutor.IsRunning("one") && sender.DownCount == 0) && run.Wait(1000), "and a tab switch ends it too");
+        });
+    }
+
+    private static void TimedRepeatAndWindow()
+    {
+        With((windows, sender) =>
+        {
+            var run = StartTimed(KeyA, new KeyBehavior { Repeat = true, DurationSeconds = 30 });
+            Check(Within(1000, () => KeyExecutor.IsRunning("one") && sender.EventCount >= 4), "a 30 s repeat is running, pressing its key");
+            windows.Show(200, "Something else");
+            Check(Within(1500, () => !KeyExecutor.IsRunning("one")) && run.Wait(1000), "another window in front: the repeat stops");
+            Check(sender.DownCount == 0, "with its key up");
+        });
+    }
+
+    private static void TimedPedalsAndTitle()
+    {
+        With((windows, sender) =>
+        {
+            windows.Show(100, "Race: lap 1");
+            var run = StartTimed(PadKeys.Brake, new KeyBehavior { Hold = true, DurationSeconds = 30 });
+            Check(Within(1000, () => KeyExecutor.IsRunning("one")), "a 30 s hold of the brake is running");
+            windows.Show(100, "Finished!");
+            Thread.Sleep(900);
+            Check(KeyExecutor.IsRunning("one"), "it is kept when just the tab's title changes");
+            windows.Show(200, "Something else");
+            Check(Within(1500, () => !KeyExecutor.IsRunning("one")) && run.Wait(1000), "but another window in front ends it");
         });
     }
 

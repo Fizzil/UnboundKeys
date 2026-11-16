@@ -325,6 +325,15 @@ internal static class KeyExecutor
         // another mapping the keys after this one's are up (both may hold
         // Shift: it must go up, then down, in that order).
         public readonly TaskCompletionSource Done = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // The window in front (and its title) when the run began, for the
+        // focus net (see CheckFocus): a timed run lets go when that window
+        // stops being the one in front, as an Infinite one does (Fizzil,
+        // 2026-11-16). PedalsOnly: a hold of only Throttle or Brake, kept
+        // when just the title changes.
+        public WindowId Window;
+        public string? WindowTitle;
+        public bool PedalsOnly;
     }
 
     private static readonly Dictionary<string, TimedRun> _activeTimedRuns = new();
@@ -338,28 +347,30 @@ internal static class KeyExecutor
         {
             if (_activeTimedRuns.TryGetValue(word, out var existing))
             {
+                // Only ever Cancel here, never Dispose: the still-running
+                // Execute call that owns this token disposes it itself, in
+                // its own finally block below. Cancelled under _lock, which
+                // that finally takes before it disposes, so the cancel can
+                // never land on a source already disposed.
                 toCancel = existing;
                 _activeTimedRuns.Remove(word);
+                existing.Cts.Cancel();
             }
             else
             {
-                mine = new TimedRun();
+                var window = ActiveWindow.Current;
+                mine = new TimedRun
+                {
+                    Window = window,
+                    WindowTitle = ActiveWindow.TitleOf(window),
+                    PedalsOnly = behavior.Hold && keys.All(k => PadKeys.IsPadKey(k.Vk)),
+                };
                 _activeTimedRuns[word] = mine;
             }
         }
 
         if (toCancel != null)
-        {
-            // Only ever Cancel here, never Dispose — the still-running
-            // Execute call that owns this token disposes it itself, in its
-            // own finally block below, once it's actually done reacting to
-            // the cancellation. CancellationTokenSource doesn't guarantee
-            // Dispose is safe to call from two threads at once, so letting
-            // exactly one owner (the run itself) be the one to dispose it
-            // avoids that race entirely.
-            toCancel.Cts.Cancel();
             return;
-        }
 
         try
         {
@@ -459,12 +470,12 @@ internal static class KeyExecutor
         lock (_lock)
         {
             if (_activeTimedRuns.TryGetValue(word, out run))
+            {
                 _activeTimedRuns.Remove(word);
+                run.Cts.Cancel(); // under _lock: see ExecuteTimed
+            }
         }
-        if (run == null)
-            return;
-        run.Cts.Cancel();
-        run.Done.Task.Wait(1000);
+        run?.Done.Task.Wait(1000);
     }
 
     // If the app closes while a key is being held/repeated indefinitely, this
@@ -807,6 +818,30 @@ internal static class KeyExecutor
                     else if (titleChanged)
                     {
                         s.RepeatWindowTitle = currentTitle;
+                    }
+                }
+            }
+
+            // Timed Holds and Repeats, by the same rule. Cancelled under
+            // _lock (see ExecuteTimed); each run lets go of its own keys
+            // and leaves, as when its word is pressed again.
+            if (_activeTimedRuns.Count > 0)
+            {
+                currentTitle ??= ActiveWindow.TitleOf(current);
+                foreach (var (word, run) in _activeTimedRuns.ToList())
+                {
+                    bool windowChanged = run.Window != current;
+                    bool titleChanged = !windowChanged && run.WindowTitle != currentTitle;
+                    bool ownSideEffect = titleChanged && LooksLikeOwnSideEffect(run.WindowTitle, currentTitle);
+
+                    if (windowChanged || (titleChanged && !ownSideEffect && !run.PedalsOnly))
+                    {
+                        _activeTimedRuns.Remove(word);
+                        run.Cts.Cancel();
+                    }
+                    else if (titleChanged)
+                    {
+                        run.WindowTitle = currentTitle;
                     }
                 }
             }

@@ -71,7 +71,7 @@ public partial class SteeringPage : IDashboardPage
         {
             try
             {
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(VirtualPadDriver.DownloadUrl) { UseShellExecute = true });
+                Opener.OpenLink(VirtualPadDriver.DownloadUrl);
             }
             catch (Exception ex)
             {

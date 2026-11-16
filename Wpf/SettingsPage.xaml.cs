@@ -125,8 +125,10 @@ public partial class SettingsPage : IDashboardPage
             {
                 string folder = System.IO.Path.GetDirectoryName(Log.FilePath)!;
                 System.IO.Directory.CreateDirectory(folder);
-                string target = System.IO.File.Exists(Log.FilePath) ? $"/select,\"{Log.FilePath}\"" : $"\"{folder}\"";
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", target) { UseShellExecute = true });
+                if (System.IO.File.Exists(Log.FilePath))
+                    Opener.ShowFile(Log.FilePath);
+                else
+                    Opener.OpenFolder(folder);
             }
             catch (Exception ex)
             {
