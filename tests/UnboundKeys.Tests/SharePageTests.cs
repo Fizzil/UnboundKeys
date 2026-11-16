@@ -62,7 +62,7 @@ internal static class SharePageTests
         // The app's own look (see Program.cs), so the pictures are honest.
         var app = Application.Current ?? new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         // The app's file carries its version in its name, so it is asked for.
-        string appName = typeof(Settings).Assembly.GetName().Name!;
+        string appName = typeof(UnboundKeys.Wpf.SettingsPage).Assembly.GetName().Name!;
         foreach (string theme in new[] { "Theme.Red", "Theme.Controls" })
             app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri($"/{appName};component/Themes/{theme}.xaml", UriKind.Relative) });
 

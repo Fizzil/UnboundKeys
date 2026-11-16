@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The app with no Windows in it: the mappings and how they are pressed,
+       the settings, the voice engine, the rules for the tray, the
+       microphone, steering and the rest. It targets plain .NET, so nothing
+       here can call into Windows; what it needs from the system it asks
+       for through small interfaces (IKeySender, IPointer, IActiveWindow,
+       IInputHooks, IMicrophone, ITrayShell, ISoundOut, IOpener,
+       IStartupRegistration, IVirtualPadDriver), and the shell beside it
+       (UnboundKeys.csproj, Windows) answers them. Another system would be
+       another shell. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>UnboundKeys</RootNamespace>
+    <AssemblyName>UnboundKeys.Core</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Vosk: offline, small-vocabulary speech recognition — replaces the
+         built-in Windows System.Speech engine, which couldn't reliably tell
+         "press one" apart from ordinary talk. -->
+    <PackageReference Include="Vosk" Version="0.3.38" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The shell and the harness build against Core's internals. The
+         shell's assembly carries the version in its name. -->
+    <InternalsVisibleTo Include="UnboundKeys-v$(Version)" />
+    <InternalsVisibleTo Include="UnboundKeys.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The on-screen keyboard's word-suggestion list (see WordPredictor). -->
+    <EmbeddedResource Include="..\Assets\words-en.txt" Link="Assets\words-en.txt" />
+  </ItemGroup>
+
+</Project>

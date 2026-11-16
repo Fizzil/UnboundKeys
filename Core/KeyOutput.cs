@@ -24,7 +24,9 @@ internal interface IKeySender
 // None ("no key") is never sent and never held.
 internal static class KeyOutput
 {
-    private static IKeySender _sender = new WindowsKeySender();
+    // Set by the system's side before anything else runs (WindowsPlatform.
+    // Install on Windows): this project knows no system of its own.
+    private static IKeySender _sender = null!;
 
     private static readonly object _gate = new();
     private static readonly HashSet<Key> _down = new();

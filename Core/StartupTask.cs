@@ -21,7 +21,9 @@ public static class StartupTask
     // on the exe (the "start paused" preference applies only here).
     public const string AutoStartArgument = "--autostart";
 
-    private static IStartupRegistration _registration = new WindowsStartupTask();
+    // Set by the system's side before anything else runs (WindowsPlatform.
+    // Install on Windows): this project knows no system of its own.
+    private static IStartupRegistration _registration = null!;
 
     // Swaps the registration in use and hands back the old one (the tests).
     internal static IStartupRegistration Use(IStartupRegistration registration)

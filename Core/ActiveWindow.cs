@@ -20,7 +20,9 @@ internal interface IActiveWindow
 
 internal static class ActiveWindow
 {
-    private static IActiveWindow _windows = new WindowsActiveWindow();
+    // Set by the system's side before anything else runs (WindowsPlatform.
+    // Install on Windows): this project knows no system of its own.
+    private static IActiveWindow _windows = null!;
 
     // The harness swaps in one of its own; returns the one replaced.
     internal static IActiveWindow Use(IActiveWindow windows)

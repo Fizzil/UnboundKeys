@@ -19,6 +19,9 @@ static class Program
         if (!SingleInstance.Claim())
             return;
 
+        // Windows' side of every plug-in point, before anything uses one.
+        WindowsPlatform.Install();
+
         // The log is the user's choice (Settings > Log what I do), off unless they
         // switched it on. While it is on, anything that goes wrong from
         // here leaves a line in it (see Log), including the errors nothing
@@ -54,7 +57,7 @@ static class Program
         VoiceEngine voice;
         try
         {
-            voice = new VoiceEngine();
+            voice = new VoiceEngine(new WinMmMicrophone(VoiceEngine.SampleRate));
         }
         catch (Exception ex)
         {

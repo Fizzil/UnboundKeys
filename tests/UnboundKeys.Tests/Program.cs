@@ -21,6 +21,8 @@ if (args.Length == 3 && args[0] == UnboundKeys.Tests.SingleInstanceTests.HoldArg
 // here touches the real profiles and the harness can run with the app open.
 string scratch = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "UnboundKeys.Tests-" + Guid.NewGuid().ToString("N"));
 System.IO.Directory.CreateDirectory(scratch);
+// Windows' side of every plug-in point, as the app installs it at its start.
+WindowsPlatform.Install();
 Settings.UseScratchFile(System.IO.Path.Combine(scratch, "settings.json"));
 Log.UseScratchFile(System.IO.Path.Combine(scratch, "log.txt"));
 // The log is off unless switched on (see SettingsTests.LogSwitch); the

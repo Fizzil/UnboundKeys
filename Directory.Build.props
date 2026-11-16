@@ -1,0 +1,10 @@
+<Project>
+
+  <!-- The app's version, in one place for every project: the shell's exe
+       carries it in its name (UnboundKeys-v4.16.0.exe), and Core names
+       that assembly as the one allowed to see its internals. -->
+  <PropertyGroup>
+    <Version>4.16.0</Version>
+  </PropertyGroup>
+
+</Project>

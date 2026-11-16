@@ -44,16 +44,13 @@ public sealed class VoiceEngine : IDisposable
     public event Action<Exception?>? MicrophoneLost;
     public event Action? MicrophoneBack;
 
-    private const int SampleRate = 16000;
+    // What the recognizer takes: 16-bit mono at this rate.
+    internal const int SampleRate = 16000;
 
     private readonly Model _model;
     private readonly VoskRecognizer _recognizer;
     private readonly IMicrophone _microphone;
     private readonly MicrophoneKeeper _keeper;
-
-    public VoiceEngine() : this(new WinMmMicrophone(SampleRate))
-    {
-    }
 
     internal VoiceEngine(IMicrophone microphone)
     {

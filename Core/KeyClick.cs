@@ -24,7 +24,9 @@ public static class KeyClick
     private const int SampleRate = 44100;
     private static readonly object Gate = new();
     private static byte[]? _wav;
-    private static ISoundOut _out = new WindowsSoundOut();
+    // Set by the system's side before anything else runs (WindowsPlatform.
+    // Install on Windows): this project knows no system of its own.
+    private static ISoundOut _out = null!;
 
     // Swaps the sound output in use and hands back the old one (the tests).
     internal static ISoundOut Use(ISoundOut output)

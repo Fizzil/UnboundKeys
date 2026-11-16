@@ -1,8 +1,52 @@
 using Nefarius.ViGEm.Client;
+using Nefarius.ViGEm.Client.Exceptions;
 using Nefarius.ViGEm.Client.Targets;
 using Nefarius.ViGEm.Client.Targets.Xbox360;
 
 namespace UnboundKeys;
+
+// The ViGEmBus driver (github.com/nefarius/ViGEmBus, the one DS4Windows
+// uses; discontinued in 2023 but still signed and still loading), through
+// the Nefarius.ViGEm.Client library: what makes virtual pads on Windows.
+internal sealed class ViGEmDriver : IVirtualPadDriver
+{
+    public string DownloadUrl => "https://github.com/nefarius/ViGEmBus/releases/latest";
+
+    // Opening a client is the library's own test: it throws when the
+    // driver is not there. Any other failure also counts as "not answering".
+    public bool IsInstalled()
+    {
+        try
+        {
+            using var client = new ViGEmClient();
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public IVirtualPad? TryCreate(out string? problem)
+    {
+        try
+        {
+            var pad = new ViGEmPad();
+            problem = null;
+            return pad;
+        }
+        catch (VigemBusNotFoundException)
+        {
+            problem = "The ViGEmBus driver is not installed. Install it from " + DownloadUrl + ", then switch steering on again.";
+            return null;
+        }
+        catch (Exception ex)
+        {
+            problem = "The virtual controller could not be started: " + ex.Message;
+            return null;
+        }
+    }
+}
 
 // The real virtual Xbox 360 pad, plugged into the ViGEmBus driver. Steer
 // goes to the left thumbstick's X axis, throttle to the right trigger and
