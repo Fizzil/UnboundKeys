@@ -43,8 +43,6 @@ public sealed class PhysicalKeyWatcher : IDisposable
     // the virtual keyboard itself.
     public event Action<string>? VirtualKeyPressed;
 
-    private const ushort VK_CAPITAL = 0x14;
-
     // How close together each of the 2 Caps Lock taps needs to land —
     // reset on every tap (not measured from the first), same idea as the
     // dashboard's own 3-tap Reset All easter egg. A full second rather
@@ -70,15 +68,16 @@ public sealed class PhysicalKeyWatcher : IDisposable
     // press. Also doubles as "which keys' matching key-up still needs
     // suppressing" — a suppressed down with a leaked-through up would look
     // to Windows (and whatever app has focus) like a spurious keystroke.
-    private readonly HashSet<ushort> _heldMirroredKeys = new();
+    private readonly HashSet<Key> _heldMirroredKeys = new();
 
-    private static readonly Dictionary<ushort, string> VkToId = BuildVkToId();
+    // The real key each Keyboard-page key stands for, to its id.
+    private static readonly Dictionary<Key, string> KeyToId = BuildKeyToId();
 
-    private static Dictionary<ushort, string> BuildVkToId()
+    private static Dictionary<Key, string> BuildKeyToId()
     {
-        var map = new Dictionary<ushort, string>();
+        var map = new Dictionary<Key, string>();
         foreach (var key in VirtualKeyCatalog.Keys)
-            map[key.DefaultVk] = key.Id;
+            map[key.DefaultKey] = key.Id;
         return map;
     }
 
@@ -87,10 +86,10 @@ public sealed class PhysicalKeyWatcher : IDisposable
     // its own output.
     internal bool Handle(KeyEvent e)
     {
-        ushort vk = e.Key;
+        Key key = e.Key;
 
         // Never swallowed: this is purely observed, not remapped.
-        if (vk == VK_CAPITAL)
+        if (key == Key.CapsLock)
         {
             if (e.Down)
             {
@@ -118,9 +117,9 @@ public sealed class PhysicalKeyWatcher : IDisposable
             return false;
         }
 
-        if (e.Down && VkToId.TryGetValue(vk, out var downId) && VirtualKeyMap.IsIntercepted(downId))
+        if (e.Down && KeyToId.TryGetValue(key, out var downId) && VirtualKeyMap.IsIntercepted(downId))
         {
-            if (_heldMirroredKeys.Add(vk))
+            if (_heldMirroredKeys.Add(key))
                 VirtualKeyPressed?.Invoke(downId);
             return true;
         }
@@ -128,7 +127,7 @@ public sealed class PhysicalKeyWatcher : IDisposable
         // A swallowed key-down also means its matching key-up needs
         // swallowing too — otherwise the program in front sees a key-up
         // with no matching down before it.
-        if (!e.Down && _heldMirroredKeys.Remove(vk))
+        if (!e.Down && _heldMirroredKeys.Remove(key))
             return true;
 
         return false;

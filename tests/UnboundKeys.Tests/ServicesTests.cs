@@ -20,6 +20,7 @@ internal static class ServicesTests
         Section("key click: one sound, only while switched on", Click);
         Section("start with Windows: asked of the system", Startup);
         Section("opening things: asked of the system", Opening);
+        Section("core: the app's logic has no Windows in it", Core);
         return _ok;
     }
 
@@ -278,6 +279,34 @@ internal static class ServicesTests
         {
             Opener.Use(real);
         }
+    }
+
+    // ---- the split (stage 1, step 6) ----
+
+    private static void Core()
+    {
+        var core = typeof(KeyExecutor).Assembly;
+        var shell = typeof(NativeInput).Assembly;
+        Check(core != shell && core.GetName().Name == "UnboundKeys.Core", "the logic is an assembly of its own, apart from the Windows shell");
+
+        string[] windowsOnly = { "PresentationFramework", "PresentationCore", "WindowsBase", "System.Windows.Forms", "System.Drawing.Common", "System.Xaml", "NAudio", "Nefarius", "Microsoft.Win32.Registry", "System.Windows.Extensions" };
+        var found = core.GetReferencedAssemblies().Select(a => a.Name ?? "").Where(n => windowsOnly.Any(w => n.StartsWith(w, StringComparison.OrdinalIgnoreCase))).ToList();
+        Check(found.Count == 0, found.Count == 0 ? "it refers to no Windows-only library" : "it refers to: " + string.Join(", ", found));
+
+        string framework = core.GetCustomAttributes(typeof(System.Runtime.Versioning.TargetFrameworkAttribute), false)
+            .Cast<System.Runtime.Versioning.TargetFrameworkAttribute>().FirstOrDefault()?.FrameworkName ?? "";
+        bool forWindows = core.GetCustomAttributes(typeof(System.Runtime.Versioning.TargetPlatformAttribute), false).Length > 0;
+        Check(framework.StartsWith(".NETCoreApp") && !forWindows, "and is built for plain .NET, not for Windows");
+
+        string[] mustBeCore = { "KeyExecutor", "KeyOutput", "KeyMap", "MouseMap", "VirtualKeyMap", "SteeringMap", "Steering", "Settings", "VoiceEngine", "MouseInputWatcher", "PhysicalKeyWatcher", "TrayIcon", "MicrophoneKeeper", "KeyClick", "Opener", "StartupTask", "WordPredictor", "Log" };
+        var astray = mustBeCore.Where(n => core.GetType("UnboundKeys." + n) == null).ToList();
+        Check(astray.Count == 0, astray.Count == 0 ? $"the {mustBeCore.Length} classes that decide things all live in it" : "not in Core: " + string.Join(", ", astray));
+        string[] mustBeShell = { "NativeInput", "LowLevelHook", "WindowsInputHooks", "WindowsKeySender", "WindowsTray", "WinMmMicrophone", "ViGEmPad", "WindowsStartupTask", "WindowsPlatform" };
+        var lost = mustBeShell.Where(n => shell.GetType("UnboundKeys." + n) == null).ToList();
+        Check(lost.Count == 0, lost.Count == 0 ? "and the ones that call into Windows live in the shell" : "not in the shell: " + string.Join(", ", lost));
+
+        Check(WordPredictor.Suggest("th").Any(), "the word list went with it: the on-screen keyboard still suggests words");
+        Check(VirtualPadDriver.DownloadUrl.Contains("ViGEmBus"), "and the shell's virtual pad driver is the one in place");
     }
 
     private static bool Within(int ms, Func<bool> condition)

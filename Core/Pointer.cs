@@ -20,7 +20,9 @@ internal interface IPointer
 
 internal static class Pointer
 {
-    private static IPointer _pointer = new WindowsPointer();
+    // Set by the system's side before anything else runs (WindowsPlatform.
+    // Install on Windows): this project knows no system of its own.
+    private static IPointer _pointer = null!;
 
     // The harness swaps in a pointer of its own; returns the one replaced.
     internal static IPointer Use(IPointer pointer)

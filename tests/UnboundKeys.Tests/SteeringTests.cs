@@ -167,7 +167,7 @@ internal static class SteeringTests
         Check(MouseCatalog.LabelFor("pushup") == "Move up" && MouseCatalog.LabelFor("pushdown") == "Move down", "their labels");
         Check(KeyCatalog.DisplayNameFor(PadKeys.Throttle) == "Throttle" && KeyCatalog.DisplayNameFor(PadKeys.Brake) == "Brake", "the pad keys have names");
         Check(KeyCatalog.Groups.Any(g => g.Category == "Controller" && g.Keys.Length == 2), "the Controller group lists both");
-        Check(!KeyMap.IsExtendedKey(PadKeys.Throttle) && !KeyMap.IsExtendedKey(PadKeys.Brake), "pad keys are not extended keys");
+        Check(!WindowsKeys.IsExtended(PadKeys.Throttle) && !WindowsKeys.IsExtended(PadKeys.Brake), "pad keys are not extended keys");
         // A pedal key held before steering comes on is remembered, so the
         // mapping that holds it applies the moment steering is on (Fizzil
         // pressed Mouse 5, then started steering, and had no throttle).

@@ -13,7 +13,7 @@ namespace UnboundKeys;
 // again cancels it with nothing sent.
 public static class StickyModifiers
 {
-    private static readonly Dictionary<string, List<(ushort Vk, bool Extended)>> _active = new();
+    private static readonly Dictionary<string, List<Key>> _active = new();
     private static readonly object _lock = new();
 
     // Lets VirtualKeyboardForm's sticky buttons refresh their own
@@ -28,19 +28,19 @@ public static class StickyModifiers
     }
 
     // Called by a sticky modifier's own button.
-    public static void Toggle(string id, List<(ushort Vk, bool Extended)> keys)
+    public static void Toggle(string id, List<Key> keys)
     {
         lock (_lock)
         {
             if (_active.Remove(id, out var existingKeys))
             {
                 foreach (var key in existingKeys)
-                    KeyOutput.KeyUp(key.Vk, key.Extended);
+                    KeyOutput.KeyUp(key);
             }
             else
             {
                 foreach (var key in keys)
-                    KeyOutput.KeyDown(key.Vk, key.Extended);
+                    KeyOutput.KeyDown(key);
                 _active[id] = keys;
             }
         }
@@ -53,18 +53,18 @@ public static class StickyModifiers
     // nothing's currently active.
     public static void ConsumeForKeyPress()
     {
-        List<List<(ushort Vk, bool Extended)>> toRelease;
+        List<List<Key>> toRelease;
         lock (_lock)
         {
             if (_active.Count == 0)
                 return;
-            toRelease = new List<List<(ushort, bool)>>(_active.Values);
+            toRelease = new List<List<Key>>(_active.Values);
             _active.Clear();
         }
 
         foreach (var keys in toRelease)
             foreach (var key in keys)
-                KeyOutput.KeyUp(key.Vk, key.Extended);
+                KeyOutput.KeyUp(key);
         Changed?.Invoke();
     }
 

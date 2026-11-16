@@ -19,9 +19,10 @@ internal enum MouseEventKind
 // it is never the app's to touch. X and Y are screen pixels.
 internal readonly record struct MouseEvent(MouseEventKind Kind, string? Button, int X, int Y);
 
-// Key is the key's code (a Windows virtual-key code, as everywhere else in
-// the app for now). A key held down keeps sending Down, as a keyboard does.
-internal readonly record struct KeyEvent(ushort Key, bool Down);
+// Key is which key (a key the app has no name for is still told apart
+// from the others, see Key). A key held down keeps sending Down, as a
+// keyboard does.
+internal readonly record struct KeyEvent(Key Key, bool Down);
 
 internal interface IInputHooks : IDisposable
 {

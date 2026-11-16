@@ -10,22 +10,22 @@ internal static class KeyOutputTests
 {
     private static bool _ok;
 
-    private const ushort KeyA = 0x41;
-    private const ushort KeyB = 0x42;
-    private const ushort MiddleClick = 0x04;
+    private const Key KeyA = Key.A;
+    private const Key KeyB = Key.B;
+    private const Key MiddleClick = Key.MiddleClick;
 
     // Notes every down and up, and which keys are down by its own count.
     internal sealed class RecordingSender : IKeySender
     {
         private readonly object _gate = new();
-        private readonly HashSet<ushort> _down = new();
-        public readonly List<(ushort Key, bool Down)> Events = new();
-        public Action<ushort>? OnKeyDown;
+        private readonly HashSet<Key> _down = new();
+        public readonly List<(Key Key, bool Down)> Events = new();
+        public Action<Key>? OnKeyDown;
         // Runs before a down is noted: whatever it does lands between the
         // executor deciding to press and the press itself.
-        public Action<ushort>? BeforeKeyDown;
+        public Action<Key>? BeforeKeyDown;
 
-        public void KeyDown(ushort key, bool extended)
+        public void KeyDown(Key key)
         {
             BeforeKeyDown?.Invoke(key);
             lock (_gate)
@@ -36,7 +36,7 @@ internal static class KeyOutputTests
             OnKeyDown?.Invoke(key);
         }
 
-        public void KeyUp(ushort key, bool extended)
+        public void KeyUp(Key key)
         {
             lock (_gate)
             {
@@ -79,25 +79,25 @@ internal static class KeyOutputTests
         var sender = new RecordingSender();
         With(sender, () =>
         {
-            KeyOutput.KeyDown(KeyA, false);
+            KeyOutput.KeyDown(KeyA);
             Check(KeyOutput.HeldCount == 1 && sender.DownCount == 1, "a key pressed is sent and noted as down");
-            KeyOutput.KeyUp(KeyA, false);
+            KeyOutput.KeyUp(KeyA);
             Check(KeyOutput.HeldCount == 0 && sender.DownCount == 0, "let go, it is sent up and no longer noted");
 
-            KeyOutput.TapKey(KeyB, false);
+            KeyOutput.TapKey(KeyB);
             Check(KeyOutput.HeldCount == 0 && sender.DownCount == 0, "a tap leaves nothing down");
 
-            KeyOutput.KeyDown(KeyA, false);
-            KeyOutput.KeyDown(KeyA, false);
-            KeyOutput.KeyDown(MiddleClick, false);
+            KeyOutput.KeyDown(KeyA);
+            KeyOutput.KeyDown(KeyA);
+            KeyOutput.KeyDown(MiddleClick);
             Check(KeyOutput.HeldCount == 2, "a key pressed twice (a hold repeating) is one held key; a mouse button counts too");
             int released = KeyOutput.ReleaseEverything();
             Check(released == 2 && sender.DownCount == 0 && KeyOutput.HeldCount == 0, "letting go of everything sends each one up, once");
             Check(KeyOutput.ReleaseEverything() == 0, "and with nothing down there is nothing to send");
 
             int before = sender.EventCount;
-            KeyOutput.KeyDown(PadKeys.Throttle, false);
-            KeyOutput.KeyUp(PadKeys.Throttle, false);
+            KeyOutput.KeyDown(PadKeys.Throttle);
+            KeyOutput.KeyUp(PadKeys.Throttle);
             Check(sender.EventCount == before, "a pad pedal is not a system key: it is never handed to the sender");
         });
     }
@@ -117,7 +117,7 @@ internal static class KeyOutputTests
                 once = false;
                 KeyOutput.ReleaseEverything();
             };
-            KeyOutput.KeyDown(KeyA, false);
+            KeyOutput.KeyDown(KeyA);
             Check(sender.DownCount == 0 && KeyOutput.HeldCount == 0, "a Stop arriving in the middle of a press still ends with the key up");
         });
     }
@@ -133,8 +133,8 @@ internal static class KeyOutputTests
         var hold = new KeyBehavior { Hold = true, Infinite = true };
         foreach (var (name, keys) in new[]
         {
-            ("a mouse button", new List<(ushort Vk, bool Extended)> { (MiddleClick, false) }),
-            ("two keyboard keys", new List<(ushort Vk, bool Extended)> { (KeyA, false), (KeyB, false) }),
+            ("a mouse button", new List<Key> { MiddleClick }),
+            ("two keyboard keys", new List<Key> { KeyA, KeyB }),
         })
         {
             var sender = new RecordingSender();
@@ -168,8 +168,8 @@ internal static class KeyOutputTests
         With(sender, () =>
         {
             var hold = new KeyBehavior { Hold = true, Infinite = true };
-            var keyboard = new List<(ushort Vk, bool Extended)> { (KeyA, false), (KeyB, false) };
-            var mouse = new List<(ushort Vk, bool Extended)> { (MiddleClick, false) };
+            var keyboard = new List<Key> { KeyA, KeyB };
+            var mouse = new List<Key> { MiddleClick };
             var random = new Random(12345);
             int orphans = 0;
             int leftDown = 0;

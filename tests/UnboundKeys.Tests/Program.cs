@@ -19,10 +19,51 @@ if (args.Length == 3 && args[0] == UnboundKeys.Tests.SingleInstanceTests.HoldArg
 
 // Settings and the log go to a scratch folder for the whole run, so nothing
 // here touches the real profiles and the harness can run with the app open.
+//
+// THESE TWO LINES COME FIRST, before anything else of the app is touched.
+// Reading the settings is not harmless: a read upgrades an old file (see
+// Settings.UpgradeToKeyNames), and plenty of the app reads its settings
+// the moment it is first used (KeyClick does). On 2026-11-16 a line put
+// above these upgraded the real settings file from here. RealSettingsUntouched
+// at the end of every run is the check that it never happens again.
 string scratch = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "UnboundKeys.Tests-" + Guid.NewGuid().ToString("N"));
 System.IO.Directory.CreateDirectory(scratch);
+string realFolder = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "UnboundKeys");
+string realFilesAtStart = RealFiles(realFolder);
 Settings.UseScratchFile(System.IO.Path.Combine(scratch, "settings.json"));
 Log.UseScratchFile(System.IO.Path.Combine(scratch, "log.txt"));
+// Windows' side of every plug-in point, as the app installs it at its start.
+WindowsPlatform.Install();
+
+// The real settings folder's files with their sizes and times, as one
+// line to compare. The log is left out: the running app may write to it.
+static string RealFiles(string folder)
+{
+    if (!System.IO.Directory.Exists(folder))
+        return "";
+    return string.Join("; ", new System.IO.DirectoryInfo(folder).GetFiles()
+        .Where(f => !f.Name.Equals("log.txt", StringComparison.OrdinalIgnoreCase))
+        .OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase)
+        .Select(f => $"{f.Name} {f.Length} {f.LastWriteTimeUtc:O}"));
+}
+
+// Nothing in the real settings folder was made, changed or removed during
+// the run. (A copy of the app running beside the harness may save its
+// settings meanwhile; then this fails for an innocent reason, and the
+// line shows which file it was.)
+bool RealSettingsUntouched()
+{
+    string now = RealFiles(realFolder);
+    bool same = now == realFilesAtStart;
+    Console.WriteLine("--- the real settings ---");
+    Console.WriteLine($"  [{(same ? "ok" : "FAIL")}] nothing in %AppData%\\UnboundKeys was made, changed or removed by this run");
+    if (!same)
+    {
+        Console.WriteLine("    before: " + realFilesAtStart);
+        Console.WriteLine("    after:  " + now);
+    }
+    return same;
+}
 // The log is off unless switched on (see SettingsTests.LogSwitch); the
 // checks below that read it need it on.
 Log.Enabled = true;
@@ -32,10 +73,24 @@ Log.Enabled = true;
 if (args.Contains("--online"))
 {
     bool online = UnboundKeys.Tests.UpdaterTests.RunOnline();
+    online &= RealSettingsUntouched();
     try { System.IO.Directory.Delete(scratch, recursive: true); }
     catch { /* a leftover scratch folder in Temp is not a failure */ }
     Console.WriteLine(online ? "ALL PASSED" : "FAILED");
     return online ? 0 : 1;
+}
+
+// "--upgrade-check <settings.json>" tries the key-name upgrade on a copy of
+// that file and nothing else (see KeyNamesTests.UpgradeCheck).
+int upgradeAt = Array.IndexOf(args, "--upgrade-check");
+if (upgradeAt >= 0 && upgradeAt + 1 < args.Length)
+{
+    bool upgraded = UnboundKeys.Tests.KeyNamesTests.UpgradeCheck(scratch, args[upgradeAt + 1]);
+    upgraded &= RealSettingsUntouched();
+    try { System.IO.Directory.Delete(scratch, recursive: true); }
+    catch { /* a leftover scratch folder in Temp is not a failure */ }
+    Console.WriteLine(upgraded ? "ALL PASSED" : "FAILED");
+    return upgraded ? 0 : 1;
 }
 
 var events = new List<(double T, ushort Vk)>();
@@ -63,8 +118,8 @@ hookThread.SetApartmentState(ApartmentState.STA);
 hookThread.Start();
 Thread.Sleep(400);
 
-var repeatKeys = new List<(ushort Vk, bool Extended)> { (F13, false) };
-var pauseKeys = new List<(ushort Vk, bool Extended)> { (F14, false) };
+var repeatKeys = new List<Key> { (Key)F13 };
+var pauseKeys = new List<Key> { (Key)F14 };
 bool allPassed = true;
 
 allPassed &= Scenario("a tap with a 2.0 s pause", new KeyBehavior { Priority = true, PrioritySeconds = 2.0 }, expectedPause: 2.0);
@@ -79,6 +134,8 @@ allPassed &= UnboundKeys.Tests.InputWatcherTests.Run();
 allPassed &= UnboundKeys.Tests.InputHooksTests.Run();
 allPassed &= UnboundKeys.Tests.ServicesTests.Run();
 allPassed &= UnboundKeys.Tests.SettingsTests.Run(scratch);
+allPassed &= UnboundKeys.Tests.KeyNamesTests.Run(scratch);
+allPassed &= UnboundKeys.Tests.MapGateTests.Run();
 // "--pictures <folder>" also saves the Settings page as PNGs (see SharePageTests).
 int picturesAt = Array.IndexOf(args, "--pictures");
 allPassed &= UnboundKeys.Tests.SharePageTests.Run(scratch, picturesAt >= 0 && picturesAt + 1 < args.Length ? args[picturesAt + 1] : null);
@@ -92,6 +149,7 @@ allPassed &= UnboundKeys.Tests.SingleInstanceTests.Run();
 try { System.IO.Directory.Delete(scratch, recursive: true); }
 catch { /* a leftover scratch folder in Temp is not a failure */ }
 
+allPassed &= RealSettingsUntouched();
 Console.WriteLine(allPassed ? "ALL PASSED" : "FAILED");
 return allPassed ? 0 : 1;
 
@@ -169,7 +227,7 @@ bool RotationScenario()
     lock (events)
         events.Clear();
 
-    var keys = new List<(ushort Vk, bool Extended)> { (F13, false), (F14, false), (F15, false) };
+    var keys = new List<Key> { (Key)F13, (Key)F14, (Key)F15 };
     var rotation = new KeyBehavior { Repeat = true, Infinite = true, Rotation = true };
 
     clock.Restart();
@@ -331,7 +389,7 @@ bool GesturesScenario()
 
     // The keyboard map knows the double press ids, starting Not Mapped,
     // and a key is taken over for either of its mappings.
-    Check(VirtualKeyMap.KeyIds.Contains("va.double") && VirtualKeyMap.DefaultWords["va.double"] == 0 && !VirtualKeyMap.IsMapped("va.double"),
+    Check(VirtualKeyMap.KeyIds.Contains("va.double") && VirtualKeyMap.DefaultWords["va.double"] == Key.None && !VirtualKeyMap.IsMapped("va.double"),
           "a keyboard key's double press exists and starts Not Mapped");
     Check(MouseMap.ButtonIds.Contains("wheelup.double") && !MouseMap.ButtonIds.Contains("middle.long"),
           "a wheel has a double press; nothing has a long press");
@@ -357,7 +415,7 @@ bool OneButtonScenario()
 
     var infinite = new KeyBehavior { Hold = true, Infinite = true };
     var timed = new KeyBehavior { Hold = true, DurationSeconds = 1.0 };
-    Task Press(string id, List<(ushort Vk, bool Extended)> keys, KeyBehavior behavior) => Task.Run(() =>
+    Task Press(string id, List<Key> keys, KeyBehavior behavior) => Task.Run(() =>
     {
         KeyExecutor.Stop(Gestures.Sibling(id));
         KeyExecutor.Execute(id, keys, behavior);

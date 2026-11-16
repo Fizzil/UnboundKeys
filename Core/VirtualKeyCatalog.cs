@@ -14,7 +14,7 @@ namespace UnboundKeys;
 // card and is never physically mirrored.
 public static class VirtualKeyCatalog
 {
-    public readonly record struct KeyInfo(string Id, string Label, ushort DefaultVk);
+    public readonly record struct KeyInfo(string Id, string Label, Key DefaultKey);
 
     public static readonly KeyInfo[] Keys = BuildKeys();
 
@@ -23,11 +23,11 @@ public static class VirtualKeyCatalog
         var list = new List<KeyInfo>();
 
         for (int i = 1; i <= 9; i++)
-            list.Add(new KeyInfo($"v{i}", i.ToString(), (ushort)(0x30 + i)));
-        list.Add(new KeyInfo("v0", "0", 0x30));
+            list.Add(new KeyInfo($"v{i}", i.ToString(), KeyNames.Digit(i)));
+        list.Add(new KeyInfo("v0", "0", Key.Digit0));
 
         for (char c = 'A'; c <= 'Z'; c++)
-            list.Add(new KeyInfo($"v{char.ToLowerInvariant(c)}", c.ToString(), c));
+            list.Add(new KeyInfo($"v{char.ToLowerInvariant(c)}", c.ToString(), KeyNames.Letter(c)));
 
         return list.ToArray();
     }

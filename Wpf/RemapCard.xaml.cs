@@ -125,7 +125,7 @@ public partial class RemapCard
 
         AddKeyRow(_source.KeyLabelFor(_id), entry =>
         {
-            _source.Rebind(_id, entry.VkCode);
+            _source.Rebind(_id, entry.Key);
             RebuildKeyGroup();
         }, onDelete: null);
 
@@ -135,7 +135,7 @@ public partial class RemapCard
             string label = $"Key {i + 2}: {KeyCatalog.DisplayNameFor(extras[i])}";
             AddKeyRow(label, entry =>
             {
-                _source.SetExtraKey(_id, slotIndex, entry.VkCode);
+                _source.SetExtraKey(_id, slotIndex, entry.Key);
                 RebuildKeyGroup();
             }, onDelete: () =>
             {

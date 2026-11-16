@@ -19,7 +19,7 @@
     <ApplicationHighDpiMode>SystemAware</ApplicationHighDpiMode>
     <StartupObject>UnboundKeys.Program</StartupObject>
     <Company>Built by Fizzil^.^</Company>
-    <Version>4.15.0</Version>
+    <!-- The version is in Directory.Build.props, shared with Core. -->
     <!-- The exe's own filename carries the version (UnboundKeys-v1.0.0.exe),
          staying in sync automatically on every future bump. RootNamespace
          is pinned separately so embedded resource lookups (Assets\skull.*)
@@ -30,12 +30,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Vosk: offline, small-vocabulary speech recognition — replaces the
-         built-in Windows System.Speech engine, which couldn't reliably tell
-         "press one" apart from ordinary talk. NAudio captures raw microphone
-         audio and feeds it to Vosk (Vosk itself has no capture of its own):
-         only its WinMM part, the one piece used (see WinMmMicrophone.cs). -->
-    <PackageReference Include="Vosk" Version="0.3.38" />
+    <!-- NAudio captures raw microphone audio and feeds it to Vosk (which
+         Core references; Vosk itself has no capture of its own): only its
+         WinMM part, the one piece used (see WinMmMicrophone.cs). -->
     <PackageReference Include="NAudio.WinMM" Version="2.4.0" />
     <!-- Nefarius.ViGEm.Client: talks to the ViGEmBus driver so Steering can
          plug in a virtual Xbox 360 pad (see ViGEmPad.cs). -->
@@ -48,14 +45,17 @@
     <!-- The harness has its own project; keep its sources out of this one. -->
     <Compile Remove="tests/**" />
     <None Remove="tests/**" />
+    <!-- Core is the app with no Windows in it (see Core/UnboundKeys.Core.csproj);
+         this project is the Windows shell around it. -->
+    <Compile Remove="Core/**" />
+    <None Remove="Core/**" />
+    <ProjectReference Include="Core\UnboundKeys.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <!-- skull.ico is the window/taskbar icon (ApplicationIcon above) and
          the tray icon, which TrayIcon.cs loads from this resource. -->
     <EmbeddedResource Include="Assets\skull.ico" />
-    <!-- The on-screen keyboard's word-suggestion list (see WordPredictor). -->
-    <EmbeddedResource Include="Assets\words-en.txt" />
     <!-- The Voice page's illustration (see Wpf/VoiceDiagram) — black line
          art on white, turned into a tintable mask at load time. -->
     <EmbeddedResource Include="Assets\voice-profile.png" />

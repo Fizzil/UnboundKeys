@@ -12,8 +12,8 @@ internal static class FocusNetTests
 {
     private static bool _ok;
 
-    private const ushort KeyA = 0x41;
-    private const ushort MiddleClick = 0x04;
+    private const Key KeyA = Key.A;
+    private const Key MiddleClick = Key.MiddleClick;
 
     private sealed class FakeWindows : IActiveWindow
     {
@@ -82,7 +82,7 @@ internal static class FocusNetTests
     }
 
     private static void StartMouseHold(string word = "one") =>
-        KeyExecutor.Execute(word, new List<(ushort Vk, bool Extended)> { (MiddleClick, false) }, InfiniteHold);
+        KeyExecutor.Execute(word, new List<Key> { MiddleClick }, InfiniteHold);
 
     private static void HoldAndWindow()
     {
@@ -118,7 +118,7 @@ internal static class FocusNetTests
             windows.Show(100, "Race: lap 1");
             // A hold of anything but a mouse button stays in Execute,
             // repeating its key, until it is ended: so on its own thread.
-            var run = Task.Run(() => KeyExecutor.Execute("one", new List<(ushort Vk, bool Extended)> { (PadKeys.Throttle, false) }, InfiniteHold));
+            var run = Task.Run(() => KeyExecutor.Execute("one", new List<Key> { PadKeys.Throttle }, InfiniteHold));
             Check(Within(1000, () => KeyExecutor.IsRunning("one")), "an infinite hold of the throttle is running");
             windows.Show(100, "Finished!");
             Thread.Sleep(900);
@@ -133,7 +133,7 @@ internal static class FocusNetTests
         With((windows, sender) =>
         {
             var repeat = new KeyBehavior { Repeat = true, Infinite = true };
-            var run = Task.Run(() => KeyExecutor.Execute("one", new List<(ushort Vk, bool Extended)> { (KeyA, false) }, repeat));
+            var run = Task.Run(() => KeyExecutor.Execute("one", new List<Key> { KeyA }, repeat));
             Check(Within(1000, () => KeyExecutor.IsRunning("one") && sender.EventCount >= 4), "an infinite repeat is running, pressing its key");
             windows.Show(200, "Something else");
             Check(Within(1500, () => !KeyExecutor.IsRunning("one")) && run.Wait(1000), "another window in front: the repeat stops");
@@ -143,8 +143,8 @@ internal static class FocusNetTests
 
     // Timed runs stay in Execute until they end: each on its own thread,
     // with a time far longer than the test, so only the net can end them.
-    private static Task StartTimed(ushort key, KeyBehavior behavior) =>
-        Task.Run(() => KeyExecutor.Execute("one", new List<(ushort Vk, bool Extended)> { (key, false) }, behavior));
+    private static Task StartTimed(Key key, KeyBehavior behavior) =>
+        Task.Run(() => KeyExecutor.Execute("one", new List<Key> { key }, behavior));
 
     private static void TimedHoldAndWindow()
     {

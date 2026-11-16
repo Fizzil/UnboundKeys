@@ -92,7 +92,7 @@ public static class Steering
     // before the steering word is said (Fizzil, testing as a new user:
     // Throttle did nothing, Up Arrow did). The pad is made outside the
     // lock, as in SetOn.
-    public static void SetPadPedal(ushort padKey, bool down)
+    public static void SetPadPedal(Key padKey, bool down)
     {
         // The feature switched off (Settings > Features): a pedal is not
         // pressed. A release still goes through, to clear one already held.

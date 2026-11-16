@@ -35,21 +35,35 @@ public static class MouseMap
         profile => Settings.LoadMouseBehaviors(profile, FreshDefaultBehaviors()),
         (words, extraWords, behaviors) => Settings.SaveMouseProfile(ActiveProfile, Enabled, words, extraWords, behaviors));
 
-    public static Dictionary<string, ushort> Words => _store.Words;
-    public static Dictionary<string, List<ushort>> ExtraWords => _store.ExtraWords;
+    public static Dictionary<string, Key> Words => _store.Words;
+    public static Dictionary<string, List<Key>> ExtraWords => _store.ExtraWords;
     public static Dictionary<string, KeyBehavior> Behaviors => _store.Behaviors;
 
     private static string[] BuildButtonIds() => (string[])MouseCatalog.AllIds.Clone();
 
     // Whether either way of pressing a physical button has a key — the
     // hook's test for taking the button over (see MouseInputWatcher).
+    // Asked on the input hooks' thread, hence the gate (see RemapStore.Gate).
     public static bool AnyGestureEnabled(string buttonId)
     {
-        foreach (var gesture in Gestures.All)
-            if (Enabled.TryGetValue(Gestures.IdFor(buttonId, gesture), out bool on) && on)
-                return true;
-        return false;
+        lock (RemapStore.Gate)
+        {
+            foreach (var gesture in Gestures.All)
+                if (Enabled.TryGetValue(Gestures.IdFor(buttonId, gesture), out bool on) && on)
+                    return true;
+            return false;
+        }
     }
+
+    // Whether one mapping id has a key, safe from any thread.
+    public static bool IsEnabled(string id)
+    {
+        lock (RemapStore.Gate)
+            return Enabled.TryGetValue(id, out bool on) && on;
+    }
+
+    // What an id presses and how, safe from any thread.
+    public static bool TryGet(string id, out List<Key> keys, out KeyBehavior behavior) => _store.TryGet(id, out keys, out behavior);
 
     private static Dictionary<string, bool> FreshDefaultEnabled()
     {
@@ -59,29 +73,28 @@ public static class MouseMap
         return map;
     }
 
-    private static Dictionary<string, ushort> FreshDefaultWords()
+    private static Dictionary<string, Key> FreshDefaultWords()
     {
-        // 0 is never a real key we'd send (SendInput needs a nonzero virtual
-        // key code), so it doubles as "nothing picked yet" for a button
-        // that's unmapped — harmless since Enabled gates whether it's ever
+        // None is never a key we'd send, so it doubles as "nothing
+        // picked yet" for a button that's unmapped — harmless since Enabled gates whether it's ever
         // actually used.
-        var map = new Dictionary<string, ushort>(StringComparer.OrdinalIgnoreCase);
+        var map = new Dictionary<string, Key>(StringComparer.OrdinalIgnoreCase);
         foreach (var id in ButtonIds)
-            map[id] = 0;
+            map[id] = Key.None;
         return map;
     }
 
-    private static Dictionary<string, List<ushort>> FreshDefaultExtraWords() => RemapStore.FreshExtraKeys(ButtonIds);
+    private static Dictionary<string, List<Key>> FreshDefaultExtraWords() => RemapStore.FreshExtraKeys(ButtonIds);
 
     private static Dictionary<string, KeyBehavior> FreshDefaultBehaviors() => RemapStore.FreshBehaviors(ButtonIds);
 
     private static Dictionary<string, bool> BuildEnabled() =>
         Settings.LoadMouseEnabled(KeyMap.ActiveProfile, FreshDefaultEnabled());
 
-    private static Dictionary<string, ushort> BuildMap() =>
+    private static Dictionary<string, Key> BuildMap() =>
         Settings.LoadMouseKeyMap(KeyMap.ActiveProfile, FreshDefaultWords());
 
-    private static Dictionary<string, List<ushort>> BuildExtraWords() =>
+    private static Dictionary<string, List<Key>> BuildExtraWords() =>
         Settings.LoadMouseExtraKeys(KeyMap.ActiveProfile, FreshDefaultExtraWords());
 
     private static Dictionary<string, KeyBehavior> BuildBehaviors() =>
@@ -92,16 +105,17 @@ public static class MouseMap
     // switches it on, so MouseInputWatcher starts intercepting it. Enabled
     // is set before the store's own Rebind (which saves) runs, so the save
     // it triggers picks up the new Enabled value too.
-    public static void Rebind(string id, ushort vkCode)
+    public static void Rebind(string id, Key key)
     {
-        Enabled[id] = true;
-        _store.Rebind(id, vkCode);
+        lock (RemapStore.Gate)
+            Enabled[id] = true;
+        _store.Rebind(id, key);
     }
 
-    public static void AddExtraKey(string id, ushort vkCode) => _store.AddExtraKey(id, vkCode);
-    public static void SetExtraKey(string id, int index, ushort vkCode) => _store.SetExtraKey(id, index, vkCode);
+    public static void AddExtraKey(string id, Key key) => _store.AddExtraKey(id, key);
+    public static void SetExtraKey(string id, int index, Key key) => _store.SetExtraKey(id, index, key);
     public static void RemoveExtraKey(string id, int index) => _store.RemoveExtraKey(id, index);
-    public static List<(ushort Vk, bool Extended)> GetAllKeys(string id) => _store.GetAllKeys(id);
+    public static List<Key> GetAllKeys(string id) => _store.GetAllKeys(id);
 
     public static void SetBehavior(string id, KeyBehavior behavior) => _store.SetBehavior(id, behavior);
 
@@ -114,7 +128,8 @@ public static class MouseMap
     // sent in its place (Fizzil's right click, dead after every restart).
     public static void ResetToDefault(string id)
     {
-        Enabled[id] = false;
+        lock (RemapStore.Gate)
+            Enabled[id] = false;
         _store.ResetToDefault(id);
     }
 
@@ -126,10 +141,13 @@ public static class MouseMap
 
     private static void DropEmptyMappings()
     {
-        foreach (var id in ButtonIds)
+        lock (RemapStore.Gate)
         {
-            if (Enabled.TryGetValue(id, out bool on) && on && Words.TryGetValue(id, out ushort vk) && vk == 0)
-                Enabled[id] = false;
+            foreach (var id in ButtonIds)
+            {
+                if (Enabled.TryGetValue(id, out bool on) && on && Words.TryGetValue(id, out Key key) && key == Key.None)
+                    Enabled[id] = false;
+            }
         }
     }
 
@@ -138,8 +156,11 @@ public static class MouseMap
     // writes the switched-off state too.
     public static void ResetAll()
     {
-        foreach (var id in ButtonIds)
-            Enabled[id] = false;
+        lock (RemapStore.Gate)
+        {
+            foreach (var id in ButtonIds)
+                Enabled[id] = false;
+        }
         _store.ResetAllToDefault();
     }
 
@@ -149,9 +170,12 @@ public static class MouseMap
     {
         var newEnabled = Settings.LoadMouseEnabled(profileName, FreshDefaultEnabled());
 
-        Enabled.Clear();
-        foreach (var (id, enabled) in newEnabled)
-            Enabled[id] = enabled;
+        lock (RemapStore.Gate)
+        {
+            Enabled.Clear();
+            foreach (var (id, enabled) in newEnabled)
+                Enabled[id] = enabled;
+        }
 
         _store.SwitchProfile(profileName);
         DropEmptyMappings();

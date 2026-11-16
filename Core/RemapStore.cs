@@ -22,36 +22,48 @@ namespace UnboundKeys;
 // through those adapters.
 internal sealed class RemapStore
 {
-    public Dictionary<string, ushort> Words { get; }
+    public Dictionary<string, Key> Words { get; }
 
     // Never exposed publicly by MouseMap (an all-zero dict — no mouse
     // button has a "natural" key) — only KeyMap/VirtualKeyMap's own
     // public DefaultWords (a real per-id default) point at the same
     // dictionary a caller like ProfilesTab.cs already reads directly.
-    public Dictionary<string, ushort> DefaultWords { get; }
+    public Dictionary<string, Key> DefaultWords { get; }
 
-    public Dictionary<string, List<ushort>> ExtraWords { get; }
+    public Dictionary<string, List<Key>> ExtraWords { get; }
     public Dictionary<string, KeyBehavior> Behaviors { get; }
 
-    private readonly Func<string, Dictionary<string, ushort>> _loadWords;
-    private readonly Func<string, Dictionary<string, List<ushort>>> _loadExtraWords;
+    private readonly Func<string, Dictionary<string, Key>> _loadWords;
+    private readonly Func<string, Dictionary<string, List<Key>>> _loadExtraWords;
     private readonly Func<string, Dictionary<string, KeyBehavior>> _loadBehaviors;
 
     // Takes Words/ExtraWords/Behaviors as arguments each time (rather than
     // closing over this store's own properties) so the owning class's
     // save delegate can fold in whatever extra field only it has —
     // MouseMap's closes over its own Enabled dict alongside these three.
-    private readonly Action<Dictionary<string, ushort>, Dictionary<string, List<ushort>>, Dictionary<string, KeyBehavior>> _save;
+    private readonly Action<Dictionary<string, Key>, Dictionary<string, List<Key>>, Dictionary<string, KeyBehavior>> _save;
+
+    // The maps are changed on the UI thread only (the dashboard), but read
+    // from others as well: the input hooks' thread deciding whether a
+    // button or key is taken over, the microphone's, the timers that tell
+    // a single press from a double one. A dictionary read while it is
+    // being changed can fail or hang, and a profile switch empties and
+    // refills all of them. So: every change to a map, and every read from
+    // a thread that is not the UI's, holds this one gate; the dashboard's
+    // own reads need not, as nothing changes a map behind its back. Held
+    // for the dictionary work alone, never across a save: the hooks'
+    // thread must not wait on the disk.
+    internal static readonly object Gate = new();
 
     public RemapStore(
-        Dictionary<string, ushort> words,
-        Dictionary<string, ushort> defaultWords,
-        Dictionary<string, List<ushort>> extraWords,
+        Dictionary<string, Key> words,
+        Dictionary<string, Key> defaultWords,
+        Dictionary<string, List<Key>> extraWords,
         Dictionary<string, KeyBehavior> behaviors,
-        Func<string, Dictionary<string, ushort>> loadWords,
-        Func<string, Dictionary<string, List<ushort>>> loadExtraWords,
+        Func<string, Dictionary<string, Key>> loadWords,
+        Func<string, Dictionary<string, List<Key>>> loadExtraWords,
         Func<string, Dictionary<string, KeyBehavior>> loadBehaviors,
-        Action<Dictionary<string, ushort>, Dictionary<string, List<ushort>>, Dictionary<string, KeyBehavior>> save)
+        Action<Dictionary<string, Key>, Dictionary<string, List<Key>>, Dictionary<string, KeyBehavior>> save)
     {
         Words = words;
         DefaultWords = defaultWords;
@@ -84,11 +96,12 @@ internal sealed class RemapStore
         return mode + time + pause;
     }
 
-    public void Rebind(string id, ushort vkCode)
+    public void Rebind(string id, Key key)
     {
-        Words[id] = vkCode;
+        lock (Gate)
+            Words[id] = key;
         Save();
-        LogChange(id, $"key 1 = {KeyCatalog.DisplayNameFor(vkCode)}");
+        LogChange(id, $"key 1 = {KeyCatalog.DisplayNameFor(key)}");
     }
 
     // How many keys can fire alongside an id's main key — six keys in all
@@ -98,48 +111,77 @@ internal sealed class RemapStore
 
     // Capped at MaxExtraKeys; a no-op past that, so it's safe to call
     // speculatively without checking the count first.
-    public void AddExtraKey(string id, ushort vkCode)
+    public void AddExtraKey(string id, Key key)
     {
-        if (ExtraWords[id].Count >= MaxExtraKeys)
-            return;
-
-        ExtraWords[id].Add(vkCode);
+        lock (Gate)
+        {
+            if (ExtraWords[id].Count >= MaxExtraKeys)
+                return;
+            ExtraWords[id].Add(key);
+        }
         Save();
-        LogChange(id, $"key {ExtraWords[id].Count + 1} added = {KeyCatalog.DisplayNameFor(vkCode)}");
+        LogChange(id, $"key {ExtraWords[id].Count + 1} added = {KeyCatalog.DisplayNameFor(key)}");
     }
 
-    public void SetExtraKey(string id, int index, ushort vkCode)
+    public void SetExtraKey(string id, int index, Key key)
     {
-        var extras = ExtraWords[id];
-        if (index < 0 || index >= extras.Count)
-            return;
-
-        extras[index] = vkCode;
+        lock (Gate)
+        {
+            var extras = ExtraWords[id];
+            if (index < 0 || index >= extras.Count)
+                return;
+            extras[index] = key;
+        }
         Save();
-        LogChange(id, $"key {index + 2} = {KeyCatalog.DisplayNameFor(vkCode)}");
+        LogChange(id, $"key {index + 2} = {KeyCatalog.DisplayNameFor(key)}");
     }
 
     public void RemoveExtraKey(string id, int index)
     {
-        var extras = ExtraWords[id];
-        if (index < 0 || index >= extras.Count)
-            return;
-
-        extras.RemoveAt(index);
+        lock (Gate)
+        {
+            var extras = ExtraWords[id];
+            if (index < 0 || index >= extras.Count)
+                return;
+            extras.RemoveAt(index);
+        }
         Save();
         LogChange(id, $"key {index + 2} removed");
     }
 
     // The full set of keys an id should press — its main key followed by
-    // any extras — each paired with whether SendInput needs to treat it
-    // as an extended key. Used everywhere an id is actually executed,
-    // instead of just looking up Words[id] alone.
-    public List<(ushort Vk, bool Extended)> GetAllKeys(string id)
+    // any extras. Used everywhere an id is actually executed, instead of
+    // just looking up Words[id] alone. A list of its own: what is being
+    // pressed must not change under the press when the mapping is edited.
+    public List<Key> GetAllKeys(string id)
     {
-        var keys = new List<(ushort, bool)> { (Words[id], KeyMap.IsExtendedKey(Words[id])) };
-        foreach (var vk in ExtraWords[id])
-            keys.Add((vk, KeyMap.IsExtendedKey(vk)));
-        return keys;
+        lock (Gate)
+        {
+            var keys = new List<Key> { Words[id] };
+            keys.AddRange(ExtraWords[id]);
+            return keys;
+        }
+    }
+
+    // What an id presses and how, for whoever is about to run it, from any
+    // thread. False for an id the map does not hold at this instant (there
+    // is none such, but a thread that finds one drops the press and does
+    // not crash).
+    public bool TryGet(string id, out List<Key> keys, out KeyBehavior behavior)
+    {
+        lock (Gate)
+        {
+            if (Words.TryGetValue(id, out var key) && ExtraWords.TryGetValue(id, out var extras) && Behaviors.TryGetValue(id, out var how))
+            {
+                keys = new List<Key> { key };
+                keys.AddRange(extras);
+                behavior = how;
+                return true;
+            }
+        }
+        keys = new List<Key>();
+        behavior = new KeyBehavior();
+        return false;
     }
 
     // Takes the whole KeyBehavior rather than one argument per field, so a
@@ -147,18 +189,19 @@ internal sealed class RemapStore
     // nowhere in between.
     public void SetBehavior(string id, KeyBehavior behavior)
     {
-        Behaviors[id] = behavior;
+        lock (Gate)
+            Behaviors[id] = behavior;
         Save();
         LogChange(id, Describe(behavior));
     }
 
     // The empty starting points every source hands to Settings.Load*: no
     // extra keys and a plain tap for each of its ids.
-    public static Dictionary<string, List<ushort>> FreshExtraKeys(IEnumerable<string> ids)
+    public static Dictionary<string, List<Key>> FreshExtraKeys(IEnumerable<string> ids)
     {
-        var map = new Dictionary<string, List<ushort>>(StringComparer.OrdinalIgnoreCase);
+        var map = new Dictionary<string, List<Key>>(StringComparer.OrdinalIgnoreCase);
         foreach (var id in ids)
-            map[id] = new List<ushort>();
+            map[id] = new List<Key>();
         return map;
     }
 
@@ -176,9 +219,12 @@ internal sealed class RemapStore
     // switching Enabled back off is exactly "fully unmapped."
     public void ResetToDefault(string id)
     {
-        Words[id] = DefaultWords[id];
-        ExtraWords[id].Clear();
-        Behaviors[id] = new KeyBehavior();
+        lock (Gate)
+        {
+            Words[id] = DefaultWords[id];
+            ExtraWords[id].Clear();
+            Behaviors[id] = new KeyBehavior();
+        }
         Save();
         LogChange(id, "reset to default");
     }
@@ -186,11 +232,14 @@ internal sealed class RemapStore
     // Every id at once, one save at the end instead of one per id.
     public void ResetAllToDefault()
     {
-        foreach (var id in new List<string>(Words.Keys))
+        lock (Gate)
         {
-            Words[id] = DefaultWords[id];
-            ExtraWords[id].Clear();
-            Behaviors[id] = new KeyBehavior();
+            foreach (var id in new List<string>(Words.Keys))
+            {
+                Words[id] = DefaultWords[id];
+                ExtraWords[id].Clear();
+                Behaviors[id] = new KeyBehavior();
+            }
         }
         Save();
         if (Log.Enabled)
@@ -210,16 +259,20 @@ internal sealed class RemapStore
         var newExtraWords = _loadExtraWords(profileName);
         var newBehaviors = _loadBehaviors(profileName);
 
-        Words.Clear();
-        foreach (var (id, vk) in newWords)
-            Words[id] = vk;
+        // Read from the file above, swapped in here in one go.
+        lock (Gate)
+        {
+            Words.Clear();
+            foreach (var (id, key) in newWords)
+                Words[id] = key;
 
-        ExtraWords.Clear();
-        foreach (var (id, extras) in newExtraWords)
-            ExtraWords[id] = extras;
+            ExtraWords.Clear();
+            foreach (var (id, extras) in newExtraWords)
+                ExtraWords[id] = extras;
 
-        Behaviors.Clear();
-        foreach (var (id, behavior) in newBehaviors)
-            Behaviors[id] = behavior;
+            Behaviors.Clear();
+            foreach (var (id, behavior) in newBehaviors)
+                Behaviors[id] = behavior;
+        }
     }
 }

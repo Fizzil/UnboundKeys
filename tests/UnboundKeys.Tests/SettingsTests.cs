@@ -47,7 +47,7 @@ internal static class SettingsTests
         Check(Same(Settings.LoadProfileNames(), "Default"), "the only game is Default");
         Check(Settings.LoadActiveProfileName() == "Default", "and it is the active one");
         Check(Same(Settings.LoadSubProfileNames("Default"), "Default"), "with one sub-profile, Default");
-        Check(Settings.LoadKeyMap("Default", Words())["one"] == 0x31, "mappings are the app's defaults");
+        Check(Settings.LoadKeyMap("Default", Words())["one"] == Key.Digit1, "mappings are the app's defaults");
         Check(!Settings.LoadWriteLog(), "the log is off until it is switched on");
         Check(!Settings.LoadRememberTypedWords(), "so is remembering typed words");
         Check(!File.Exists(_file), "reading alone writes nothing to disk");
@@ -98,7 +98,7 @@ internal static class SettingsTests
         bool SavedAsMapped(string id) => Settings.LoadMouseEnabled("Default", AllOff())[id];
 
         MouseMap.SwitchProfile("Default");
-        MouseMap.Rebind("right", 0x41);
+        MouseMap.Rebind("right", Key.A);
         Check(MouseMap.Enabled["right"] && SavedAsMapped("right"), "a key picked for the right button saves it as mapped");
 
         MouseMap.ResetToDefault("right");
@@ -107,13 +107,13 @@ internal static class SettingsTests
 
         var enabled = AllOff();
         enabled["right"] = true;
-        var keys = new Dictionary<string, ushort>();
-        var extras = new Dictionary<string, List<ushort>>();
+        var keys = new Dictionary<string, Key>();
+        var extras = new Dictionary<string, List<Key>>();
         var behaviors = new Dictionary<string, KeyBehavior>();
         foreach (var id in MouseMap.ButtonIds)
         {
             keys[id] = 0;
-            extras[id] = new List<ushort>();
+            extras[id] = new List<Key>();
             behaviors[id] = new KeyBehavior();
         }
         Settings.SaveMouseProfile("Default", enabled, keys, extras, behaviors);
@@ -127,7 +127,7 @@ internal static class SettingsTests
     // VoicePress settings are not imported again on the next start.
     private static void ResetApp()
     {
-        Settings.SaveProfile("Default", new() { ["one"] = 0x41 }, new(), new());
+        Settings.SaveProfile("Default", new() { ["one"] = Key.A }, new(), new());
         Settings.SaveKeyboardScale(0.8); // a second save, so there is a backup too
         Settings.SaveWriteLog(true);
         Check(File.Exists(_file) && File.Exists(_backup), "before it, a settings file and its backup");
@@ -135,7 +135,7 @@ internal static class SettingsTests
         Settings.DeleteEverything();
         Check(!File.Exists(_backup), "the backup is deleted");
         Check(File.Exists(_file), "a fresh settings file is left in place of the old one");
-        Check(Settings.LoadKeyMap("Default", Words())["one"] == 0x31 && !Settings.LoadWriteLog() && Same(Settings.LoadProfileNames(), "Default"),
+        Check(Settings.LoadKeyMap("Default", Words())["one"] == Key.Digit1 && !Settings.LoadWriteLog() && Same(Settings.LoadProfileNames(), "Default"),
             "and it reads as a fresh install: default mappings, one game, the switches off");
 
         Log.Info("a line before the reset");
@@ -205,17 +205,17 @@ internal static class SettingsTests
     {
         var behavior = new KeyBehavior { Repeat = true, Infinite = true, Rotation = true, Priority = true, PrioritySeconds = 1.5, DurationSeconds = 2.5 };
         Settings.SaveProfile("Default",
-            new() { ["one"] = 0x41, ["ghost"] = 0x5A },
-            new() { ["one"] = new() { 0x42, 0x43 } },
+            new() { ["one"] = Key.A, ["ghost"] = Key.Z },
+            new() { ["one"] = new() { Key.B, Key.C } },
             new() { ["one"] = behavior });
 
         var map = Settings.LoadKeyMap("Default", Words());
-        Check(map["one"] == 0x41, "a saved key loads again");
-        Check(map["two"] == 0x32, "a key that was never saved keeps its default");
+        Check(map["one"] == Key.A, "a saved key loads again");
+        Check(map["two"] == Key.Digit2, "a key that was never saved keeps its default");
         Check(!map.ContainsKey("ghost"), "an id the app does not know is ignored");
 
         var extras = Settings.LoadExtraKeys("Default", new() { ["one"] = new(), ["two"] = new() });
-        Check(extras["one"].SequenceEqual(new ushort[] { 0x42, 0x43 }), "extra keys load again, in order");
+        Check(extras["one"].SequenceEqual(new Key[] { Key.B, Key.C }), "extra keys load again, in order");
 
         var loaded = Settings.LoadBehaviors("Default", new() { ["one"] = new KeyBehavior(), ["two"] = new KeyBehavior() })["one"];
         Check(loaded.Repeat && loaded.Infinite && loaded.Rotation && loaded.Priority && !loaded.Hold
@@ -226,12 +226,12 @@ internal static class SettingsTests
               && !new KeyBehavior { Priority = true }.IsPlainTap() && !loaded.IsPlainTap(),
               "a fresh behavior is a plain tap; one with a pause, a repeat or a hold is not");
 
-        Settings.SaveMouseProfile("Default", new() { ["middle"] = true }, new() { ["middle"] = 0x46 }, new(), new());
-        Settings.SaveVirtualProfile("Default", new() { ["f1"] = 0x47 }, new(), new());
-        Check(Settings.LoadKeyMap("Default", Words())["one"] == 0x41
-              && Settings.LoadMouseKeyMap("Default", new() { ["middle"] = 0 })["middle"] == 0x46
+        Settings.SaveMouseProfile("Default", new() { ["middle"] = true }, new() { ["middle"] = Key.F }, new(), new());
+        Settings.SaveVirtualProfile("Default", new() { ["f1"] = Key.G }, new(), new());
+        Check(Settings.LoadKeyMap("Default", Words())["one"] == Key.A
+              && Settings.LoadMouseKeyMap("Default", new() { ["middle"] = Key.None })["middle"] == Key.F
               && Settings.LoadMouseEnabled("Default", new() { ["middle"] = false })["middle"]
-              && Settings.LoadVirtualKeyMap("Default", new() { ["f1"] = 0 })["f1"] == 0x47,
+              && Settings.LoadVirtualKeyMap("Default", new() { ["f1"] = Key.None })["f1"] == Key.G,
               "saving voice, mouse or keyboard mappings leaves the other two alone");
 
         string before = File.ReadAllText(_file);
@@ -250,16 +250,16 @@ internal static class SettingsTests
 
         Settings.SaveMouseProfile("Default",
             new() { ["middle"] = true },
-            new() { ["middle"] = 0x26 },
+            new() { ["middle"] = Key.Up },
             new() { ["middle"] = new() },
             new() { ["middle"] = new KeyBehavior { Hold = true, Infinite = true } });
         Settings.SaveSteeringStretch(0.25);
         Check(Settings.LoadSteeringStretch() == 0.25, "a saved stretch loads again");
-        Check(Settings.LoadMouseKeyMap("Default", new() { ["middle"] = 0 })["middle"] == 0x26, "saving it keeps the mouse mappings");
+        Check(Settings.LoadMouseKeyMap("Default", new() { ["middle"] = Key.None })["middle"] == Key.Up, "saving it keeps the mouse mappings");
 
         Settings.SaveMouseProfile("Default",
             new() { ["middle"] = true },
-            new() { ["middle"] = 0x28 },
+            new() { ["middle"] = Key.Down },
             new() { ["middle"] = new() },
             new() { ["middle"] = new KeyBehavior() });
         Check(Settings.LoadSteeringStretch() == 0.25, "and saving the mouse mappings keeps the stretch");
@@ -301,25 +301,25 @@ internal static class SettingsTests
         var enabled = Settings.LoadSteeringEnabled(SteeringMap.FreshEnabled());
         Check(!enabled["pushup"] && !enabled["pushdown"], "never saved: both pushes are unmapped");
 
-        SteeringMap.Rebind("pushup", 0x57);
+        SteeringMap.Rebind("pushup", Key.W);
         SteeringMap.SetBehavior("pushup", new KeyBehavior { Hold = true, Infinite = true });
-        SteeringMap.AddExtraKey("pushup", 0x45);
+        SteeringMap.AddExtraKey("pushup", Key.E);
         Settings.CreateProfileIfMissing("Browsing", new(), new(), new(), new(), new(), new(), new());
         Settings.SetActiveProfile("Browsing");
         enabled = Settings.LoadSteeringEnabled(SteeringMap.FreshEnabled());
-        Check(enabled["pushup"] && Settings.LoadSteeringKeyMap(SteeringMap.FreshWords())["pushup"] == 0x57,
+        Check(enabled["pushup"] && Settings.LoadSteeringKeyMap(SteeringMap.FreshWords())["pushup"] == Key.W,
             "a Push up mapping still loads after another profile is made active");
-        Check(Settings.LoadSteeringExtraKeys(SteeringMap.FreshExtraKeys())["pushup"].SequenceEqual(new ushort[] { 0x45 }), "with its extra key");
+        Check(Settings.LoadSteeringExtraKeys(SteeringMap.FreshExtraKeys())["pushup"].SequenceEqual(new Key[] { Key.E }), "with its extra key");
         Check(Settings.LoadSteeringBehaviors(SteeringMap.FreshBehaviors())["pushup"].Hold, "and its behavior");
 
         Settings.SaveMouseProfile("Browsing",
-            new() { ["middle"] = true }, new() { ["middle"] = 0x26 }, new() { ["middle"] = new() }, new() { ["middle"] = new KeyBehavior() });
+            new() { ["middle"] = true }, new() { ["middle"] = Key.Up }, new() { ["middle"] = new() }, new() { ["middle"] = new KeyBehavior() });
         Check(Settings.LoadSteeringEnabled(SteeringMap.FreshEnabled())["pushup"], "a mouse profile save leaves it alone");
 
         MouseMap.SwitchProfile("Browsing");
         MouseMap.ResetAll();
         Check(Settings.LoadSteeringEnabled(SteeringMap.FreshEnabled())["pushup"]
-              && Settings.LoadSteeringKeyMap(SteeringMap.FreshWords())["pushup"] == 0x57, "Reset profile's MouseMap.ResetAll leaves it alone");
+              && Settings.LoadSteeringKeyMap(SteeringMap.FreshWords())["pushup"] == Key.W, "Reset profile's MouseMap.ResetAll leaves it alone");
         Check(!MouseMap.ButtonIds.Contains("pushup") && !MouseMap.ButtonIds.Contains("pushdown"), "the mouse map no longer carries the pushes");
 
         SteeringMap.ResetToDefault("pushup");
@@ -328,13 +328,13 @@ internal static class SettingsTests
 
     private static void Games()
     {
-        Settings.CreateProfileIfMissing("WoW", new() { ["one"] = 0x41 }, new(), new(), new(), new(), new(), new());
-        Settings.CreateProfileIfMissing("Diablo", new() { ["one"] = 0x44 }, new(), new(), new(), new(), new(), new());
-        Settings.CreateProfileIfMissing("Halo", new() { ["one"] = 0x48 }, new(), new(), new(), new(), new(), new());
+        Settings.CreateProfileIfMissing("WoW", new() { ["one"] = Key.A }, new(), new(), new(), new(), new(), new());
+        Settings.CreateProfileIfMissing("Diablo", new() { ["one"] = Key.D }, new(), new(), new(), new(), new(), new());
+        Settings.CreateProfileIfMissing("Halo", new() { ["one"] = Key.H }, new(), new(), new(), new(), new(), new());
         Check(Same(Settings.LoadProfileNames(), "Default", "WoW", "Diablo", "Halo"), "new games are listed in the order they were made, after Default");
 
-        Settings.CreateProfileIfMissing("WoW", new() { ["one"] = 0x5A }, new(), new(), new(), new(), new(), new());
-        Check(Settings.LoadKeyMap("WoW", Words())["one"] == 0x41, "creating a game that already exists changes nothing");
+        Settings.CreateProfileIfMissing("WoW", new() { ["one"] = Key.Z }, new(), new(), new(), new(), new(), new());
+        Check(Settings.LoadKeyMap("WoW", Words())["one"] == Key.A, "creating a game that already exists changes nothing");
 
         Settings.SetActiveProfile("Diablo");
         Check(Settings.LoadActiveProfileName() == "Diablo", "the active game is remembered");
@@ -346,7 +346,7 @@ internal static class SettingsTests
         Check(Settings.RenameProfile("Diablo", "Diablo 4"), "a free name is accepted");
         Check(Same(Settings.LoadProfileNames(), "Default", "WoW", "Diablo 4", "Halo"), "the renamed game keeps its place in the list");
         Check(Settings.LoadActiveProfileName() == "Diablo 4", "and stays the active game");
-        Check(Settings.LoadKeyMap("Diablo 4", Words())["one"] == 0x44, "and keeps its mappings");
+        Check(Settings.LoadKeyMap("Diablo 4", Words())["one"] == Key.D, "and keeps its mappings");
 
         Settings.DeleteProfile("Diablo 4");
         Check(Same(Settings.LoadProfileNames(), "Default", "WoW", "Halo"), "a deleted game is gone");
@@ -355,7 +355,7 @@ internal static class SettingsTests
 
     private static void SubProfiles()
     {
-        Settings.SaveProfile("WoW", new() { ["one"] = 0x41 }, new(), new());
+        Settings.SaveProfile("WoW", new() { ["one"] = Key.A }, new(), new());
         Settings.SaveThemeColor("WoW", "Green");
 
         Check(Settings.CreateSubProfile("WoW", "Hunter"), "a sub-profile can be added");
@@ -366,12 +366,12 @@ internal static class SettingsTests
 
         Check(!Settings.SetActiveSubProfile("WoW", "Mage"), "switching to one that does not exist is refused");
         Check(Settings.SetActiveSubProfile("WoW", "Hunter"), "switching to the new one works");
-        Check(Settings.LoadKeyMap("WoW", Words())["one"] == 0x41, "a new sub-profile starts as a copy of the one it was made from");
+        Check(Settings.LoadKeyMap("WoW", Words())["one"] == Key.A, "a new sub-profile starts as a copy of the one it was made from");
 
-        Settings.SaveProfile("WoW", new() { ["one"] = 0x48 }, new(), new());
-        Check(Settings.LoadKeyMap("WoW", Words())["one"] == 0x48, "a change saved on Hunter loads on Hunter");
+        Settings.SaveProfile("WoW", new() { ["one"] = Key.H }, new(), new());
+        Check(Settings.LoadKeyMap("WoW", Words())["one"] == Key.H, "a change saved on Hunter loads on Hunter");
         Settings.SetActiveSubProfile("WoW", "Default");
-        Check(Settings.LoadKeyMap("WoW", Words())["one"] == 0x41, "and leaves Default as it was");
+        Check(Settings.LoadKeyMap("WoW", Words())["one"] == Key.A, "and leaves Default as it was");
         Check(Settings.LoadThemeColor("WoW", "Red") == "Green", "the colour belongs to the game, not the sub-profile");
 
         Settings.CreateSubProfile("WoW", "Mage");
@@ -382,7 +382,7 @@ internal static class SettingsTests
         Settings.SetActiveSubProfile("WoW", "Marksman");
         Settings.RenameSubProfile("WoW", "Marksman", "Hunter");
         Check(Settings.LoadActiveSubProfile("WoW") == "Hunter", "renaming the active one keeps it active");
-        Check(Settings.LoadKeyMap("WoW", Words())["one"] == 0x48, "with its mappings");
+        Check(Settings.LoadKeyMap("WoW", Words())["one"] == Key.H, "with its mappings");
 
         Check(Settings.DeleteSubProfile("WoW", "Hunter"), "the active sub-profile can be deleted");
         Check(Settings.LoadActiveSubProfile("WoW") == "Default", "and the game moves to its first remaining one");
@@ -395,7 +395,7 @@ internal static class SettingsTests
         // Before profiles: one flat key map.
         File.WriteAllText(_file, """{"KeyMap":{"one":65},"Behaviors":{"one":{"Repeat":true,"DurationSeconds":3}}}""");
         var old = Settings.LoadBehaviors("Default", new() { ["one"] = new KeyBehavior() })["one"];
-        Check(Settings.LoadKeyMap("Default", Words())["one"] == 65 && old.Repeat && old.DurationSeconds == 3,
+        Check(Settings.LoadKeyMap("Default", Words())["one"] == Key.A && old.Repeat && old.DurationSeconds == 3,
               "a file from before profiles becomes the Default game");
         Check(Same(Settings.LoadSubProfileNames("Default"), "Default"), "with one sub-profile");
 
@@ -404,8 +404,8 @@ internal static class SettingsTests
         File.WriteAllText(_file, """{"ActiveProfile":"WoW","Profiles":{"WoW":{"ThemeColor":"Green","KeyMap":{"one":66},"MouseEnabled":{"middle":true},"MouseKeyMap":{"middle":67}}}}""");
         Check(Settings.LoadActiveProfileName() == "WoW" && Settings.LoadThemeColor("WoW", "Red") == "Green",
               "a file from before sub-profiles keeps its game and colour");
-        Check(Settings.LoadKeyMap("WoW", Words())["one"] == 66
-              && Settings.LoadMouseKeyMap("WoW", new() { ["middle"] = 0 })["middle"] == 67,
+        Check(Settings.LoadKeyMap("WoW", Words())["one"] == Key.B
+              && Settings.LoadMouseKeyMap("WoW", new() { ["middle"] = Key.None })["middle"] == Key.C,
               "and its mappings, as the game's Default sub-profile");
 
         Settings.SaveKeyboardShown(false);
@@ -413,7 +413,7 @@ internal static class SettingsTests
         {
             var wow = doc.RootElement.GetProperty("Profiles").GetProperty("WoW");
             Check(!wow.TryGetProperty("KeyMap", out _), "the next save drops the old flat fields");
-            Check(wow.GetProperty("SubProfiles").GetProperty("Default").GetProperty("KeyMap").GetProperty("one").GetInt32() == 66,
+            Check(wow.GetProperty("SubProfiles").GetProperty("Default").GetProperty("KeyMap").GetProperty("one").GetString() == "B",
                   "and writes the mappings in the new place");
         }
 
@@ -422,32 +422,32 @@ internal static class SettingsTests
         Fresh();
         File.WriteAllText(_file, """{"Mystery":12,"Profiles":{"Default":{"Mystery":true,"SubProfiles":{"Default":{"KeyMap":{"one":68},"Behaviors":{"one":{"Repeat":true,"Infinite":true,"Mystery":250}}}}}}}""");
         var known = Settings.LoadBehaviors("Default", new() { ["one"] = new KeyBehavior() })["one"];
-        Check(Settings.LoadKeyMap("Default", Words())["one"] == 68 && known.Repeat && known.Infinite,
+        Check(Settings.LoadKeyMap("Default", Words())["one"] == Key.D && known.Repeat && known.Infinite,
               "fields this version does not know are ignored, and the rest still loads");
     }
 
     private static void DamagedFiles()
     {
-        Settings.SaveProfile("Default", new() { ["one"] = 0x41 }, new(), new());
+        Settings.SaveProfile("Default", new() { ["one"] = Key.A }, new(), new());
         Settings.SaveKeyboardShown(true);
 
         File.WriteAllText(_file, "{ \"Profiles\": { \"Defa");
-        Check(Settings.LoadKeyMap("Default", Words())["one"] == 0x41, "a file cut short mid-save falls back to the backup");
+        Check(Settings.LoadKeyMap("Default", Words())["one"] == Key.A, "a file cut short mid-save falls back to the backup");
         Check(File.Exists(_log) && File.ReadAllText(_log).Contains("settings.json could not be read"), "and says so in the log");
 
         Settings.SaveKeyboardScale(0.8);
-        Check(Parses(_file) && Settings.LoadKeyMap("Default", Words())["one"] == 0x41, "the next save writes a whole file again, mappings intact");
+        Check(Parses(_file) && Settings.LoadKeyMap("Default", Words())["one"] == Key.A, "the next save writes a whole file again, mappings intact");
 
         // One more save, so the backup is a good file again.
         Settings.SaveKeyboardScale(0.9);
         File.WriteAllText(_file, "");
-        Check(Settings.LoadKeyMap("Default", Words())["one"] == 0x41, "an empty file falls back to the backup");
+        Check(Settings.LoadKeyMap("Default", Words())["one"] == Key.A, "an empty file falls back to the backup");
         File.WriteAllText(_file, "null");
-        Check(Settings.LoadKeyMap("Default", Words())["one"] == 0x41, "so does a file that holds nothing");
+        Check(Settings.LoadKeyMap("Default", Words())["one"] == Key.A, "so does a file that holds nothing");
 
         File.WriteAllText(_file, "not json");
         File.WriteAllText(_backup, "not json either");
-        Check(Settings.LoadKeyMap("Default", Words())["one"] == 0x31 && Same(Settings.LoadProfileNames(), "Default"),
+        Check(Settings.LoadKeyMap("Default", Words())["one"] == Key.Digit1 && Same(Settings.LoadProfileNames(), "Default"),
               "with both files damaged the app starts fresh rather than crashing");
 
         Settings.SaveKeyboardScale(0.7);
@@ -479,11 +479,11 @@ internal static class SettingsTests
     {
         string folder = ShareFolder();
         const string game = "xcom2: WotC";
-        Settings.CreateProfileIfMissing(game, new() { ["one"] = 0x41 }, new(), new(), new(), new(), new(), new());
+        Settings.CreateProfileIfMissing(game, new() { ["one"] = Key.A }, new(), new(), new(), new(), new(), new());
         Settings.SaveThemeColor(game, "Green");
         Settings.CreateSubProfile(game, "Sniper");
         Settings.SetActiveSubProfile(game, "Sniper");
-        Settings.SaveProfile(game, new() { ["one"] = 0x48 }, new(), new() { ["one"] = new KeyBehavior { Hold = true, DurationSeconds = 2 } });
+        Settings.SaveProfile(game, new() { ["one"] = Key.H }, new(), new() { ["one"] = new KeyBehavior { Hold = true, DurationSeconds = 2 } });
         Settings.SaveSteeringStretch(0.25);
 
         Check(Settings.ExportProfile("Nope", folder) == null, "a game that does not exist cannot be shared");
@@ -507,13 +507,13 @@ internal static class SettingsTests
             return;
         Check(Same(Settings.LoadSubProfileNames(name), "Default", "Sniper"), "its sub-profiles come with it");
         Check(Settings.LoadActiveSubProfile(name) == "Sniper", "on the one it was last on");
-        Check(Settings.LoadKeyMap(name, Words())["one"] == 0x48, "with that one's mappings");
+        Check(Settings.LoadKeyMap(name, Words())["one"] == Key.H, "with that one's mappings");
         var behavior = Settings.LoadBehaviors(name, new() { ["one"] = new KeyBehavior() })["one"];
         Check(behavior.Hold && behavior.DurationSeconds == 2, "and how each key is pressed");
         Settings.SetActiveSubProfile(name, "Default");
-        Check(Settings.LoadKeyMap(name, Words())["one"] == 0x41, "the other sub-profile kept its own mappings");
+        Check(Settings.LoadKeyMap(name, Words())["one"] == Key.A, "the other sub-profile kept its own mappings");
         Check(Settings.LoadThemeColor(name, "Red") == "Green", "and the colour came too");
-        Check(Settings.LoadKeyMap(game, Words())["one"] == 0x48, "the game it was shared from is untouched");
+        Check(Settings.LoadKeyMap(game, Words())["one"] == Key.H, "the game it was shared from is untouched");
 
         Check(Settings.ImportProfile(path, out _) == game + " 3", "importing again gives a 3");
         Settings.DeleteProfile(game);
@@ -522,7 +522,7 @@ internal static class SettingsTests
         Fresh();
         string? fresh = Settings.ExportProfile("Default", folder);
         Check(fresh != null && Settings.ImportProfile(fresh, out _) == "Default 2", "Default can be shared, even before anything was saved");
-        Check(Settings.LoadKeyMap("Default 2", Words())["one"] == 0x31, "and reads the app's defaults");
+        Check(Settings.LoadKeyMap("Default 2", Words())["one"] == Key.Digit1, "and reads the app's defaults");
     }
 
     private static void ShareRefusals()
@@ -574,14 +574,14 @@ internal static class SettingsTests
         File.WriteAllText(path, ShareHead + "\"Name\":\"Bare\",\"Profile\":{}}");
         Check(Settings.ImportProfile(path, out _) == "Bare", "a profile with nothing in it comes in");
         Check(Same(Settings.LoadSubProfileNames("Bare"), "Default"), "with one sub-profile, Default");
-        Check(Settings.LoadKeyMap("Bare", Words())["one"] == 0x31, "at the app's defaults");
+        Check(Settings.LoadKeyMap("Bare", Words())["one"] == Key.Digit1, "at the app's defaults");
 
         File.WriteAllText(path, ShareHead + "\"Name\":\"Nulls\",\"Profile\":{\"ThemeColor\":null,\"ActiveSubProfile\":\"Gone\",\"SubProfiles\":{"
             + "\"A\":{\"KeyMap\":null,\"Behaviors\":{\"one\":null},\"ExtraKeys\":{\"one\":[1,2,3,4,5,6,7,8,9]}},\"B\":null}}}");
         Check(Settings.ImportProfile(path, out _) == "Nulls", "nulls where mappings should be are tolerated");
         Check(Same(Settings.LoadSubProfileNames("Nulls"), "A", "B"), "both sub-profiles are there");
         Check(Settings.LoadActiveSubProfile("Nulls") == "A", "an active sub-profile that does not exist falls back to the first");
-        Check(Settings.LoadKeyMap("Nulls", Words())["one"] == 0x31, "a missing key map reads the defaults");
+        Check(Settings.LoadKeyMap("Nulls", Words())["one"] == Key.Digit1, "a missing key map reads the defaults");
         Check(Settings.LoadBehaviors("Nulls", new() { ["one"] = new KeyBehavior() })["one"] != null, "a null behaviour is dropped, not loaded");
         Check(Settings.LoadExtraKeys("Nulls", new() { ["one"] = new() })["one"].Count == RemapStore.MaxExtraKeys, "extra keys are cut to what a mapping can hold");
         Check(Settings.LoadThemeColor("Nulls", "Red") == "Red", "and no colour means the default colour");
@@ -620,7 +620,7 @@ internal static class SettingsTests
         Check(ProfileShare.Find(other, folder).Count == ProfileShare.MaxListed, "a long list is cut to the newest few");
     }
 
-    private static Dictionary<string, ushort> Words() => new() { ["one"] = 0x31, ["two"] = 0x32 };
+    private static Dictionary<string, Key> Words() => new() { ["one"] = Key.Digit1, ["two"] = Key.Digit2 };
 
     private static bool Same(List<string> actual, params string[] expected) => actual.SequenceEqual(expected);
 

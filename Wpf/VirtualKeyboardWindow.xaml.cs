@@ -27,7 +27,6 @@ public partial class VirtualKeyboardWindow
 {
     private const double RowHeight = 44;
     private const double KeysWidth = 780; // the key area at full size; the grip sits beside it
-    private const ushort VkCapital = 0x14;
     // One schedule for a held key, whether held on screen or by a Hold mapping.
     private const int RepeatInitialDelayMs = KeyExecutor.HoldRepeatDelayMs;
     private const int RepeatIntervalMs = KeyExecutor.RepeatIntervalMs;
@@ -169,7 +168,7 @@ public partial class VirtualKeyboardWindow
             _letterLabels.Add((label, spec.Label));
         if (spec.ShiftLabel != null)
             _shiftableLabels.Add((label, spec.Label, spec.ShiftLabel));
-        if (spec.Kind == KeyKind.Plain && spec.Vk == VkCapital)
+        if (spec.Kind == KeyKind.Plain && spec.Key == Key.CapsLock)
             _capsLockButtons.Add(button);
         if (spec.Kind == KeyKind.FadeToggle)
             _fadeButtons.Add(button);
@@ -199,14 +198,14 @@ public partial class VirtualKeyboardWindow
                     TrackRemappableKey(id, spec.Label);
                     break;
                 case KeyKind.Plain:
-                    KeyOutput.TapKey(spec.Vk, spec.Extended);
-                    if (spec.Vk == VkCapital)
+                    KeyOutput.TapKey(spec.Key);
+                    if (spec.Key == Key.CapsLock)
                     {
                         _capsLockOn = !_capsLockOn;
                         RefreshCapsLockHighlight();
                         HandleCapsLockPanicTap();
                     }
-                    TrackPlainKey(spec.Vk);
+                    TrackPlainKey(spec.Key);
                     break;
             }
         }
@@ -219,7 +218,7 @@ public partial class VirtualKeyboardWindow
         // read as.
         bool CanRepeat() => spec.Kind switch
         {
-            KeyKind.Plain => spec.Vk != VkCapital,
+            KeyKind.Plain => spec.Key != Key.CapsLock,
             KeyKind.Remappable => VirtualKeyMap.Behaviors[spec.Id!] is { Repeat: false, Hold: false, Infinite: false }
                 && !VirtualKeyMap.IsMapped(Gestures.IdFor(spec.Id!, Gesture.Double)),
             _ => false,
@@ -243,7 +242,7 @@ public partial class VirtualKeyboardWindow
                 case KeyKind.StickyFixed:
                     // Its highlight follows the modifier's real state via
                     // StickyModifiers.Changed, not this button's own press.
-                    StickyModifiers.Toggle(spec.Id!, new List<(ushort, bool)> { (spec.Vk, spec.Extended) });
+                    StickyModifiers.Toggle(spec.Id!, new List<Key> { spec.Key });
                     break;
                 case KeyKind.Remappable:
                     StickyModifiers.ConsumeForKeyPress();
@@ -252,7 +251,7 @@ public partial class VirtualKeyboardWindow
                 case KeyKind.Plain:
                     StickyModifiers.ConsumeForKeyPress();
                     // Caps keeps showing its toggle state, like a keyboard's LED.
-                    if (spec.Vk != VkCapital)
+                    if (spec.Key != Key.CapsLock)
                         button.Tag = false;
                     break;
                 case KeyKind.MiniToggle:
@@ -321,22 +320,22 @@ public partial class VirtualKeyboardWindow
         RefreshSuggestions();
     }
 
-    private void TrackPlainKey(ushort vk)
+    private void TrackPlainKey(Key key)
     {
-        switch (vk)
+        switch (key)
         {
-            case 0x08: // Backspace
+            case Key.Backspace:
                 if (_currentWord.Length > 0)
                     _currentWord.Length--;
                 break;
-            case 0x20: // Space
-            case 0x0D: // Enter
-            case 0x09: // Tab
-            case 0xBA: case 0xBB: case 0xBC: case 0xBD: case 0xBE: case 0xBF: // ; = , - . /
-            case 0xC0: case 0xDB: case 0xDC: case 0xDD: case 0xDE:           // ` [ \ ] '
+            case Key.Space:
+            case Key.Enter:
+            case Key.Tab:
+            case Key.Semicolon: case Key.EqualSign: case Key.Comma: case Key.Minus: case Key.Period: case Key.Slash:
+            case Key.Backtick: case Key.OpenBracket: case Key.Backslash: case Key.CloseBracket: case Key.Quote:
                 CommitWord();
                 break;
-            case VkCapital: // toggles case, doesn't move the caret
+            case Key.CapsLock: // toggles case, doesn't move the caret
                 return;
             default: // Esc, Del, the arrows — the caret moved somewhere; lose the thread
                 _currentWord.Clear();
@@ -380,10 +379,14 @@ public partial class VirtualKeyboardWindow
         string rest = word[Math.Min(_currentWord.Length, word.Length)..];
         foreach (char c in rest)
         {
-            ushort vk = char.IsAsciiDigit(c) ? (ushort)c : (ushort)char.ToUpperInvariant(c);
-            KeyOutput.TapKey(vk, false);
+            // A suggestion is letters and digits; anything else in a word
+            // from an edited list has no key here and is left out.
+            if (char.IsAsciiDigit(c))
+                KeyOutput.TapKey(KeyNames.Digit(c - '0'));
+            else if (char.IsAsciiLetter(c))
+                KeyOutput.TapKey(KeyNames.Letter(c));
         }
-        KeyOutput.TapKey(0x20, false);
+        KeyOutput.TapKey(Key.Space);
         StickyModifiers.ConsumeForKeyPress();
 
         WordPredictor.Learn(word);

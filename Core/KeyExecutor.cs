@@ -81,7 +81,7 @@ internal static class KeyExecutor
     private sealed class InfiniteState
     {
         public string? HoldWord;
-        public IReadOnlyList<(ushort Vk, bool Extended)>? HoldKeys;
+        public IReadOnlyList<Key>? HoldKeys;
         public WindowId? HoldWindow;
         public string? HoldWindowTitle;
 
@@ -121,34 +121,34 @@ internal static class KeyExecutor
     // then releasing each in quick succession, rather than one full
     // down-then-up cycle per key. That's as close to truly simultaneous as
     // discrete SendInput calls get, and it's imperceptible in practice.
-    private static void PressAllDown(IReadOnlyList<(ushort Vk, bool Extended)> keys)
+    private static void PressAllDown(IReadOnlyList<Key> keys)
     {
         foreach (var key in keys)
-            KeyOutput.KeyDown(key.Vk, key.Extended);
+            KeyOutput.KeyDown(key);
     }
 
-    private static void ReleaseAllUp(IReadOnlyList<(ushort Vk, bool Extended)> keys)
+    private static void ReleaseAllUp(IReadOnlyList<Key> keys)
     {
         foreach (var key in keys)
-            KeyOutput.KeyUp(key.Vk, key.Extended);
+            KeyOutput.KeyUp(key);
     }
 
     // The key a Hold repeats while it lasts: the last one pressed, as on a
     // real keyboard, where Ctrl stays down and X is what repeats. A mouse
     // button never repeats (a real one doesn't either), so null for that.
-    private static (ushort Vk, bool Extended)? RepeatingKey(IReadOnlyList<(ushort Vk, bool Extended)> keys) =>
-        keys.Count > 0 && !KeyCatalog.IsMouseButton(keys[^1].Vk) ? keys[^1] : null;
+    private static Key? RepeatingKey(IReadOnlyList<Key> keys) =>
+        keys.Count > 0 && !KeyCatalog.IsMouseButton(keys[^1]) ? keys[^1] : null;
 
     // Repeat cycles through a word's keys one at a time instead of firing
     // them together — Key 1, then Key 2, then Key 3, then back to Key 1, for
     // as long as the repeat runs (a single key just "cycles" through itself
     // every time, same as before). Hold and a plain tap still fire every key
     // together, since that's what makes a combo like Ctrl+C work at all.
-    private static void TapKeySequentially(IReadOnlyList<(ushort Vk, bool Extended)> keys, int index)
+    private static void TapKeySequentially(IReadOnlyList<Key> keys, int index)
     {
         var key = keys[index % keys.Count];
-        KeyOutput.KeyDown(key.Vk, key.Extended);
-        KeyOutput.KeyUp(key.Vk, key.Extended);
+        KeyOutput.KeyDown(key);
+        KeyOutput.KeyUp(key);
     }
 
     // Rotation (see KeyBehavior.Rotation): every key, in order, a few
@@ -156,7 +156,7 @@ internal static class KeyExecutor
     // rest, so one burst is "the highest-priority ready ability".
     private const int BurstGapMs = 15;
 
-    private static void TapBurst(IReadOnlyList<(ushort Vk, bool Extended)> keys, CancellationToken token)
+    private static void TapBurst(IReadOnlyList<Key> keys, CancellationToken token)
     {
         for (int i = 0; i < keys.Count && !token.IsCancellationRequested; i++)
         {
@@ -231,7 +231,7 @@ internal static class KeyExecutor
         }
     }
 
-    public static void Execute(string word, IReadOnlyList<(ushort Vk, bool Extended)> keys, KeyBehavior behavior)
+    public static void Execute(string word, IReadOnlyList<Key> keys, KeyBehavior behavior)
     {
         // Steering (see Steering.cs): this word, button or key is the
         // steering switch. Its pedals go along with it (Fizzil: one button
@@ -243,7 +243,7 @@ internal static class KeyExecutor
         if (behavior.Steering && Features.SteeringEnabled)
         {
             Steering.Toggle();
-            var pedals = keys.Where(k => PadKeys.IsPadKey(k.Vk)).ToList();
+            var pedals = keys.Where(k => PadKeys.IsPadKey(k)).ToList();
             if (pedals.Count == 0)
                 return;
             keys = pedals;
@@ -285,7 +285,7 @@ internal static class KeyExecutor
     // through its sequence once, each key waiting its own gap, instead of
     // collapsing into a single simultaneous tap of every key (for a 1-key
     // mapping that is one tap either way); anything else is one combo tap.
-    private static void FireOnce(IReadOnlyList<(ushort Vk, bool Extended)> keys, KeyBehavior behavior, CancellationToken token)
+    private static void FireOnce(IReadOnlyList<Key> keys, KeyBehavior behavior, CancellationToken token)
     {
         if (behavior.Repeat && behavior.Rotation)
         {
@@ -338,7 +338,7 @@ internal static class KeyExecutor
 
     private static readonly Dictionary<string, TimedRun> _activeTimedRuns = new();
 
-    private static void ExecuteTimed(string word, IReadOnlyList<(ushort Vk, bool Extended)> keys, KeyBehavior behavior)
+    private static void ExecuteTimed(string word, IReadOnlyList<Key> keys, KeyBehavior behavior)
     {
         TimedRun? toCancel = null;
         TimedRun? mine = null;
@@ -363,7 +363,7 @@ internal static class KeyExecutor
                 {
                     Window = window,
                     WindowTitle = ActiveWindow.TitleOf(window),
-                    PedalsOnly = behavior.Hold && keys.All(k => PadKeys.IsPadKey(k.Vk)),
+                    PedalsOnly = behavior.Hold && keys.All(k => PadKeys.IsPadKey(k)),
                 };
                 _activeTimedRuns[word] = mine;
             }
@@ -397,7 +397,7 @@ internal static class KeyExecutor
                         InterruptibleSleep(repeating == null ? leftMs : Math.Min(nextRepeatMs, leftMs), token);
                         if (repeating == null || token.IsCancellationRequested || DateTime.UtcNow >= end)
                             break;
-                        KeyOutput.KeyDown(repeating.Value.Vk, repeating.Value.Extended);
+                        KeyOutput.KeyDown(repeating.Value);
                         nextRepeatMs = RepeatIntervalMs;
                     }
                 }
@@ -497,7 +497,7 @@ internal static class KeyExecutor
         // or an edit mid-hold makes those differ, and releasing the new
         // keys left the old one stuck down (the harness caught exactly
         // that). A repeat never leaves a key down, so nothing to send for one.
-        var held = new List<IReadOnlyList<(ushort Vk, bool Extended)>>();
+        var held = new List<IReadOnlyList<Key>>();
         lock (_lock)
         {
             foreach (var s in new[] { _voiceState, _mouseState, _virtualState })
@@ -548,7 +548,7 @@ internal static class KeyExecutor
     // isn't actually engaged right now.
     public static void ForceRelease(string word)
     {
-        IReadOnlyList<(ushort Vk, bool Extended)>? keysToRelease = null;
+        IReadOnlyList<Key>? keysToRelease = null;
         var s = StateFor(word);
 
         lock (_lock)
@@ -580,12 +580,12 @@ internal static class KeyExecutor
             ReleaseAllUp(keysToRelease);
     }
 
-    private static void ExecuteInfinite(string word, IReadOnlyList<(ushort Vk, bool Extended)> keys, KeyBehavior behavior)
+    private static void ExecuteInfinite(string word, IReadOnlyList<Key> keys, KeyBehavior behavior)
     {
         bool repeatMode = behavior.Repeat && !behavior.Hold;
         bool starting;
         string? bumpedWord = null;
-        IReadOnlyList<(ushort Vk, bool Extended)>? bumpedHoldKeys = null;
+        IReadOnlyList<Key>? bumpedHoldKeys = null;
         var s = StateFor(word);
 
         lock (_lock)
@@ -722,7 +722,7 @@ internal static class KeyExecutor
                 {
                     if (!(_engaged.TryGetValue(word, out var v) && v) || s.HoldWord != word)
                         break;
-                    KeyOutput.KeyDown(repeating.Value.Vk, repeating.Value.Extended);
+                    KeyOutput.KeyDown(repeating.Value);
                 }
                 InterruptibleSleep(RepeatIntervalMs, token);
             }
@@ -766,7 +766,7 @@ internal static class KeyExecutor
     {
         var current = ActiveWindow.Current;
         string? currentTitle = null; // fetched lazily, only if actually needed below
-        var holdReleases = new List<IReadOnlyList<(ushort Vk, bool Extended)>>();
+        var holdReleases = new List<IReadOnlyList<Key>>();
 
         lock (_lock)
         {
@@ -782,7 +782,7 @@ internal static class KeyExecutor
                     // PadKeys) is not a key stuck in a game: a browser game
                     // changing its tab title mid-race must not lift the
                     // throttle. A real switch of window still does.
-                    bool pedalsOnly = s.HoldKeys!.All(k => PadKeys.IsPadKey(k.Vk));
+                    bool pedalsOnly = s.HoldKeys!.All(k => PadKeys.IsPadKey(k));
 
                     if (windowChanged || (titleChanged && !ownSideEffect && !pedalsOnly))
                     {

@@ -94,13 +94,13 @@ internal static class InputHooksTests
     private static void HeardOnOwnThread()
     {
         var gate = new object();
-        var heard = new List<(ushort Key, bool Down, int Thread)>();
+        var heard = new List<(Key Key, bool Down, int Thread)>();
         using var hooks = new WindowsInputHooks();
         hooks.Start(
             _ => false,
             e =>
             {
-                if (e.Key != F15 && e.Key != F14)
+                if (e.Key != Key.F15 && e.Key != Key.F14)
                     return false;
                 lock (gate)
                     heard.Add((e.Key, e.Down, Environment.CurrentManagedThreadId));
@@ -109,16 +109,16 @@ internal static class InputHooksTests
 
         TapUnmarked(F15);
         bool both = Within(1000, () => { lock (gate) return heard.Count >= 2; });
-        (ushort Key, bool Down, int Thread)[] seen;
+        (Key Key, bool Down, int Thread)[] seen;
         lock (gate)
             seen = heard.ToArray();
-        Check(both && seen.Length == 2 && seen[0] == (F15, true, seen[0].Thread) && seen[1].Key == F15 && !seen[1].Down,
+        Check(both && seen.Length == 2 && seen[0] == (Key.F15, true, seen[0].Thread) && seen[1].Key == Key.F15 && !seen[1].Down,
               "a real key's press and release reach the handler, in order");
         Check(seen.Length > 0 && seen.All(s => s.Thread != Environment.CurrentManagedThreadId),
               "on a thread that is not the one that started the hooks");
 
         // The app's own output carries its mark and is never shown.
-        KeyOutput.TapKey(F14, false);
+        KeyOutput.TapKey(Key.F14);
         Thread.Sleep(300);
         int count;
         lock (gate)
@@ -135,7 +135,7 @@ internal static class InputHooksTests
             _ => false,
             e =>
             {
-                if (e.Key != F15)
+                if (e.Key != Key.F15)
                     return false;
                 if (e.Down && slowNext)
                 {

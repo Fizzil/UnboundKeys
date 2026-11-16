@@ -15,7 +15,9 @@ internal interface IOpener
 
 internal static class Opener
 {
-    private static IOpener _opener = new WindowsOpener();
+    // Set by the system's side before anything else runs (WindowsPlatform.
+    // Install on Windows): this project knows no system of its own.
+    private static IOpener _opener = null!;
 
     // Swaps the opener in use and hands back the old one (the tests).
     internal static IOpener Use(IOpener opener)
