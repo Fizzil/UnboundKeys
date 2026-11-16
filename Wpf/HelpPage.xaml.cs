@@ -60,7 +60,7 @@ public partial class HelpPage : IDashboardPage
         AddLine("Stop, on the rail", "lets go of everything, whatever is mapped, with one click, and switches steering off.");
         AddLine($"\"press {VoiceEngine.StopWord}\"", "does the same by voice.");
         AddLine("Caps, twice quickly", "on the on-screen keyboard, or a real Caps Lock key, releases everything, lifts Fade, and shows or hides this dashboard.");
-        AddLine("Switching windows", "lets go of every Infinite hold and repeat and switches steering off, so alt-tab never leaves a key stuck; a new browser tab lets go of the holds and repeats too. A timed Hold or Repeat runs out its own time, and a hold of only Throttle or Brake is kept when just the browser tab's title changes.");
+        AddLine("Switching windows", "lets go of every hold and repeat, timed or Infinite, and switches steering off, so alt-tab never leaves a key stuck; a new browser tab lets go of the holds and repeats too. A hold of only Throttle or Brake is kept when just the browser tab's title changes.");
         AddLine("Left Click", "is never remapped, so you can always click.");
 
         AddHeader("ON-SCREEN KEYBOARD", topMargin: 6);
