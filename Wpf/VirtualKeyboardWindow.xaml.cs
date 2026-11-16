@@ -199,7 +199,7 @@ public partial class VirtualKeyboardWindow
                     TrackRemappableKey(id, spec.Label);
                     break;
                 case KeyKind.Plain:
-                    NativeInput.TapKey(spec.Vk, spec.Extended);
+                    KeyOutput.TapKey(spec.Vk, spec.Extended);
                     if (spec.Vk == VkCapital)
                     {
                         _capsLockOn = !_capsLockOn;
@@ -381,9 +381,9 @@ public partial class VirtualKeyboardWindow
         foreach (char c in rest)
         {
             ushort vk = char.IsAsciiDigit(c) ? (ushort)c : (ushort)char.ToUpperInvariant(c);
-            NativeInput.TapKey(vk, false);
+            KeyOutput.TapKey(vk, false);
         }
-        NativeInput.TapKey(0x20, false);
+        KeyOutput.TapKey(0x20, false);
         StickyModifiers.ConsumeForKeyPress();
 
         WordPredictor.Learn(word);

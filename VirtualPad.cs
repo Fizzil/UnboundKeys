@@ -22,7 +22,7 @@ public interface IVirtualPad : IDisposable
 // Two pseudo key codes, outside every real virtual-key code, that stand for
 // the virtual pad's pedals so a mapping can hold them like any key: Mode
 // Hold with Infinite on Throttle is a pedal held until the mapping is
-// stopped. NativeInput.KeyDown/KeyUp hand them to Steering.SetPadPedal
+// stopped. KeyOutput.KeyDown/KeyUp hand them to Steering.SetPadPedal
 // instead of sending a key.
 public static class PadKeys
 {

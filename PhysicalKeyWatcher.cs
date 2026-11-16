@@ -1,11 +1,8 @@
-using System.Runtime.InteropServices;
-
 namespace UnboundKeys;
 
-// Watches the physical keyboard system-wide via a low-level hook (see
-// LowLevelHook — the P/Invoke/lifecycle machinery lives there; this class
-// owns only the actual keyboard-specific logic), for two unrelated jobs
-// that happen to share one hook:
+// Decides what each real key event means (the events come from the system
+// through IInputHooks, see InputHooks.cs), for two unrelated jobs that
+// happen to share the one stream of keys:
 //
 // 1. The rapid double-tap of the physical Caps Lock key (see
 //    StopRequested): releases everything (voice, mouse, and the virtual
@@ -46,14 +43,6 @@ public sealed class PhysicalKeyWatcher : IDisposable
     // the virtual keyboard itself.
     public event Action<string>? VirtualKeyPressed;
 
-    private const int WH_KEYBOARD_LL = 13;
-    private const int WM_KEYDOWN = 0x0100;
-    private const int WM_KEYUP = 0x0101;
-    // Sent instead of the plain WM_KEYDOWN/UP pair while Alt is held down
-    // at the same time — still an ordinary press as far as this watcher
-    // cares, so it's treated identically.
-    private const int WM_SYSKEYDOWN = 0x0104;
-    private const int WM_SYSKEYUP = 0x0105;
     private const ushort VK_CAPITAL = 0x14;
 
     // How close together each of the 2 Caps Lock taps needs to land —
@@ -66,20 +55,8 @@ public sealed class PhysicalKeyWatcher : IDisposable
     private int _panicTapCount;
     private DateTime _lastPanicTap = DateTime.MinValue;
 
-    [StructLayout(LayoutKind.Sequential)]
-    private struct KBDLLHOOKSTRUCT
-    {
-        public uint vkCode;
-        public uint scanCode;
-        public uint flags;
-        public uint time;
-        public IntPtr dwExtraInfo;
-    }
-
-    private readonly LowLevelHook _hook = new();
-
-    // Whether Caps Lock is currently physically held down — Windows sends
-    // a fresh WM_KEYDOWN for every auto-repeat tick while a key stays
+    // Whether Caps Lock is currently physically held down — the keyboard
+    // sends a fresh key-down for every auto-repeat tick while a key stays
     // pressed, so only the very first down of a press should count as a
     // tap; this is what tells that apart from a repeat.
     private bool _capsLockHeld;
@@ -87,7 +64,7 @@ public sealed class PhysicalKeyWatcher : IDisposable
     // Digit/letter keys currently physically held down AND being mirrored
     // (i.e. customized — see the class comment). Same auto-repeat problem
     // as Caps Lock above, but for a different reason: without this, a
-    // held-down key's repeated WM_KEYDOWNs would each re-fire
+    // held-down key's repeated key-downs would each re-fire
     // VirtualKeyPressed, which for something like an Infinite Repeat would
     // just toggle it on and off every ~30ms instead of behaving like one
     // press. Also doubles as "which keys' matching key-up still needs
@@ -105,34 +82,17 @@ public sealed class PhysicalKeyWatcher : IDisposable
         return map;
     }
 
-    public void Start() => _hook.Start(WH_KEYBOARD_LL, HookCallback);
-    public void Pause() => _hook.Pause();
-    public void Resume() => _hook.Resume();
-
-    // Only ever invoked once LowLevelHook has already confirmed nCode >= 0
-    // and the watcher isn't paused — no need to check either here.
-    private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
+    // One real key event; true to swallow it. Never called for the app's
+    // own key presses (IInputHooks leaves those out), so it cannot catch
+    // its own output.
+    internal bool Handle(KeyEvent e)
     {
-        var data = Marshal.PtrToStructure<KBDLLHOOKSTRUCT>(lParam);
+        ushort vk = e.Key;
 
-        // Ignore only UnboundKeys's own synthetic key presses (see
-        // NativeInput.InjectedByUnboundKeys) — this hook is system-wide,
-        // so without this it would catch its own output. Checking
-        // dwExtraInfo specifically, rather than the generic "this was
-        // injected" flag, matters because legitimate software
-        // (accessibility tools, macro keyboards) can also inject real
-        // keyboard input, and a blanket check would swallow that too.
-        if (data.dwExtraInfo == NativeInput.InjectedByUnboundKeys)
-            return _hook.CallNext(nCode, wParam, lParam);
-
-        int msg = wParam.ToInt32();
-        ushort vk = (ushort)data.vkCode;
-
-        // Never suppressed — always falls through to CallNext — this is
-        // purely observed, not remapped.
+        // Never swallowed: this is purely observed, not remapped.
         if (vk == VK_CAPITAL)
         {
-            if (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN)
+            if (e.Down)
             {
                 if (!_capsLockHeld)
                 {
@@ -150,30 +110,29 @@ public sealed class PhysicalKeyWatcher : IDisposable
                     }
                 }
             }
-            else if (msg == WM_KEYUP || msg == WM_SYSKEYUP)
+            else
             {
                 _capsLockHeld = false;
             }
 
-            return _hook.CallNext(nCode, wParam, lParam);
+            return false;
         }
 
-        if ((msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN) && VkToId.TryGetValue(vk, out var downId)
-            && VirtualKeyMap.IsIntercepted(downId))
+        if (e.Down && VkToId.TryGetValue(vk, out var downId) && VirtualKeyMap.IsIntercepted(downId))
         {
             if (_heldMirroredKeys.Add(vk))
                 VirtualKeyPressed?.Invoke(downId);
-            return (IntPtr)1;
+            return true;
         }
 
-        // A suppressed key-down also means its matching key-up needs
-        // suppressing too — otherwise Windows (and whatever app has
-        // focus) sees a key-up with no matching down before it.
-        if ((msg == WM_KEYUP || msg == WM_SYSKEYUP) && _heldMirroredKeys.Remove(vk))
-            return (IntPtr)1;
+        // A swallowed key-down also means its matching key-up needs
+        // swallowing too — otherwise the program in front sees a key-up
+        // with no matching down before it.
+        if (!e.Down && _heldMirroredKeys.Remove(vk))
+            return true;
 
-        return _hook.CallNext(nCode, wParam, lParam);
+        return false;
     }
 
-    public void Dispose() => _hook.Dispose();
+    public void Dispose() { }
 }
