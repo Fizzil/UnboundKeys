@@ -78,7 +78,7 @@ public sealed class VoiceEngine : IDisposable
         // sequence of these; the actual "press <word>" shape is enforced
         // afterward in HandleResult.
         var words = new List<string> { "press" };
-        words.AddRange(KeyMap.Words.Keys);
+        words.AddRange(KeyMap.RemappableWords);
         words.Add(StopWord);
         words.Add(MenuWord);
         words.Add(FadeWord);
@@ -175,7 +175,9 @@ public sealed class VoiceEngine : IDisposable
             return null;
 
         var spoken = parts[1].Trim();
-        bool known = KeyMap.Words.ContainsKey(spoken)
+        // The fixed list of words, not the map: this runs on the
+        // microphone's thread, and the map can be mid-switch.
+        bool known = KeyMap.RemappableWords.Contains(spoken, StringComparer.OrdinalIgnoreCase)
             || string.Equals(spoken, StopWord, StringComparison.OrdinalIgnoreCase)
             || string.Equals(spoken, MenuWord, StringComparison.OrdinalIgnoreCase)
             || string.Equals(spoken, FadeWord, StringComparison.OrdinalIgnoreCase);

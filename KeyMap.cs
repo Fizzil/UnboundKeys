@@ -89,6 +89,9 @@ public static class KeyMap
 
     public static List<Key> GetAllKeys(string word) => _store.GetAllKeys(word);
 
+    // What a word presses and how, safe from any thread (see RemapStore.Gate).
+    public static bool TryGet(string word, out List<Key> keys, out KeyBehavior behavior) => _store.TryGet(word, out keys, out behavior);
+
     // Called by the dashboard when the user changes anything about how a
     // word's key is pressed: its Mode, Infinite, the duration, the pause.
     public static void SetBehavior(string word, KeyBehavior behavior) => _store.SetBehavior(word, behavior);

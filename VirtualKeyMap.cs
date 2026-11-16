@@ -77,21 +77,40 @@ public static class VirtualKeyMap
     // overhead, no risk to normal typing), and only a customized one gets
     // intercepted and rerouted through the same remap the on-screen
     // keyboard itself uses.
-    public static bool IsCustomized(string id) =>
-        Words[id] != DefaultWords[id] ||
-        ExtraWords[id].Count > 0 ||
-        !Behaviors[id].IsPlainTap();
+    //
+    // Asked on the input hooks' thread, hence the gate (see
+    // RemapStore.Gate); an id the maps do not hold at this instant is
+    // simply not customized.
+    public static bool IsCustomized(string id)
+    {
+        lock (RemapStore.Gate)
+        {
+            return Words.TryGetValue(id, out var key) && DefaultWords.TryGetValue(id, out var natural)
+                && ExtraWords.TryGetValue(id, out var extras) && Behaviors.TryGetValue(id, out var behavior)
+                && (key != natural || extras.Count > 0 || !behavior.IsPlainTap());
+        }
+    }
 
     // Whether an id sends anything: a key's own mapping always does; its
     // double press's only once a key is picked for it (0 is "Not Mapped").
     // What PressGestures asks before it fires an id.
-    public static bool IsMapped(string id) => Words.TryGetValue(id, out Key key) && key != Key.None;
+    public static bool IsMapped(string id)
+    {
+        lock (RemapStore.Gate)
+            return Words.TryGetValue(id, out Key key) && key != Key.None;
+    }
+
+    // What an id presses and how, safe from any thread.
+    public static bool TryGet(string id, out List<Key> keys, out KeyBehavior behavior) => _store.TryGet(id, out keys, out behavior);
 
     // Whether a key is taken over on the real keyboard (PhysicalKeyWatcher)
     // and lit on the Keyboard page: its own mapping is customized, or its
     // double press's is.
-    public static bool IsIntercepted(string keyId) =>
-        IsCustomized(keyId) || IsCustomized(Gestures.IdFor(keyId, Gesture.Double));
+    public static bool IsIntercepted(string keyId)
+    {
+        lock (RemapStore.Gate)
+            return IsCustomized(keyId) || IsCustomized(Gestures.IdFor(keyId, Gesture.Double));
+    }
 
     public static void SetBehavior(string id, KeyBehavior behavior) => _store.SetBehavior(id, behavior);
 

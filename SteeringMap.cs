@@ -63,9 +63,20 @@ public static class SteeringMap
     // Enabled is set before the store's save so the save writes it.
     public static void Rebind(string id, Key key)
     {
-        Enabled[id] = true;
+        lock (RemapStore.Gate)
+            Enabled[id] = true;
         _store.Rebind(id, key);
     }
+
+    // Whether a push has a key, and what it presses and how, safe from any
+    // thread (see RemapStore.Gate).
+    public static bool IsEnabled(string id)
+    {
+        lock (RemapStore.Gate)
+            return Enabled.TryGetValue(id, out bool on) && on;
+    }
+
+    public static bool TryGet(string id, out List<Key> keys, out KeyBehavior behavior) => _store.TryGet(id, out keys, out behavior);
 
     public static void AddExtraKey(string id, Key key) => _store.AddExtraKey(id, key);
     public static void SetExtraKey(string id, int index, Key key) => _store.SetExtraKey(id, index, key);
@@ -79,7 +90,8 @@ public static class SteeringMap
     // other order caused).
     public static void ResetToDefault(string id)
     {
-        Enabled[id] = false;
+        lock (RemapStore.Gate)
+            Enabled[id] = false;
         _store.ResetToDefault(id);
     }
 
@@ -87,8 +99,11 @@ public static class SteeringMap
     // (Reset profile leaves the pushes alone); it is here for completeness.
     public static void ResetAll()
     {
-        foreach (var id in Ids)
-            Enabled[id] = false;
+        lock (RemapStore.Gate)
+        {
+            foreach (var id in Ids)
+                Enabled[id] = false;
+        }
         _store.ResetAllToDefault();
     }
 }

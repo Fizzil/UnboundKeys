@@ -108,11 +108,10 @@ static class Program
             }
 
             // On the microphone's thread while a profile switch on the UI
-            // thread may be swapping the maps: a word with no behaviour at
-            // this instant is dropped, not a crash.
-            if (!KeyMap.Behaviors.TryGetValue(word, out var behavior))
+            // thread may be swapping the maps (see RemapStore.Gate): a
+            // word the map does not hold at this instant is dropped.
+            if (!KeyMap.TryGet(word, out var keys, out var behavior))
                 return;
-            var keys = KeyMap.GetAllKeys(word);
             Task.Run(() => KeyExecutor.Execute(word, keys, behavior));
         };
 
@@ -126,7 +125,7 @@ static class Program
         {
             foreach (var word in KeyMap.RemappableWords)
                 KeyExecutor.ForceRelease(word);
-            if (KeyMap.RemappableWords.Any(w => KeyMap.Behaviors.TryGetValue(w, out var b) && b.Steering))
+            if (KeyMap.RemappableWords.Any(w => KeyMap.TryGet(w, out _, out var b) && b.Steering))
                 Steering.LetGo();
         }
 
@@ -164,7 +163,8 @@ static class Program
             // a mapping id (e.g. "middle", or "middle.double" for a double
             // press) is just as valid a key into that as a spoken word,
             // and the two never collide.
-            RunMapping(id, MouseMap.GetAllKeys(id), MouseMap.Behaviors[id]);
+            if (MouseMap.TryGet(id, out var keys, out var behavior))
+                RunMapping(id, keys, behavior);
         };
 
         // Push up and Push down (see Steering.cs): the pointer pushed past a
@@ -182,8 +182,8 @@ static class Program
         // Tap is over before the wait ends, and its Stop is a no-op.
         Steering.PushPressed += id =>
         {
-            if (SteeringMap.Enabled.TryGetValue(id, out bool on) && on)
-                RunMapping(id, SteeringMap.GetAllKeys(id), SteeringMap.Behaviors[id]);
+            if (SteeringMap.IsEnabled(id) && SteeringMap.TryGet(id, out var keys, out var behavior))
+                RunMapping(id, keys, behavior);
         };
         Steering.PushReleased += id => Task.Run(async () =>
         {
@@ -215,7 +215,11 @@ static class Program
         // which tells a single press from a double one and names the
         // mapping to run.
         physical.VirtualKeyPressed += KeyPresses.Press;
-        KeyPresses.Pressed += id => RunMapping(id, VirtualKeyMap.GetAllKeys(id), VirtualKeyMap.Behaviors[id]);
+        KeyPresses.Pressed += id =>
+        {
+            if (VirtualKeyMap.TryGet(id, out var keys, out var behavior))
+                RunMapping(id, keys, behavior);
+        };
 
         // The dashboard rail Listening switch pauses the voice keys only.
         // Fizzil wants the mouse buttons and both keyboards to keep working

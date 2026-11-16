@@ -31,7 +31,7 @@ public sealed class MouseInputWatcher : IDisposable
     {
         _isOwnWindowAt = isOwnWindowAt;
         _gestures = new PressGestures(
-            id => MouseMap.Enabled.TryGetValue(id, out bool on) && on,
+            MouseMap.IsEnabled,
             id => ButtonPressed?.Invoke(id));
     }
 
