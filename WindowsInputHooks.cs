@@ -294,7 +294,7 @@ internal sealed class WindowsInputHooks : IInputHooks
                 bool down = msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN;
                 bool up = msg == WM_KEYUP || msg == WM_SYSKEYUP;
                 if (down || up)
-                    swallow = _onKey(new KeyEvent((ushort)data.vkCode, down));
+                    swallow = _onKey(new KeyEvent(WindowsKeys.FromVk(data.vkCode), down));
             }
         }
         catch (Exception ex)

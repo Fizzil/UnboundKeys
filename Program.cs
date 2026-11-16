@@ -151,7 +151,7 @@ static class Program
         // press while the double press's mapping is holding a key switches
         // to the single press's. The same way of pressing again is
         // Execute's own "again to stop".
-        static void RunMapping(string id, List<(ushort Vk, bool Extended)> keys, KeyBehavior behavior) =>
+        static void RunMapping(string id, List<Key> keys, KeyBehavior behavior) =>
             Task.Run(() =>
             {
                 KeyExecutor.Stop(Gestures.Sibling(id));

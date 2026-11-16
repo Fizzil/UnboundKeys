@@ -38,6 +38,18 @@ if (args.Contains("--online"))
     return online ? 0 : 1;
 }
 
+// "--upgrade-check <settings.json>" tries the key-name upgrade on a copy of
+// that file and nothing else (see KeyNamesTests.UpgradeCheck).
+int upgradeAt = Array.IndexOf(args, "--upgrade-check");
+if (upgradeAt >= 0 && upgradeAt + 1 < args.Length)
+{
+    bool upgraded = UnboundKeys.Tests.KeyNamesTests.UpgradeCheck(scratch, args[upgradeAt + 1]);
+    try { System.IO.Directory.Delete(scratch, recursive: true); }
+    catch { /* a leftover scratch folder in Temp is not a failure */ }
+    Console.WriteLine(upgraded ? "ALL PASSED" : "FAILED");
+    return upgraded ? 0 : 1;
+}
+
 var events = new List<(double T, ushort Vk)>();
 var clock = Stopwatch.StartNew();
 var hook = new LowLevelHook();
@@ -63,8 +75,8 @@ hookThread.SetApartmentState(ApartmentState.STA);
 hookThread.Start();
 Thread.Sleep(400);
 
-var repeatKeys = new List<(ushort Vk, bool Extended)> { (F13, false) };
-var pauseKeys = new List<(ushort Vk, bool Extended)> { (F14, false) };
+var repeatKeys = new List<Key> { (Key)F13 };
+var pauseKeys = new List<Key> { (Key)F14 };
 bool allPassed = true;
 
 allPassed &= Scenario("a tap with a 2.0 s pause", new KeyBehavior { Priority = true, PrioritySeconds = 2.0 }, expectedPause: 2.0);
@@ -79,6 +91,7 @@ allPassed &= UnboundKeys.Tests.InputWatcherTests.Run();
 allPassed &= UnboundKeys.Tests.InputHooksTests.Run();
 allPassed &= UnboundKeys.Tests.ServicesTests.Run();
 allPassed &= UnboundKeys.Tests.SettingsTests.Run(scratch);
+allPassed &= UnboundKeys.Tests.KeyNamesTests.Run(scratch);
 // "--pictures <folder>" also saves the Settings page as PNGs (see SharePageTests).
 int picturesAt = Array.IndexOf(args, "--pictures");
 allPassed &= UnboundKeys.Tests.SharePageTests.Run(scratch, picturesAt >= 0 && picturesAt + 1 < args.Length ? args[picturesAt + 1] : null);
@@ -169,7 +182,7 @@ bool RotationScenario()
     lock (events)
         events.Clear();
 
-    var keys = new List<(ushort Vk, bool Extended)> { (F13, false), (F14, false), (F15, false) };
+    var keys = new List<Key> { (Key)F13, (Key)F14, (Key)F15 };
     var rotation = new KeyBehavior { Repeat = true, Infinite = true, Rotation = true };
 
     clock.Restart();
@@ -331,7 +344,7 @@ bool GesturesScenario()
 
     // The keyboard map knows the double press ids, starting Not Mapped,
     // and a key is taken over for either of its mappings.
-    Check(VirtualKeyMap.KeyIds.Contains("va.double") && VirtualKeyMap.DefaultWords["va.double"] == 0 && !VirtualKeyMap.IsMapped("va.double"),
+    Check(VirtualKeyMap.KeyIds.Contains("va.double") && VirtualKeyMap.DefaultWords["va.double"] == Key.None && !VirtualKeyMap.IsMapped("va.double"),
           "a keyboard key's double press exists and starts Not Mapped");
     Check(MouseMap.ButtonIds.Contains("wheelup.double") && !MouseMap.ButtonIds.Contains("middle.long"),
           "a wheel has a double press; nothing has a long press");
@@ -357,7 +370,7 @@ bool OneButtonScenario()
 
     var infinite = new KeyBehavior { Hold = true, Infinite = true };
     var timed = new KeyBehavior { Hold = true, DurationSeconds = 1.0 };
-    Task Press(string id, List<(ushort Vk, bool Extended)> keys, KeyBehavior behavior) => Task.Run(() =>
+    Task Press(string id, List<Key> keys, KeyBehavior behavior) => Task.Run(() =>
     {
         KeyExecutor.Stop(Gestures.Sibling(id));
         KeyExecutor.Execute(id, keys, behavior);

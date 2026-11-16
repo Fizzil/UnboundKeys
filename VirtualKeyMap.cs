@@ -10,7 +10,7 @@ public static class VirtualKeyMap
 {
     public static readonly string[] KeyIds = BuildKeyIds();
 
-    public static readonly Dictionary<string, ushort> DefaultWords = BuildDefaultMap();
+    public static readonly Dictionary<string, Key> DefaultWords = BuildDefaultMap();
 
     // Shares the same active profile as KeyMap/MouseMap — switching
     // profiles swaps every source's mappings together.
@@ -26,8 +26,8 @@ public static class VirtualKeyMap
         profile => Settings.LoadVirtualBehaviors(profile, FreshDefaultBehaviors()),
         (words, extraWords, behaviors) => Settings.SaveVirtualProfile(ActiveProfile, words, extraWords, behaviors));
 
-    public static Dictionary<string, ushort> Words => _store.Words;
-    public static Dictionary<string, List<ushort>> ExtraWords => _store.ExtraWords;
+    public static Dictionary<string, Key> Words => _store.Words;
+    public static Dictionary<string, List<Key>> ExtraWords => _store.ExtraWords;
     public static Dictionary<string, KeyBehavior> Behaviors => _store.Behaviors;
 
     // Every mapping id: each key's own ("va") and its double press's
@@ -36,38 +36,38 @@ public static class VirtualKeyMap
 
     // A key's own default is its real key; its double press's is 0, "Not
     // Mapped", as a mouse button's is (see IsMapped).
-    private static Dictionary<string, ushort> BuildDefaultMap()
+    private static Dictionary<string, Key> BuildDefaultMap()
     {
-        var map = new Dictionary<string, ushort>(StringComparer.OrdinalIgnoreCase);
+        var map = new Dictionary<string, Key>(StringComparer.OrdinalIgnoreCase);
         foreach (var key in VirtualKeyCatalog.Keys)
         {
-            map[key.Id] = key.DefaultVk;
-            map[Gestures.IdFor(key.Id, Gesture.Double)] = 0;
+            map[key.Id] = key.DefaultKey;
+            map[Gestures.IdFor(key.Id, Gesture.Double)] = Key.None;
         }
         return map;
     }
 
-    private static Dictionary<string, ushort> FreshDefaultWords() =>
+    private static Dictionary<string, Key> FreshDefaultWords() =>
         new(DefaultWords, StringComparer.OrdinalIgnoreCase);
 
     private static Dictionary<string, KeyBehavior> FreshDefaultBehaviors() => RemapStore.FreshBehaviors(KeyIds);
 
-    private static Dictionary<string, List<ushort>> FreshDefaultExtraWords() => RemapStore.FreshExtraKeys(KeyIds);
+    private static Dictionary<string, List<Key>> FreshDefaultExtraWords() => RemapStore.FreshExtraKeys(KeyIds);
 
-    private static Dictionary<string, ushort> BuildMap() =>
+    private static Dictionary<string, Key> BuildMap() =>
         Settings.LoadVirtualKeyMap(KeyMap.ActiveProfile, FreshDefaultWords());
 
-    private static Dictionary<string, List<ushort>> BuildExtraWords() =>
+    private static Dictionary<string, List<Key>> BuildExtraWords() =>
         Settings.LoadVirtualExtraKeys(KeyMap.ActiveProfile, FreshDefaultExtraWords());
 
     private static Dictionary<string, KeyBehavior> BuildBehaviors() =>
         Settings.LoadVirtualBehaviors(KeyMap.ActiveProfile, FreshDefaultBehaviors());
 
-    public static void Rebind(string id, ushort vkCode) => _store.Rebind(id, vkCode);
-    public static void AddExtraKey(string id, ushort vkCode) => _store.AddExtraKey(id, vkCode);
-    public static void SetExtraKey(string id, int index, ushort vkCode) => _store.SetExtraKey(id, index, vkCode);
+    public static void Rebind(string id, Key key) => _store.Rebind(id, key);
+    public static void AddExtraKey(string id, Key key) => _store.AddExtraKey(id, key);
+    public static void SetExtraKey(string id, int index, Key key) => _store.SetExtraKey(id, index, key);
     public static void RemoveExtraKey(string id, int index) => _store.RemoveExtraKey(id, index);
-    public static List<(ushort Vk, bool Extended)> GetAllKeys(string id) => _store.GetAllKeys(id);
+    public static List<Key> GetAllKeys(string id) => _store.GetAllKeys(id);
 
     // Whether this key has been changed from doing nothing special —
     // remapped to a different key, given extra combo keys, or given a
@@ -85,7 +85,7 @@ public static class VirtualKeyMap
     // Whether an id sends anything: a key's own mapping always does; its
     // double press's only once a key is picked for it (0 is "Not Mapped").
     // What PressGestures asks before it fires an id.
-    public static bool IsMapped(string id) => Words.TryGetValue(id, out ushort vk) && vk != 0;
+    public static bool IsMapped(string id) => Words.TryGetValue(id, out Key key) && key != Key.None;
 
     // Whether a key is taken over on the real keyboard (PhysicalKeyWatcher)
     // and lit on the Keyboard page: its own mapping is customized, or its

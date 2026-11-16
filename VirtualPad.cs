@@ -26,10 +26,10 @@ public interface IVirtualPad : IDisposable
 // instead of sending a key.
 public static class PadKeys
 {
-    public const ushort Throttle = 0xFF01;
-    public const ushort Brake = 0xFF02;
+    public const Key Throttle = Key.Throttle;
+    public const Key Brake = Key.Brake;
 
-    public static bool IsPadKey(ushort vk) => vk is Throttle or Brake;
+    public static bool IsPadKey(Key key) => key is Throttle or Brake;
 }
 
 public static class VirtualPadDriver

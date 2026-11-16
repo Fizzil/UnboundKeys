@@ -526,16 +526,16 @@ public partial class SettingsPage : IDashboardPage
             return;
         string name = NextFreeName(names, "Profile");
 
-        var freshWords = new Dictionary<string, ushort>(KeyMap.DefaultWords, StringComparer.OrdinalIgnoreCase);
+        var freshWords = new Dictionary<string, Key>(KeyMap.DefaultWords, StringComparer.OrdinalIgnoreCase);
         var freshExtraWords = RemapStore.FreshExtraKeys(KeyMap.RemappableWords);
         var freshBehaviors = RemapStore.FreshBehaviors(KeyMap.RemappableWords);
 
         var freshMouseEnabled = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
-        var freshMouseWords = new Dictionary<string, ushort>(StringComparer.OrdinalIgnoreCase);
+        var freshMouseWords = new Dictionary<string, Key>(StringComparer.OrdinalIgnoreCase);
         foreach (var id in MouseMap.ButtonIds)
         {
             freshMouseEnabled[id] = false;
-            freshMouseWords[id] = 0;
+            freshMouseWords[id] = Key.None;
         }
         var freshMouseExtraWords = RemapStore.FreshExtraKeys(MouseMap.ButtonIds);
         var freshMouseBehaviors = RemapStore.FreshBehaviors(MouseMap.ButtonIds);

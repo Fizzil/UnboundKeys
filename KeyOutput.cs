@@ -6,8 +6,8 @@ namespace UnboundKeys;
 // what it was asked to send.
 internal interface IKeySender
 {
-    void KeyDown(ushort key, bool extended);
-    void KeyUp(ushort key, bool extended);
+    void KeyDown(Key key);
+    void KeyUp(Key key);
 }
 
 // Every key and mouse button the app presses goes out through here, and
@@ -20,12 +20,14 @@ internal interface IKeySender
 //   (KeyExecutor.ReleaseAll) let go of what each mapping says it holds,
 //   and then ReleaseEverything lets go of whatever the ledger still has,
 //   so a key that slipped past the bookkeeping is not left stuck down.
+//
+// None ("no key") is never sent and never held.
 internal static class KeyOutput
 {
     private static IKeySender _sender = new WindowsKeySender();
 
     private static readonly object _gate = new();
-    private static readonly HashSet<(ushort Key, bool Extended)> _down = new();
+    private static readonly HashSet<Key> _down = new();
     private static long _sweeps;
 
     // The harness swaps in a sender of its own; returns the one replaced.
@@ -41,23 +43,25 @@ internal static class KeyOutput
         get { lock (_gate) return _down.Count; }
     }
 
-    public static void TapKey(ushort key, bool extended)
+    public static void TapKey(Key key)
     {
-        KeyDown(key, extended);
-        KeyUp(key, extended);
+        KeyDown(key);
+        KeyUp(key);
     }
 
-    public static void KeyDown(ushort key, bool extended)
+    public static void KeyDown(Key key)
     {
+        if (key == Key.None)
+            return;
         long sweepsBefore;
         lock (_gate)
         {
             sweepsBefore = _sweeps;
-            _down.Add((key, extended));
+            _down.Add(key);
         }
         // Never sent while holding the gate: a send waits for the app's
         // own hooks to see the event, and nothing else should wait on that.
-        Send(key, extended, down: true);
+        Send(key, down: true);
 
         // A ReleaseEverything that ran while this press was on its way out
         // may have sent its key-up first. It asked for everything to be
@@ -67,36 +71,38 @@ internal static class KeyOutput
         {
             swept = _sweeps != sweepsBefore;
             if (swept)
-                _down.Remove((key, extended));
+                _down.Remove(key);
         }
         if (swept)
-            Send(key, extended, down: false);
+            Send(key, down: false);
     }
 
-    public static void KeyUp(ushort key, bool extended)
+    public static void KeyUp(Key key)
     {
+        if (key == Key.None)
+            return;
         lock (_gate)
-            _down.Remove((key, extended));
-        Send(key, extended, down: false);
+            _down.Remove(key);
+        Send(key, down: false);
     }
 
     // Lets go of every key the ledger still has down. Returns how many
     // there were: none, when the bookkeeping above it did its job.
     public static int ReleaseEverything()
     {
-        (ushort Key, bool Extended)[] left;
+        Key[] left;
         lock (_gate)
         {
             _sweeps++;
             left = _down.ToArray();
             _down.Clear();
         }
-        foreach (var (key, extended) in left)
-            Send(key, extended, down: false);
+        foreach (var key in left)
+            Send(key, down: false);
         return left.Length;
     }
 
-    private static void Send(ushort key, bool extended, bool down)
+    private static void Send(Key key, bool down)
     {
         if (PadKeys.IsPadKey(key))
         {
@@ -104,8 +110,8 @@ internal static class KeyOutput
             return;
         }
         if (down)
-            _sender.KeyDown(key, extended);
+            _sender.KeyDown(key);
         else
-            _sender.KeyUp(key, extended);
+            _sender.KeyUp(key);
     }
 }

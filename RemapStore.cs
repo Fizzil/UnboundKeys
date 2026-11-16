@@ -22,36 +22,36 @@ namespace UnboundKeys;
 // through those adapters.
 internal sealed class RemapStore
 {
-    public Dictionary<string, ushort> Words { get; }
+    public Dictionary<string, Key> Words { get; }
 
     // Never exposed publicly by MouseMap (an all-zero dict — no mouse
     // button has a "natural" key) — only KeyMap/VirtualKeyMap's own
     // public DefaultWords (a real per-id default) point at the same
     // dictionary a caller like ProfilesTab.cs already reads directly.
-    public Dictionary<string, ushort> DefaultWords { get; }
+    public Dictionary<string, Key> DefaultWords { get; }
 
-    public Dictionary<string, List<ushort>> ExtraWords { get; }
+    public Dictionary<string, List<Key>> ExtraWords { get; }
     public Dictionary<string, KeyBehavior> Behaviors { get; }
 
-    private readonly Func<string, Dictionary<string, ushort>> _loadWords;
-    private readonly Func<string, Dictionary<string, List<ushort>>> _loadExtraWords;
+    private readonly Func<string, Dictionary<string, Key>> _loadWords;
+    private readonly Func<string, Dictionary<string, List<Key>>> _loadExtraWords;
     private readonly Func<string, Dictionary<string, KeyBehavior>> _loadBehaviors;
 
     // Takes Words/ExtraWords/Behaviors as arguments each time (rather than
     // closing over this store's own properties) so the owning class's
     // save delegate can fold in whatever extra field only it has —
     // MouseMap's closes over its own Enabled dict alongside these three.
-    private readonly Action<Dictionary<string, ushort>, Dictionary<string, List<ushort>>, Dictionary<string, KeyBehavior>> _save;
+    private readonly Action<Dictionary<string, Key>, Dictionary<string, List<Key>>, Dictionary<string, KeyBehavior>> _save;
 
     public RemapStore(
-        Dictionary<string, ushort> words,
-        Dictionary<string, ushort> defaultWords,
-        Dictionary<string, List<ushort>> extraWords,
+        Dictionary<string, Key> words,
+        Dictionary<string, Key> defaultWords,
+        Dictionary<string, List<Key>> extraWords,
         Dictionary<string, KeyBehavior> behaviors,
-        Func<string, Dictionary<string, ushort>> loadWords,
-        Func<string, Dictionary<string, List<ushort>>> loadExtraWords,
+        Func<string, Dictionary<string, Key>> loadWords,
+        Func<string, Dictionary<string, List<Key>>> loadExtraWords,
         Func<string, Dictionary<string, KeyBehavior>> loadBehaviors,
-        Action<Dictionary<string, ushort>, Dictionary<string, List<ushort>>, Dictionary<string, KeyBehavior>> save)
+        Action<Dictionary<string, Key>, Dictionary<string, List<Key>>, Dictionary<string, KeyBehavior>> save)
     {
         Words = words;
         DefaultWords = defaultWords;
@@ -84,11 +84,11 @@ internal sealed class RemapStore
         return mode + time + pause;
     }
 
-    public void Rebind(string id, ushort vkCode)
+    public void Rebind(string id, Key key)
     {
-        Words[id] = vkCode;
+        Words[id] = key;
         Save();
-        LogChange(id, $"key 1 = {KeyCatalog.DisplayNameFor(vkCode)}");
+        LogChange(id, $"key 1 = {KeyCatalog.DisplayNameFor(key)}");
     }
 
     // How many keys can fire alongside an id's main key — six keys in all
@@ -98,25 +98,25 @@ internal sealed class RemapStore
 
     // Capped at MaxExtraKeys; a no-op past that, so it's safe to call
     // speculatively without checking the count first.
-    public void AddExtraKey(string id, ushort vkCode)
+    public void AddExtraKey(string id, Key key)
     {
         if (ExtraWords[id].Count >= MaxExtraKeys)
             return;
 
-        ExtraWords[id].Add(vkCode);
+        ExtraWords[id].Add(key);
         Save();
-        LogChange(id, $"key {ExtraWords[id].Count + 1} added = {KeyCatalog.DisplayNameFor(vkCode)}");
+        LogChange(id, $"key {ExtraWords[id].Count + 1} added = {KeyCatalog.DisplayNameFor(key)}");
     }
 
-    public void SetExtraKey(string id, int index, ushort vkCode)
+    public void SetExtraKey(string id, int index, Key key)
     {
         var extras = ExtraWords[id];
         if (index < 0 || index >= extras.Count)
             return;
 
-        extras[index] = vkCode;
+        extras[index] = key;
         Save();
-        LogChange(id, $"key {index + 2} = {KeyCatalog.DisplayNameFor(vkCode)}");
+        LogChange(id, $"key {index + 2} = {KeyCatalog.DisplayNameFor(key)}");
     }
 
     public void RemoveExtraKey(string id, int index)
@@ -131,14 +131,13 @@ internal sealed class RemapStore
     }
 
     // The full set of keys an id should press — its main key followed by
-    // any extras — each paired with whether SendInput needs to treat it
-    // as an extended key. Used everywhere an id is actually executed,
-    // instead of just looking up Words[id] alone.
-    public List<(ushort Vk, bool Extended)> GetAllKeys(string id)
+    // any extras. Used everywhere an id is actually executed, instead of
+    // just looking up Words[id] alone. A list of its own: what is being
+    // pressed must not change under the press when the mapping is edited.
+    public List<Key> GetAllKeys(string id)
     {
-        var keys = new List<(ushort, bool)> { (Words[id], KeyMap.IsExtendedKey(Words[id])) };
-        foreach (var vk in ExtraWords[id])
-            keys.Add((vk, KeyMap.IsExtendedKey(vk)));
+        var keys = new List<Key> { Words[id] };
+        keys.AddRange(ExtraWords[id]);
         return keys;
     }
 
@@ -154,11 +153,11 @@ internal sealed class RemapStore
 
     // The empty starting points every source hands to Settings.Load*: no
     // extra keys and a plain tap for each of its ids.
-    public static Dictionary<string, List<ushort>> FreshExtraKeys(IEnumerable<string> ids)
+    public static Dictionary<string, List<Key>> FreshExtraKeys(IEnumerable<string> ids)
     {
-        var map = new Dictionary<string, List<ushort>>(StringComparer.OrdinalIgnoreCase);
+        var map = new Dictionary<string, List<Key>>(StringComparer.OrdinalIgnoreCase);
         foreach (var id in ids)
-            map[id] = new List<ushort>();
+            map[id] = new List<Key>();
         return map;
     }
 

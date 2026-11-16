@@ -32,8 +32,8 @@ public static class SteeringMap
         _ => Settings.LoadSteeringBehaviors(FreshBehaviors()),
         (words, extraWords, behaviors) => Settings.SaveSteeringMap(Enabled, words, extraWords, behaviors));
 
-    public static Dictionary<string, ushort> Words => _store.Words;
-    public static Dictionary<string, List<ushort>> ExtraWords => _store.ExtraWords;
+    public static Dictionary<string, Key> Words => _store.Words;
+    public static Dictionary<string, List<Key>> ExtraWords => _store.ExtraWords;
     public static Dictionary<string, KeyBehavior> Behaviors => _store.Behaviors;
 
     // The empty starting points handed to Settings.Load*: every push
@@ -47,30 +47,30 @@ public static class SteeringMap
         return map;
     }
 
-    public static Dictionary<string, ushort> FreshWords()
+    public static Dictionary<string, Key> FreshWords()
     {
-        var map = new Dictionary<string, ushort>(StringComparer.OrdinalIgnoreCase);
+        var map = new Dictionary<string, Key>(StringComparer.OrdinalIgnoreCase);
         foreach (var id in Ids)
-            map[id] = 0;
+            map[id] = Key.None;
         return map;
     }
 
-    public static Dictionary<string, List<ushort>> FreshExtraKeys() => RemapStore.FreshExtraKeys(Ids);
+    public static Dictionary<string, List<Key>> FreshExtraKeys() => RemapStore.FreshExtraKeys(Ids);
 
     public static Dictionary<string, KeyBehavior> FreshBehaviors() => RemapStore.FreshBehaviors(Ids);
 
     // As MouseMap.Rebind: the first key picked switches the push on, and
     // Enabled is set before the store's save so the save writes it.
-    public static void Rebind(string id, ushort vkCode)
+    public static void Rebind(string id, Key key)
     {
         Enabled[id] = true;
-        _store.Rebind(id, vkCode);
+        _store.Rebind(id, key);
     }
 
-    public static void AddExtraKey(string id, ushort vkCode) => _store.AddExtraKey(id, vkCode);
-    public static void SetExtraKey(string id, int index, ushort vkCode) => _store.SetExtraKey(id, index, vkCode);
+    public static void AddExtraKey(string id, Key key) => _store.AddExtraKey(id, key);
+    public static void SetExtraKey(string id, int index, Key key) => _store.SetExtraKey(id, index, key);
     public static void RemoveExtraKey(string id, int index) => _store.RemoveExtraKey(id, index);
-    public static List<(ushort Vk, bool Extended)> GetAllKeys(string id) => _store.GetAllKeys(id);
+    public static List<Key> GetAllKeys(string id) => _store.GetAllKeys(id);
 
     public static void SetBehavior(string id, KeyBehavior behavior) => _store.SetBehavior(id, behavior);
 

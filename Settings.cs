@@ -32,6 +32,7 @@ internal static class Settings
     {
         FilePath = path;
         _scratch = true;
+        _keyNamesUpgradeTried = false;
     }
 
     // One-time migration for anyone upgrading from the app's old name
@@ -73,25 +74,25 @@ internal static class Settings
     // needed when a new kind of mapping is added.
     public sealed class MappingSet
     {
-        public Dictionary<string, ushort> KeyMap { get; set; } = new();
+        public Dictionary<string, Key> KeyMap { get; set; } = new();
 
         // Up to RemapStore.MaxExtraKeys extra keys per word, fired alongside
         // its main key as a combo.
-        public Dictionary<string, List<ushort>> ExtraKeys { get; set; } = new();
+        public Dictionary<string, List<Key>> ExtraKeys { get; set; } = new();
         public Dictionary<string, KeyBehavior> Behaviors { get; set; } = new();
 
         // Mouse-button mappings — same shape, keyed by MouseCatalog button id
         // (e.g. "middle"). MouseEnabled tracks which buttons actually have a
         // key assigned; an unmapped button passes its click through.
         public Dictionary<string, bool> MouseEnabled { get; set; } = new();
-        public Dictionary<string, ushort> MouseKeyMap { get; set; } = new();
-        public Dictionary<string, List<ushort>> MouseExtraKeys { get; set; } = new();
+        public Dictionary<string, Key> MouseKeyMap { get; set; } = new();
+        public Dictionary<string, List<Key>> MouseExtraKeys { get; set; } = new();
         public Dictionary<string, KeyBehavior> MouseBehaviors { get; set; } = new();
 
         // The on-screen keyboard's remappable keys (see VirtualKeyCatalog):
         // every one always sends something, so no Enabled map here.
-        public Dictionary<string, ushort> VirtualKeyMap { get; set; } = new();
-        public Dictionary<string, List<ushort>> VirtualExtraKeys { get; set; } = new();
+        public Dictionary<string, Key> VirtualKeyMap { get; set; } = new();
+        public Dictionary<string, List<Key>> VirtualExtraKeys { get; set; } = new();
         public Dictionary<string, KeyBehavior> VirtualBehaviors { get; set; } = new();
 
         // A JSON round trip is the one deep copy this file needs (a new
@@ -114,15 +115,15 @@ internal static class Settings
         // Before sub-profiles existed the mappings sat right here. Read once
         // for migration (see Read), then nulled so they are never written
         // again — null is left out of the file entirely.
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public Dictionary<string, ushort>? KeyMap { get; set; }
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public Dictionary<string, List<ushort>>? ExtraKeys { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public Dictionary<string, Key>? KeyMap { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public Dictionary<string, List<Key>>? ExtraKeys { get; set; }
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public Dictionary<string, KeyBehavior>? Behaviors { get; set; }
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public Dictionary<string, bool>? MouseEnabled { get; set; }
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public Dictionary<string, ushort>? MouseKeyMap { get; set; }
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public Dictionary<string, List<ushort>>? MouseExtraKeys { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public Dictionary<string, Key>? MouseKeyMap { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public Dictionary<string, List<Key>>? MouseExtraKeys { get; set; }
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public Dictionary<string, KeyBehavior>? MouseBehaviors { get; set; }
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public Dictionary<string, ushort>? VirtualKeyMap { get; set; }
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public Dictionary<string, List<ushort>>? VirtualExtraKeys { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public Dictionary<string, Key>? VirtualKeyMap { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public Dictionary<string, List<Key>>? VirtualExtraKeys { get; set; }
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public Dictionary<string, KeyBehavior>? VirtualBehaviors { get; set; }
 
         [JsonIgnore]
@@ -195,8 +196,8 @@ internal static class Settings
         // ignored.
         public double SteeringStretch { get; set; } = Steering.DefaultStretch;
         public Dictionary<string, bool> SteeringEnabled { get; set; } = new();
-        public Dictionary<string, ushort> SteeringKeyMap { get; set; } = new();
-        public Dictionary<string, List<ushort>> SteeringExtraKeys { get; set; } = new();
+        public Dictionary<string, Key> SteeringKeyMap { get; set; } = new();
+        public Dictionary<string, List<Key>> SteeringExtraKeys { get; set; } = new();
         public Dictionary<string, KeyBehavior> SteeringBehaviors { get; set; } = new();
 
         // Settings > Features (see Features.cs): whether Steering is part of
@@ -225,7 +226,7 @@ internal static class Settings
         public bool AutoStartPaused { get; set; }
 
         // Pre-profiles shape — only ever read, for one-time migration.
-        public Dictionary<string, ushort>? KeyMap { get; set; }
+        public Dictionary<string, Key>? KeyMap { get; set; }
         public Dictionary<string, KeyBehavior>? Behaviors { get; set; }
     }
 
@@ -239,9 +240,13 @@ internal static class Settings
         // reason to bring the backup back.
         if (File.Exists(FilePath))
         {
-            var saved = ReadFrom(FilePath);
+            var saved = ReadFrom(FilePath, out bool keysAsNumbers);
             if (saved != null)
+            {
+                if (keysAsNumbers)
+                    UpgradeToKeyNames(saved);
                 return saved;
+            }
             Log.Error("settings.json could not be read; trying settings.json.bak");
             // The unreadable file is kept as settings.json.unreadable: the
             // next save would otherwise make it the backup (see Write) and
@@ -249,11 +254,47 @@ internal static class Settings
             // is what explains what happened.
             try { File.Copy(FilePath, FilePath + ".unreadable", overwrite: true); }
             catch (Exception ex) { Log.Error("keeping the unreadable settings.json", ex); }
-            saved = ReadFrom(BackupPath);
+            saved = ReadFrom(BackupPath, out _);
             if (saved != null)
                 return saved;
         }
         return Fresh();
+    }
+
+    // Up to 4.15.0 a key in this file was a number; from 4.16.0 it is the
+    // key's name (see Key), and numbers are still read. The first time a
+    // file with numbers is read, it is copied to
+    // settings.before-key-names.json and then written again with names.
+    // The copy is for going back: a version before 4.16.0 cannot read the
+    // names, and would start as new. It is made once and never replaced,
+    // so it stays the file from before the very first upgrade. Tried once
+    // per run: if the write does not take, the numbers still read fine and
+    // the next save writes the names anyway.
+    private static string BeforeKeyNamesPath =>
+        Path.Combine(Path.GetDirectoryName(FilePath)!, "settings.before-key-names.json");
+    private static bool _keyNamesUpgradeTried;
+
+    private static void UpgradeToKeyNames(SavedData saved)
+    {
+        lock (WriteGate)
+        {
+            if (_keyNamesUpgradeTried)
+                return;
+            _keyNamesUpgradeTried = true;
+        }
+        try
+        {
+            if (!File.Exists(BeforeKeyNamesPath))
+                File.Copy(FilePath, BeforeKeyNamesPath);
+        }
+        catch (Exception ex)
+        {
+            // No copy, no upgrade now: the file is left as it is.
+            Log.Error("keeping the settings from before key names", ex);
+            return;
+        }
+        Write(saved);
+        Log.Info($"settings upgraded: keys are saved by name; the file from before is kept as {Path.GetFileName(BeforeKeyNamesPath)}");
     }
 
     // A new install's settings: the optional features start switched off.
@@ -261,14 +302,19 @@ internal static class Settings
 
     private static readonly object WriteGate = new();
 
-    private static SavedData? ReadFrom(string path)
+    // keysAsNumbers: the file holds keys the old way, as numbers (see
+    // UpgradeToKeyNames).
+    private static SavedData? ReadFrom(string path, out bool keysAsNumbers)
     {
+        keysAsNumbers = false;
         try
         {
             if (File.Exists(path))
             {
                 var json = File.ReadAllText(path);
+                KeyJsonConverter.SawNumber = false;
                 var saved = JsonSerializer.Deserialize<SavedData>(json);
+                keysAsNumbers = KeyJsonConverter.SawNumber;
                 if (saved != null)
                 {
                     // The app used to store one flat key map/behavior set with
@@ -580,7 +626,7 @@ internal static class Settings
     // down and saved for the last time.
     public static void DeleteEverything()
     {
-        foreach (string path in new[] { FilePath, BackupPath, FilePath + ".tmp" })
+        foreach (string path in new[] { FilePath, BackupPath, FilePath + ".tmp", BeforeKeyNamesPath })
         {
             try
             {
@@ -631,10 +677,10 @@ internal static class Settings
         return defaults;
     }
 
-    public static Dictionary<string, ushort> LoadKeyMap(string profile, Dictionary<string, ushort> defaults) =>
+    public static Dictionary<string, Key> LoadKeyMap(string profile, Dictionary<string, Key> defaults) =>
         LoadField(profile, defaults, d => d.KeyMap);
 
-    public static Dictionary<string, List<ushort>> LoadExtraKeys(string profile, Dictionary<string, List<ushort>> defaults) =>
+    public static Dictionary<string, List<Key>> LoadExtraKeys(string profile, Dictionary<string, List<Key>> defaults) =>
         LoadField(profile, defaults, d => d.ExtraKeys);
 
     public static Dictionary<string, KeyBehavior> LoadBehaviors(string profile, Dictionary<string, KeyBehavior> defaults) =>
@@ -643,19 +689,19 @@ internal static class Settings
     public static Dictionary<string, bool> LoadMouseEnabled(string profile, Dictionary<string, bool> defaults) =>
         LoadField(profile, defaults, d => d.MouseEnabled);
 
-    public static Dictionary<string, ushort> LoadMouseKeyMap(string profile, Dictionary<string, ushort> defaults) =>
+    public static Dictionary<string, Key> LoadMouseKeyMap(string profile, Dictionary<string, Key> defaults) =>
         LoadField(profile, defaults, d => d.MouseKeyMap);
 
-    public static Dictionary<string, List<ushort>> LoadMouseExtraKeys(string profile, Dictionary<string, List<ushort>> defaults) =>
+    public static Dictionary<string, List<Key>> LoadMouseExtraKeys(string profile, Dictionary<string, List<Key>> defaults) =>
         LoadField(profile, defaults, d => d.MouseExtraKeys);
 
     public static Dictionary<string, KeyBehavior> LoadMouseBehaviors(string profile, Dictionary<string, KeyBehavior> defaults) =>
         LoadField(profile, defaults, d => d.MouseBehaviors);
 
-    public static Dictionary<string, ushort> LoadVirtualKeyMap(string profile, Dictionary<string, ushort> defaults) =>
+    public static Dictionary<string, Key> LoadVirtualKeyMap(string profile, Dictionary<string, Key> defaults) =>
         LoadField(profile, defaults, d => d.VirtualKeyMap);
 
-    public static Dictionary<string, List<ushort>> LoadVirtualExtraKeys(string profile, Dictionary<string, List<ushort>> defaults) =>
+    public static Dictionary<string, List<Key>> LoadVirtualExtraKeys(string profile, Dictionary<string, List<Key>> defaults) =>
         LoadField(profile, defaults, d => d.VirtualExtraKeys);
 
     public static Dictionary<string, KeyBehavior> LoadVirtualBehaviors(string profile, Dictionary<string, KeyBehavior> defaults) =>
@@ -691,13 +737,13 @@ internal static class Settings
         Write(saved);
     }
 
-    public static void SaveProfile(string profile, Dictionary<string, ushort> keyMap, Dictionary<string, List<ushort>> extraKeys, Dictionary<string, KeyBehavior> behaviors) =>
+    public static void SaveProfile(string profile, Dictionary<string, Key> keyMap, Dictionary<string, List<Key>> extraKeys, Dictionary<string, KeyBehavior> behaviors) =>
         SaveFields(profile, d => { d.KeyMap = keyMap; d.ExtraKeys = extraKeys; d.Behaviors = behaviors; });
 
-    public static void SaveMouseProfile(string profile, Dictionary<string, bool> enabled, Dictionary<string, ushort> keyMap, Dictionary<string, List<ushort>> extraKeys, Dictionary<string, KeyBehavior> behaviors) =>
+    public static void SaveMouseProfile(string profile, Dictionary<string, bool> enabled, Dictionary<string, Key> keyMap, Dictionary<string, List<Key>> extraKeys, Dictionary<string, KeyBehavior> behaviors) =>
         SaveFields(profile, d => { d.MouseEnabled = enabled; d.MouseKeyMap = keyMap; d.MouseExtraKeys = extraKeys; d.MouseBehaviors = behaviors; });
 
-    public static void SaveVirtualProfile(string profile, Dictionary<string, ushort> keyMap, Dictionary<string, List<ushort>> extraKeys, Dictionary<string, KeyBehavior> behaviors) =>
+    public static void SaveVirtualProfile(string profile, Dictionary<string, Key> keyMap, Dictionary<string, List<Key>> extraKeys, Dictionary<string, KeyBehavior> behaviors) =>
         SaveFields(profile, d => { d.VirtualKeyMap = keyMap; d.VirtualExtraKeys = extraKeys; d.VirtualBehaviors = behaviors; });
 
     // Steering's settings are the app's, not a profile's (Fizzil: set up
@@ -723,16 +769,16 @@ internal static class Settings
     public static Dictionary<string, bool> LoadSteeringEnabled(Dictionary<string, bool> defaults) =>
         OverlaySteering(defaults, Read().SteeringEnabled);
 
-    public static Dictionary<string, ushort> LoadSteeringKeyMap(Dictionary<string, ushort> defaults) =>
+    public static Dictionary<string, Key> LoadSteeringKeyMap(Dictionary<string, Key> defaults) =>
         OverlaySteering(defaults, Read().SteeringKeyMap);
 
-    public static Dictionary<string, List<ushort>> LoadSteeringExtraKeys(Dictionary<string, List<ushort>> defaults) =>
+    public static Dictionary<string, List<Key>> LoadSteeringExtraKeys(Dictionary<string, List<Key>> defaults) =>
         OverlaySteering(defaults, Read().SteeringExtraKeys);
 
     public static Dictionary<string, KeyBehavior> LoadSteeringBehaviors(Dictionary<string, KeyBehavior> defaults) =>
         OverlaySteering(defaults, Read().SteeringBehaviors);
 
-    public static void SaveSteeringMap(Dictionary<string, bool> enabled, Dictionary<string, ushort> keyMap, Dictionary<string, List<ushort>> extraKeys, Dictionary<string, KeyBehavior> behaviors)
+    public static void SaveSteeringMap(Dictionary<string, bool> enabled, Dictionary<string, Key> keyMap, Dictionary<string, List<Key>> extraKeys, Dictionary<string, KeyBehavior> behaviors)
     {
         var saved = Read();
         saved.SteeringEnabled = enabled;
@@ -747,8 +793,8 @@ internal static class Settings
     // is safe to call speculatively.
     public static void CreateProfileIfMissing(
         string profile,
-        Dictionary<string, ushort> keyMap, Dictionary<string, List<ushort>> extraKeys, Dictionary<string, KeyBehavior> behaviors,
-        Dictionary<string, bool> mouseEnabled, Dictionary<string, ushort> mouseKeyMap, Dictionary<string, List<ushort>> mouseExtraKeys, Dictionary<string, KeyBehavior> mouseBehaviors)
+        Dictionary<string, Key> keyMap, Dictionary<string, List<Key>> extraKeys, Dictionary<string, KeyBehavior> behaviors,
+        Dictionary<string, bool> mouseEnabled, Dictionary<string, Key> mouseKeyMap, Dictionary<string, List<Key>> mouseExtraKeys, Dictionary<string, KeyBehavior> mouseBehaviors)
     {
         var saved = Read();
         if (saved.Profiles.ContainsKey(profile))
@@ -834,7 +880,10 @@ internal static class Settings
     // The biggest real profile so far is about 55 KB; anything near this is
     // not a profile, and is refused before it is read into memory.
     private const long MaxSharedFileBytes = 1_000_000;
-    private const int SharedFormat = 1;
+    // 2 since 4.16.0: keys by name (see Key). A file of format 1, keys as
+    // numbers, is still read; a version before 4.16.0 cannot read format 2
+    // and says the file is not a profile.
+    private const int SharedFormat = 2;
     private static readonly string[] KnownThemeColors = { "Red", "Green", "Blue" };
 
     // What the file holds. UnboundKeysProfile is both the marker that says
@@ -1007,7 +1056,7 @@ internal static class Settings
     }
 
     // A mapping holds at most RemapStore.MaxExtraKeys extra keys.
-    private static Dictionary<string, List<ushort>> Capped(Dictionary<string, List<ushort>> extraKeys)
+    private static Dictionary<string, List<Key>> Capped(Dictionary<string, List<Key>> extraKeys)
     {
         foreach (var keys in extraKeys.Values)
             if (keys.Count > RemapStore.MaxExtraKeys)

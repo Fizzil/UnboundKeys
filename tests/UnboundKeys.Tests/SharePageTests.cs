@@ -55,7 +55,7 @@ internal static class SharePageTests
         Directory.CreateDirectory(downloads);
         ProfileShare.UseScratchFolders(share, downloads);
 
-        Settings.CreateProfileIfMissing("WoW", new() { ["one"] = 0x41 }, new(), new(), new(), new(), new(), new());
+        Settings.CreateProfileIfMissing("WoW", new() { ["one"] = Key.A }, new(), new(), new(), new(), new(), new());
         Settings.CreateSubProfile("WoW", "Hunter");
         Settings.CreateProfileIfMissing("the isle", new(), new(), new(), new(), new(), new(), new());
 

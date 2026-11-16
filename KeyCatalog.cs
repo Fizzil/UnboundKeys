@@ -4,69 +4,67 @@ namespace UnboundKeys;
 // the way an on-screen keyboard would group them.
 public static class KeyCatalog
 {
-    public readonly record struct Entry(string DisplayName, ushort VkCode);
+    public readonly record struct Entry(string DisplayName, Key Key);
 
     // Field order matters here: these must be declared above Groups, since
     // static field initializers run top-to-bottom and Groups reads them.
     private static readonly Entry[] Navigation =
     {
-        new("Up Arrow", 0x26),
-        new("Down Arrow", 0x28),
-        new("Left Arrow", 0x25),
-        new("Right Arrow", 0x27),
-        new("Home", 0x24),
-        new("End", 0x23),
-        new("Page Up", 0x21),
-        new("Page Down", 0x22),
-        new("Insert", 0x2D),
-        new("Delete", 0x2E),
+        new("Up Arrow", Key.Up),
+        new("Down Arrow", Key.Down),
+        new("Left Arrow", Key.Left),
+        new("Right Arrow", Key.Right),
+        new("Home", Key.Home),
+        new("End", Key.End),
+        new("Page Up", Key.PageUp),
+        new("Page Down", Key.PageDown),
+        new("Insert", Key.Insert),
+        new("Delete", Key.Delete),
     };
 
     private static readonly Entry[] Modifiers =
     {
-        new("Shift", 0x10),
-        new("Ctrl", 0x11),
-        new("Alt", 0x12),
-        new("Tab", 0x09),
-        new("Caps Lock", 0x14),
-        new("Windows", 0x5B),
+        new("Shift", Key.Shift),
+        new("Ctrl", Key.Ctrl),
+        new("Alt", Key.Alt),
+        new("Tab", Key.Tab),
+        new("Caps Lock", Key.CapsLock),
+        new("Windows", Key.Win),
     };
 
-    // Windows' own reserved virtual-key codes for these five mouse buttons
-    // (what GetAsyncKeyState et al. already expect) — reusing them lets a
-    // "key" a word/button sends be a mouse click instead of a keyboard
-    // press, using the exact same ushort everything else already passes
-    // around. See NativeInput.KeyDown/KeyUp for where that's acted on.
+    // A "key" a word/button sends can be a mouse click instead of a
+    // keyboard press: the five buttons are keys like any other (see Key),
+    // and the system's key sender is where a click goes out as a click.
     // Wheel Up/Down aren't offered here: a wheel tick is an instantaneous
     // scroll, not a press you can hold down, so Hold wouldn't mean anything
     // for it.
     private static readonly Entry[] MouseButtons =
     {
-        new("Left Click", 0x01),
-        new("Right Click", 0x02),
-        new("Middle Click", 0x04),
-        new("Mouse Button 4", 0x05),
-        new("Mouse Button 5", 0x06),
+        new("Left Click", Key.LeftClick),
+        new("Right Click", Key.RightClick),
+        new("Middle Click", Key.MiddleClick),
+        new("Mouse Button 4", Key.Mouse4),
+        new("Mouse Button 5", Key.Mouse5),
     };
 
-    // Whether a "key" is one of those mouse buttons (the click codes 0x01,
-    // 0x02 and 0x04 to 0x06; 0x03 is not a button).
-    public static bool IsMouseButton(ushort key) => key is 0x01 or 0x02 or 0x04 or 0x05 or 0x06;
+    // Whether a "key" is one of those mouse buttons.
+    public static bool IsMouseButton(Key key) =>
+        key is Key.LeftClick or Key.RightClick or Key.MiddleClick or Key.Mouse4 or Key.Mouse5;
 
     // Named but not listed: see DisplayNameFor.
     private static readonly Entry[] Punctuation =
     {
-        new("- (minus)", 0xBD),
-        new("= (equals)", 0xBB),
-        new(", (comma)", 0xBC),
-        new(". (period)", 0xBE),
-        new("/ (slash)", 0xBF),
-        new("; (semicolon)", 0xBA),
-        new("' (quote)", 0xDE),
-        new("[ (open bracket)", 0xDB),
-        new("] (close bracket)", 0xDD),
-        new("\\ (backslash)", 0xDC),
-        new("` (backtick)", 0xC0),
+        new("- (minus)", Key.Minus),
+        new("= (equals)", Key.EqualSign),
+        new(", (comma)", Key.Comma),
+        new(". (period)", Key.Period),
+        new("/ (slash)", Key.Slash),
+        new("; (semicolon)", Key.Semicolon),
+        new("' (quote)", Key.Quote),
+        new("[ (open bracket)", Key.OpenBracket),
+        new("] (close bracket)", Key.CloseBracket),
+        new("\\ (backslash)", Key.Backslash),
+        new("` (backtick)", Key.Backtick),
     };
 
     // The virtual pad's pedals (see PadKeys): pressing one holds the pedal
@@ -80,10 +78,10 @@ public static class KeyCatalog
 
     private static readonly Entry[] Other =
     {
-        new("Space", 0x20),
-        new("Enter", 0x0D),
-        new("Backspace", 0x08),
-        new("Escape", 0x1B),
+        new("Space", Key.Space),
+        new("Enter", Key.Enter),
+        new("Backspace", Key.Backspace),
+        new("Escape", Key.Escape),
     };
 
     public const string ControllerCategory = "Controller";
@@ -100,28 +98,30 @@ public static class KeyCatalog
         ("Other", Other),
     };
 
-    public static string DisplayNameFor(ushort vk)
+    public static string DisplayNameFor(Key key)
     {
         foreach (var (_, keys) in Groups)
             foreach (var entry in keys)
-                if (entry.VkCode == vk)
+                if (entry.Key == key)
                     return entry.DisplayName;
 
         // Punctuation is not offered in the picker (Fizzil: the symbols out
         // altogether) but keeps its names, so a mapping saved with one still
         // reads "; (semicolon)" rather than a code.
         foreach (var entry in Punctuation)
-            if (entry.VkCode == vk)
+            if (entry.Key == key)
                 return entry.DisplayName;
 
-        return $"Key 0x{vk:X2}";
+        // A key the app has no name for (a number in an old file): shown by
+        // its number, as it always was.
+        return $"Key 0x{(ushort)key:X2}";
     }
 
     private static Entry[] Letters()
     {
         var list = new List<Entry>();
         for (char c = 'A'; c <= 'Z'; c++)
-            list.Add(new Entry(c.ToString(), c));
+            list.Add(new Entry(c.ToString(), KeyNames.Letter(c)));
         return list.ToArray();
     }
 
@@ -129,7 +129,7 @@ public static class KeyCatalog
     {
         var list = new List<Entry>();
         for (int i = 0; i <= 9; i++)
-            list.Add(new Entry(i.ToString(), (ushort)(0x30 + i)));
+            list.Add(new Entry(i.ToString(), KeyNames.Digit(i)));
         return list.ToArray();
     }
 
@@ -137,7 +137,7 @@ public static class KeyCatalog
     {
         var list = new List<Entry>();
         for (int i = 1; i <= 12; i++)
-            list.Add(new Entry($"F{i}", (ushort)(0x70 + i - 1)));
+            list.Add(new Entry($"F{i}", KeyNames.Function(i)));
         return list.ToArray();
     }
 }

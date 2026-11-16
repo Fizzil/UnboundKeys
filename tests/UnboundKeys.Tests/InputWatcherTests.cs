@@ -8,9 +8,9 @@ internal static class InputWatcherTests
 {
     private static bool _ok;
 
-    private const ushort KeyA = 0x41;
-    private const ushort KeyB = 0x42;
-    private const ushort CapsLock = 0x14;
+    private const Key KeyA = Key.A;
+    private const Key KeyB = Key.B;
+    private const Key CapsLock = Key.CapsLock;
 
     public static bool Run()
     {
