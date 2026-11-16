@@ -111,8 +111,7 @@ internal static class ProfileShare
             return;
         try
         {
-            System.Diagnostics.Process.Start(
-                new System.Diagnostics.ProcessStartInfo("explorer.exe", $"/select,\"{path}\"") { UseShellExecute = true });
+            Opener.ShowFile(path);
         }
         catch (Exception ex)
         {

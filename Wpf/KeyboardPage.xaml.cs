@@ -75,7 +75,7 @@ public partial class KeyboardPage : IDashboardPage
             try
             {
                 string path = WordPredictor.EnsureListFile();
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true });
+                Opener.OpenFile(path);
             }
             catch (Exception ex)
             {

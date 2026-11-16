@@ -1,5 +1,4 @@
 using System.IO;
-using System.Media;
 
 namespace UnboundKeys;
 
@@ -8,15 +7,32 @@ namespace UnboundKeys;
 // feel of its own, so the sound is the confirmation that a press landed.
 // The sound is a short tick synthesized once, in code, rather than a
 // shipped .wav: a burst of low-passed noise that dies in a few
-// milliseconds (the click) under a brief falling tone (the body). It goes
-// through SoundPlayer, the one Windows player quick enough to keep up
-// with typing; each new click cuts the last one short, which at 35 ms
-// nobody hears. The Keyboard page's "Key click sound" switch turns it off.
+// milliseconds (the click) under a brief falling tone (the body). Playing
+// it is the system's business (ISoundOut: WindowsSoundOut on Windows);
+// each new click cuts the last one short, which at 35 ms nobody hears.
+// The Keyboard page's "Key click sound" switch turns it off.
+
+// The system's side: play this WAV now, cutting short one still playing.
+// The same array is handed over every time, so it can be prepared once.
+internal interface ISoundOut
+{
+    void Play(byte[] wav);
+}
+
 public static class KeyClick
 {
     private const int SampleRate = 44100;
     private static readonly object Gate = new();
-    private static SoundPlayer? _player;
+    private static byte[]? _wav;
+    private static ISoundOut _out = new WindowsSoundOut();
+
+    // Swaps the sound output in use and hands back the old one (the tests).
+    internal static ISoundOut Use(ISoundOut output)
+    {
+        var old = _out;
+        _out = output;
+        return old;
+    }
     private static bool _enabled = Settings.LoadKeyClickSound();
 
     public static bool Enabled
@@ -35,22 +51,15 @@ public static class KeyClick
             return;
         try
         {
-            SoundPlayer player;
+            byte[] wav;
             lock (Gate)
-                player = _player ??= Build();
-            player.Play();
+                wav = _wav ??= Synthesize();
+            _out.Play(wav);
         }
         catch
         {
             // No sound device, or one that refuses: the key itself still works.
         }
-    }
-
-    private static SoundPlayer Build()
-    {
-        var player = new SoundPlayer(new MemoryStream(Synthesize()));
-        player.Load();
-        return player;
     }
 
     // 35 ms of 16-bit mono at 44.1 kHz.

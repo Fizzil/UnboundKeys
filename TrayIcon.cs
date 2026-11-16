@@ -1,8 +1,3 @@
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.Reflection;
-using System.Windows.Forms;
-
 namespace UnboundKeys;
 
 // The app's presence while its dashboard is hidden: an icon in the
@@ -16,26 +11,30 @@ namespace UnboundKeys;
 // a balloon here says the app is still running — the standard Windows
 // answer to "where did it go", and the moment a newcomer needs it.
 //
-// Built on WinForms' NotifyIcon — WPF has no tray icon of its own, and
-// NotifyIcon only needs a message loop, which WPF's dispatcher provides.
+// This class decides what the icon says; the icon itself is the
+// system's (ITrayShell: WindowsTray on Windows), so the deciding can be
+// tested and another system only has to draw.
+
+// The system's side of the tray icon: an icon that is bright or dimmed,
+// with a tooltip, that reports a left click and can show a short message.
+internal interface ITrayShell : IDisposable
+{
+    event Action? Clicked;
+    void Show(bool dimmed, string tooltip);
+    void Notify(string title, string text);
+}
+
 internal sealed class TrayIcon : IDisposable
 {
-    private readonly NotifyIcon _icon;
-    private readonly Icon _listening;
-    private readonly Icon _paused;
+    private readonly ITrayShell _shell;
 
     public event Action? Clicked;
 
-    public TrayIcon()
+    public TrayIcon(ITrayShell shell)
     {
-        _listening = LoadEmbeddedIcon("UnboundKeys.Assets.skull.ico");
-        _paused = MakeDimmed(_listening);
-        _icon = new NotifyIcon { Icon = _listening, Text = "UnboundKeys — listening", Visible = true };
-        _icon.MouseClick += (_, e) =>
-        {
-            if (e.Button == MouseButtons.Left)
-                Clicked?.Invoke();
-        };
+        _shell = shell;
+        _shell.Clicked += () => Clicked?.Invoke();
+        Refresh();
     }
 
     private bool _pausedState;
@@ -56,13 +55,11 @@ internal sealed class TrayIcon : IDisposable
         Refresh();
     }
 
-    private void Refresh()
-    {
-        _icon.Icon = _pausedState || _micLost ? _paused : _listening;
-        _icon.Text = _micLost ? "UnboundKeys — microphone lost, trying again"
+    private void Refresh() =>
+        _shell.Show(_pausedState || _micLost,
+            _micLost ? "UnboundKeys — microphone lost, trying again"
             : _pausedState ? "UnboundKeys — voice paused"
-            : "UnboundKeys — listening";
-    }
+            : "UnboundKeys — listening");
 
     private bool _saidStillRunning;
 
@@ -72,48 +69,9 @@ internal sealed class TrayIcon : IDisposable
         if (_saidStillRunning)
             return;
         _saidStillRunning = true;
-        _icon.ShowBalloonTip(5000, "UnboundKeys is still running",
-            "It lives here in the tray. Click this icon to bring the dashboard back; Quit is at the bottom of its rail.",
-            ToolTipIcon.None);
+        _shell.Notify("UnboundKeys is still running",
+            "It lives here in the tray. Click this icon to bring the dashboard back; Quit is at the bottom of its rail.");
     }
 
-    public void Dispose()
-    {
-        _icon.Visible = false;
-        _icon.Dispose();
-    }
-
-    private static Icon LoadEmbeddedIcon(string resourceName)
-    {
-        var assembly = Assembly.GetExecutingAssembly();
-        using var stream = assembly.GetManifestResourceStream(resourceName)
-            ?? throw new InvalidOperationException($"Embedded resource not found: {resourceName}");
-        // At the size the tray actually draws (20 px at 125% scaling), so
-        // Windows picks that frame of the icon instead of shrinking a big one.
-        return new Icon(stream, System.Windows.Forms.SystemInformation.SmallIconSize);
-    }
-
-    // Greyed and half-transparent — the same treatment the old overlay
-    // gave its paused state.
-    private static Icon MakeDimmed(Icon original)
-    {
-        using var source = original.ToBitmap();
-        using var dimmed = new Bitmap(source.Width, source.Height);
-        using var g = Graphics.FromImage(dimmed);
-
-        var colorMatrix = new ColorMatrix(new float[][]
-        {
-            new float[] { 0.3f, 0.3f, 0.3f, 0, 0 },
-            new float[] { 0.3f, 0.3f, 0.3f, 0, 0 },
-            new float[] { 0.3f, 0.3f, 0.3f, 0, 0 },
-            new float[] { 0, 0, 0, 0.5f, 0 },
-            new float[] { 0, 0, 0, 0, 1 },
-        });
-        using var attributes = new ImageAttributes();
-        attributes.SetColorMatrix(colorMatrix);
-        g.DrawImage(source, new System.Drawing.Rectangle(0, 0, source.Width, source.Height),
-            0, 0, source.Width, source.Height, GraphicsUnit.Pixel, attributes);
-
-        return Icon.FromHandle(dimmed.GetHicon());
-    }
+    public void Dispose() => _shell.Dispose();
 }

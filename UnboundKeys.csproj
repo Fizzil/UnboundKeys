@@ -33,9 +33,10 @@
     <!-- Vosk: offline, small-vocabulary speech recognition — replaces the
          built-in Windows System.Speech engine, which couldn't reliably tell
          "press one" apart from ordinary talk. NAudio captures raw microphone
-         audio and feeds it to Vosk (Vosk itself has no capture of its own). -->
+         audio and feeds it to Vosk (Vosk itself has no capture of its own):
+         only its WinMM part, the one piece used (see WinMmMicrophone.cs). -->
     <PackageReference Include="Vosk" Version="0.3.38" />
-    <PackageReference Include="NAudio" Version="2.4.0" />
+    <PackageReference Include="NAudio.WinMM" Version="2.4.0" />
     <!-- Nefarius.ViGEm.Client: talks to the ViGEmBus driver so Steering can
          plug in a virtual Xbox 360 pad (see ViGEmPad.cs). -->
     <PackageReference Include="Nefarius.ViGEm.Client" Version="1.21.256" />

@@ -75,7 +75,7 @@ static class Program
         // WindowsInputHooks): the two watchers above decide what each
         // event means. Declared after them, so it stops before they go.
         using var hooks = new WindowsInputHooks();
-        using var tray = new TrayIcon();
+        using var tray = new TrayIcon(new WindowsTray());
         var dashboard = new Wpf.DashboardWindow();
 
         // Steering (see Steering.cs) keeps quiet while the dashboard is the
